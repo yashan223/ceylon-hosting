@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "xoxod33p-store",
+      name: "ceylonhosting",
       cwd: "/home/admin/xoxod33p-store",
       script: "npm",
       args: "start",

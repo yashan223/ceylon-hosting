@@ -13,10 +13,10 @@ export async function StorePageHeader({
 
   return (
     <header className="store-page-header">
-      <Link className="store-page-brand" href="/" aria-label="xoxod33p store home">
+      <Link className="store-page-brand" href="/" aria-label="CeylonHosting home">
         <Image
           src="/logo.png"
-          alt="xoxod33p store"
+          alt="CeylonHosting"
           width={120}
           height={30}
           style={{ height: "auto" }}

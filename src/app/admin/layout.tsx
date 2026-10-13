@@ -18,9 +18,9 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
       <aside className="admin-sidebar">
         <div className="admin-sidebar-brand-row">
           <Link className="admin-brand" href="/admin">
-            <span className="brand-mark">X</span>
+            <span className="brand-mark">C</span>
             <span>
-              <strong>xoxod33p</strong>
+              <strong>CeylonHosting</strong>
               <small>ADMIN CONSOLE</small>
             </span>
           </Link>

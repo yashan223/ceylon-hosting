@@ -36,9 +36,9 @@ export default async function DashboardPage() {
     <main className="dashboard-page">
       <aside className="dashboard-sidebar">
         <Link className="dashboard-brand" href="/">
-          <span className="brand-mark">X</span>
+          <span className="brand-mark">C</span>
           <span>
-            <strong>xoxod33p</strong>
+            <strong>CeylonHosting</strong>
             <small>CLIENT WORKSPACE</small>
           </span>
         </Link>

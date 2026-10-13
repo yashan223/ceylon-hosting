@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "No Refund Policy",
   description:
-    "Understand when COD4 servers, mods, and setup services bought from xoxod33p store can be refunded.",
+    "Understand when COD4 servers, mods, and setup services bought from CeylonHosting can be refunded.",
   alternates: { canonical: "/refund-policy" },
 };
 
@@ -40,7 +40,7 @@ export default function RefundPolicyPage() {
         <h2>Contact</h2>
         <p>
           For policy questions, email{" "}
-          <a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a>.
+          <a href="mailto:support@ceylonhosting.com">support@ceylonhosting.com</a>.
         </p>
       </article>
     </main>

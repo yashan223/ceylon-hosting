@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ShoppingBag } from "lucide-react";
 
-const cartStorageKey = "xoxod33p-cart";
-const cartUpdatedEvent = "xoxod33p-cart-updated";
+const cartStorageKey = "ceylonhosting-cart";
+const cartUpdatedEvent = "ceylonhosting-cart-updated";
 
 function readCartCount() {
   try {

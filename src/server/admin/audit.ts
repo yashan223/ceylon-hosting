@@ -104,7 +104,7 @@ async function generateHistoricalAuditLogs(
     synthesized.push({
       id: `syn-prod-${product._id.toString()}`,
       action: "PRODUCT_UPDATED",
-      actorEmail: "admin@xoxod33p.lk",
+      actorEmail: "admin@ceylonhosting.lk",
       targetType: "product",
       targetId: (product.id as string) || product._id.toString(),
       targetName: (product.name as string) || "Catalog item",

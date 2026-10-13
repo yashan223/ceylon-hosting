@@ -1,4 +1,4 @@
-# xoxod33p-store
+# CeylonHosting
 
 E-commerce platform for game servers, mods, and technical services.
 

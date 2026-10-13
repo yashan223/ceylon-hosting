@@ -28,7 +28,7 @@ export default async function ResetPasswordPage({
         <div className="auth-brand">
           <Image
             src="/logo.png"
-            alt="xoxod33p store"
+            alt="CeylonHosting"
             className="auth-logo"
             width={220}
             height={52}
@@ -45,7 +45,7 @@ export default async function ResetPasswordPage({
           </h1>
           <p>Use a strong password you do not use anywhere else.</p>
         </div>
-        <span className="auth-coordinate">XOXOD33P STORE / 2026</span>
+        <span className="auth-coordinate">CEYLONHOSTING / 2026</span>
       </section>
       <section className="auth-form">
         <div className="auth-heading">

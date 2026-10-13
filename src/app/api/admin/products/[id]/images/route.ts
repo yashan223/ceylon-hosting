@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
+import type { Document, UpdateFilter } from "mongodb";
 import { requireAdmin } from "@/server/auth/admin";
 import { getDatabase } from "@/server/db/mongodb";
 import { uploadProductFile } from "@/server/storage/private-files";
@@ -83,7 +84,7 @@ export async function POST(request: Request, context: RouteContext) {
   await database.collection("products").updateOne({ id }, {
     $set: setPayload,
     $push: { galleryImages: { $each: newGalleryItems } },
-  } as any);
+  } as UpdateFilter<Document>);
 
   await recordAuditLog({
     action: "PRODUCT_UPDATED",

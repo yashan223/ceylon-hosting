@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import type { Product } from "@/types/product";
 
 type CartItem = { productId: string; quantity: number };
-const cartStorageKey = "xoxod33p-cart";
+const cartStorageKey = "ceylonhosting-cart";
 
 export function ProductAddToCart({
   product,
@@ -39,7 +39,7 @@ export function ProductAddToCart({
         cartStorageKey,
         JSON.stringify([...cart, { productId: product.id, quantity: 1 }]),
       );
-      window.dispatchEvent(new Event("xoxod33p-cart-updated"));
+      window.dispatchEvent(new Event("ceylonhosting-cart-updated"));
     }
     setAdded(true);
   }

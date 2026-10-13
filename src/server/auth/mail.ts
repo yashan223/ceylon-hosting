@@ -36,8 +36,8 @@ export async function sendVerificationEmail(input: {
     body: JSON.stringify({
       from,
       to: [input.email],
-      subject: "Verify your xoxod33p store email",
-      html: `<p>${greeting}</p><p>Verify your xoxod33p store account by clicking the link below:</p><p><a href="${verificationUrl}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
+      subject: "Verify your CeylonHosting email",
+      html: `<p>${greeting}</p><p>Verify your CeylonHosting account by clicking the link below:</p><p><a href="${verificationUrl}">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
     }),
     cache: "no-store",
   });
@@ -62,8 +62,8 @@ export async function sendPasswordResetEmail(input: {
     body: JSON.stringify({
       from,
       to: [input.email],
-      subject: "Reset your xoxod33p store password",
-      html: `<p>${greeting}</p><p>Reset your xoxod33p store password using the link below:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour.</p>`,
+      subject: "Reset your CeylonHosting password",
+      html: `<p>${greeting}</p><p>Reset your CeylonHosting password using the link below:</p><p><a href="${resetUrl}">Reset my password</a></p><p>This link expires in 1 hour.</p>`,
     }),
     cache: "no-store",
   });
@@ -114,7 +114,7 @@ export async function sendServerRenewalReminderEmail(input: {
 <body>
   <div class="container">
     <div class="header">
-      <div class="brand">xoxod33p / Server Operations</div>
+      <div class="brand">CeylonHosting / Server Operations</div>
       <h1>Monthly Server Renewal Notice</h1>
     </div>
     <div class="content">
@@ -156,7 +156,7 @@ export async function sendServerRenewalReminderEmail(input: {
       </p>
     </div>
     <div class="footer">
-      &copy; ${new Date().getFullYear()} xoxod33p Store. Game servers and community solutions.
+      &copy; ${new Date().getFullYear()} CeylonHosting. Game servers and community solutions.
     </div>
   </div>
 </body>

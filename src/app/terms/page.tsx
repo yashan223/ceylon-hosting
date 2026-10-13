@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
-    "The terms that apply when you buy COD4 servers, mods, and setup services from xoxod33p store.",
+    "The terms that apply when you buy COD4 servers, mods, and setup services from CeylonHosting.",
   alternates: { canonical: "/terms" },
 };
 
@@ -18,7 +18,7 @@ export default function TermsPage() {
         <span className="section-kicker">Legal</span>
         <h1>Terms & Conditions</h1>
         <p>
-          By using xoxod33p store, you agree to provide accurate account details and use the store
+          By using CeylonHosting, you agree to provide accurate account details and use the platform
           for lawful purposes.
         </p>
         <h2>Orders and services</h2>
@@ -41,7 +41,7 @@ export default function TermsPage() {
         <h2>Contact</h2>
         <p>
           Questions about these terms can be sent to{" "}
-          <a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a>.
+          <a href="mailto:support@ceylonhosting.com">support@ceylonhosting.com</a>.
         </p>
       </article>
     </main>

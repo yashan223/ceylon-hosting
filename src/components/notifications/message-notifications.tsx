@@ -15,7 +15,7 @@ type Notification = {
 const pollIntervalMs = 10_000;
 const toastLifetimeMs = 6_000;
 const maxToasts = 4;
-const readStorageKey = "xoxod33p_read_notifications";
+const readStorageKey = "ceylonhosting_read_notifications";
 
 const keyOf = (notification: Notification) => `${notification.orderId}:${notification.id}`;
 

@@ -350,7 +350,7 @@ export async function checkAndSendServerReminders(): Promise<ReminderCheckResult
           await recordAuditLog({
             action: "SERVER_REMINDER_SENT",
             actorId: "system",
-            actorEmail: "automation@xoxod33p",
+            actorEmail: "automation@ceylonhosting",
             targetType: "server",
             targetId: sub.id,
             targetName: sub.serverName,

@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-brand">
           <Image
             src="/logo.png"
-            alt="XOXOD33P STORE"
+            alt="CeylonHosting"
             className="auth-logo"
             width={220}
             height={52}
@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
           </h1>
           <p>We will send a secure password reset link to your email.</p>
         </div>
-        <span className="auth-coordinate">XOXOD33P STORE / 2026</span>
+        <span className="auth-coordinate">CEYLONHOSTING / 2026</span>
       </section>
       <section className="auth-form">
         <div className="auth-heading">

@@ -59,7 +59,7 @@ const faqItems = [
 ];
 
 type CartItem = { productId: string; quantity: number };
-const cartStorageKey = "xoxod33p-cart";
+const cartStorageKey = "ceylonhosting-cart";
 
 function formatPrice(price: number) {
   return `Rs. ${price.toLocaleString("en-LK")}`;
@@ -202,7 +202,7 @@ export function Storefront({
 
   useEffect(() => {
     if (isAdmin) {
-      setCart([]);
+      window.setTimeout(() => setCart([]));
       try {
         window.localStorage.removeItem(cartStorageKey);
       } catch {}
@@ -303,7 +303,7 @@ export function Storefront({
         <a
           className="brand"
           href="#home"
-          aria-label="xoxod33p store home"
+          aria-label="CeylonHosting home"
           onClick={(event) => {
             event.preventDefault();
             scrollTo("home", "home");
@@ -311,7 +311,7 @@ export function Storefront({
         >
           <Image
             src="/logo.png"
-            alt="xoxod33p store"
+            alt="CeylonHosting"
             className="brand-logo"
             width={120}
             height={30}
@@ -419,7 +419,7 @@ export function Storefront({
         </div>
       </header>
 
-      <section className="brand-intro" id="home" aria-label="Welcome to xoxod33p store">
+      <section className="brand-intro" id="home" aria-label="Welcome to CeylonHosting">
         <div className="intro-pixel-blast" aria-hidden="true">
           <PixelBlast
             variant="square"
@@ -440,7 +440,7 @@ export function Storefront({
         <div className="brand-intro-content">
           <Image
             src="/logo.png"
-            alt="xoxod33p store"
+            alt="CeylonHosting"
             className="intro-logo"
             width={560}
             height={150}
@@ -663,7 +663,7 @@ export function Storefront({
           <div className="footer-brand">
             <Image
               src="/logo.png"
-              alt="xoxod33p store"
+              alt="CeylonHosting"
               className="footer-logo"
               width={160}
               height={34}
@@ -733,7 +733,7 @@ export function Storefront({
           </div>
           <div>
             <span>Contact</span>
-            <a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a>
+            <a href="mailto:support@ceylonhosting.com">support@ceylonhosting.com</a>
             <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">
               WhatsApp: +94 77 123 4567
             </a>
@@ -741,7 +741,7 @@ export function Storefront({
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 xoxod33p store. Built for better game nights.</span>
+          <span>© 2026 CeylonHosting. Built for better game nights.</span>
           <span className="footer-code">SERVERS / MODS / SUPPORT</span>
         </div>
       </footer>

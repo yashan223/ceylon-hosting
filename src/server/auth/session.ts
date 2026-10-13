@@ -4,7 +4,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { getDatabase } from "@/server/db/mongodb";
 import { findUserById, type AuthUser } from "@/server/auth/users";
 
-const cookieName = "xoxod33p_session";
+const cookieName = "ceylonhosting_session";
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
 const temporarySessionLifetimeMs = 24 * 60 * 60 * 1000;
 

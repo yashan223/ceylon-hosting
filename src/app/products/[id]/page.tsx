@@ -97,10 +97,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
         }}
       />
       <header className="site-header site-header-scrolled">
-        <Link className="brand" href="/" aria-label="xoxod33p store home">
+        <Link className="brand" href="/" aria-label="CeylonHosting home">
           <Image
             src="/logo.png"
-            alt="xoxod33p store"
+            alt="CeylonHosting"
             className="brand-logo"
             width={120}
             height={30}
