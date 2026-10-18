@@ -1,3 +1,4 @@
+import type { CreateCheckoutParams } from "@payments-lk/node";
 import { NextResponse } from "next/server";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
 import { getCurrentUser } from "@/server/auth/session";
@@ -48,22 +49,62 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This order has already been paid." }, { status: 409 });
 
   try {
-    const lineItems = order.items.map(({ name, quantity, unitPrice }) => ({
-      name: name.slice(0, 80),
-      unitAmountCents: Math.round(unitPrice * 100),
-      quantity,
-    }));
-    const checkout = await getPaymentsLkClient().checkouts.create(
-      {
-        lineItems,
-        reference: orderId,
-        successUrl: getPaymentsReturnUrl(
-          `${process.env.PAYMENTS_LK_SUCCESS_PATH ?? "/checkout/success"}?order=${orderId}`,
-        ),
-        cancelUrl: getPaymentsReturnUrl(process.env.PAYMENTS_LK_CANCEL_PATH ?? "/"),
-      },
-      { idempotencyKey: `order-${orderId}` },
+    const totalCents = order.items.reduce(
+      (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
+      0,
     );
+
+    if (totalCents < 1000) {
+      return NextResponse.json(
+        { error: "Order total must be at least Rs. 10.00 to process payment." },
+        { status: 400 },
+      );
+    }
+
+    const customerName = user.firstName?.trim() || user.email.split("@")[0] || "Customer";
+    const customer = {
+      name: customerName,
+      email: user.email,
+    };
+
+    const baseParams = {
+      reference: orderId,
+      customer,
+      successUrl: getPaymentsReturnUrl(
+        `${process.env.PAYMENTS_LK_SUCCESS_PATH ?? "/checkout/success"}?order=${orderId}`,
+      ),
+      cancelUrl: getPaymentsReturnUrl(process.env.PAYMENTS_LK_CANCEL_PATH ?? "/"),
+    };
+
+    const canUseLineItems =
+      order.items.length >= 1 &&
+      order.items.length <= 10 &&
+      order.items.every(
+        ({ name, quantity, unitPrice }) =>
+          name.trim().length > 0 &&
+          quantity >= 1 &&
+          quantity <= 99 &&
+          Math.round(unitPrice * 100) >= 100,
+      );
+
+    const checkoutParams: CreateCheckoutParams = canUseLineItems
+      ? {
+          ...baseParams,
+          lineItems: order.items.map(({ name, quantity, unitPrice }) => ({
+            name: name.slice(0, 80),
+            unitAmountCents: Math.round(unitPrice * 100),
+            quantity,
+          })),
+        }
+      : {
+          ...baseParams,
+          amountCents: totalCents,
+          description: `Order #${orderId}`,
+        };
+
+    const checkout = await getPaymentsLkClient().checkouts.create(checkoutParams, {
+      idempotencyKey: `order-${orderId}`,
+    });
 
     return NextResponse.json({ checkoutId: checkout.id, url: checkout.url });
   } catch (error) {

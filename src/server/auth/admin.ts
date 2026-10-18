@@ -11,18 +11,13 @@ function valuesFromEnv(value: string | undefined, lowercase = false) {
 }
 
 export function isConfiguredAdminEmail(email: string) {
-  const configuredEmails = valuesFromEnv(process.env.ADMIN_EMAILS, true);
-  const allowedEmails =
-    configuredEmails.size > 0
-      ? configuredEmails
-      : valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL, true);
+  const allowedEmails = valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL, true);
   return allowedEmails.has(email.trim().toLowerCase());
 }
 
 export function isUserAdmin(user: { id?: string; email: string } | null | undefined): boolean {
   if (!user?.email) return false;
-  const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
-  return (user.id ? allowedUserIds.has(user.id) : false) || isConfiguredAdminEmail(user.email);
+  return isConfiguredAdminEmail(user.email);
 }
 
 export async function isAdminUser() {

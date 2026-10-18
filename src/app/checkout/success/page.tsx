@@ -17,7 +17,7 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
         const checkoutRecord = await getPaymentsLkClient().checkouts.retrieve(checkout);
         const payment = checkoutRecord.payment;
         const expectedAmountCents = currentOrder.items.reduce(
-          (total, item) => total + item.unitPrice * item.quantity * 100,
+          (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
           0,
         );
         if (

@@ -17,6 +17,10 @@ export async function POST(request: Request) {
   try {
     const event = getPaymentsLkClient().webhooks.constructEvent(rawBody, signature, webhookSecret);
 
+    if (event.type === "test.ping") {
+      return NextResponse.json({ received: true, ping: true });
+    }
+
     if (event.type === "payment.succeeded") {
       if (event.data.reference)
         await markOrderPaid(event.data.reference, event.data.id, event.data.amountCents);
@@ -24,6 +28,14 @@ export async function POST(request: Request) {
         paymentId: event.data.id,
         orderId: event.data.reference,
         amountCents: event.data.amountCents,
+      });
+    }
+
+    if (event.type === "payment.failed") {
+      console.warn("Payments.lk payment failed", {
+        paymentId: event.data.id,
+        orderId: event.data.reference,
+        reason: event.data.failureMessage,
       });
     }
 
