@@ -11,9 +11,14 @@ export interface Datacenter {
   flag: string;
   lat: number;
   lng: number;
-  pingUrl: string;
   fallbackPing: number;
-  isHost?: boolean;
+}
+
+export interface UserLocation {
+  lat: number;
+  lng: number;
+  city?: string;
+  country?: string;
 }
 
 export const DATACENTERS: Datacenter[] = [
@@ -25,9 +30,7 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇱🇰",
     lat: 6.9271,
     lng: 79.8612,
-    pingUrl: "/api/ping",
     fallbackPing: 8,
-    isHost: true,
   },
   {
     id: "in-mumbai",
@@ -37,7 +40,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇮🇳",
     lat: 19.076,
     lng: 72.8777,
-    pingUrl: "/api/ping",
     fallbackPing: 32,
   },
   {
@@ -48,7 +50,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇮🇳",
     lat: 13.0827,
     lng: 80.2707,
-    pingUrl: "/api/ping",
     fallbackPing: 22,
   },
   {
@@ -59,7 +60,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇸🇬",
     lat: 1.3521,
     lng: 103.8198,
-    pingUrl: "/api/ping",
     fallbackPing: 44,
   },
   {
@@ -70,7 +70,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇭🇰",
     lat: 22.3193,
     lng: 114.1694,
-    pingUrl: "/api/ping",
     fallbackPing: 54,
   },
   {
@@ -81,7 +80,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇦🇪",
     lat: 25.2048,
     lng: 55.2708,
-    pingUrl: "/api/ping",
     fallbackPing: 58,
   },
   {
@@ -92,7 +90,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇯🇵",
     lat: 35.6762,
     lng: 139.6503,
-    pingUrl: "/api/ping",
     fallbackPing: 94,
   },
   {
@@ -103,7 +100,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇰🇷",
     lat: 37.5665,
     lng: 126.978,
-    pingUrl: "/api/ping",
     fallbackPing: 86,
   },
   {
@@ -114,7 +110,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇩🇪",
     lat: 50.1109,
     lng: 8.6821,
-    pingUrl: "/api/ping",
     fallbackPing: 118,
   },
   {
@@ -125,7 +120,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇬🇧",
     lat: 51.5074,
     lng: -0.1278,
-    pingUrl: "/api/ping",
     fallbackPing: 126,
   },
   {
@@ -136,7 +130,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇺🇸",
     lat: 39.0438,
     lng: -77.4874,
-    pingUrl: "/api/ping",
     fallbackPing: 215,
   },
   {
@@ -147,7 +140,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇺🇸",
     lat: 37.3382,
     lng: -121.8863,
-    pingUrl: "/api/ping",
     fallbackPing: 238,
   },
   {
@@ -158,7 +150,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇦🇺",
     lat: -33.8688,
     lng: 151.2093,
-    pingUrl: "/api/ping",
     fallbackPing: 112,
   },
   {
@@ -169,7 +160,6 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇿🇦",
     lat: -26.2041,
     lng: 28.0473,
-    pingUrl: "/api/ping",
     fallbackPing: 168,
   },
   {
@@ -180,13 +170,9 @@ export const DATACENTERS: Datacenter[] = [
     flag: "🇧🇷",
     lat: -23.5505,
     lng: -46.6333,
-    pingUrl: "/api/ping",
     fallbackPing: 265,
   },
 ];
-
-const HOST_LAT = 6.9271;
-const HOST_LNG = 79.8612;
 
 function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
   const phi = (90 - lat) * (Math.PI / 180);
@@ -198,43 +184,126 @@ function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector
   );
 }
 
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 export function LatencyGlobe() {
   const mountRef = useRef<HTMLDivElement>(null);
   const calloutRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const userLabelRef = useRef<HTMLDivElement | null>(null);
+
   const [selectedDc, setSelectedDc] = useState<Datacenter | null>(null);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [ping, setPing] = useState<number | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
   useEffect(() => {
-    fetch("/api/ping", { cache: "no-store" }).catch(() => {});
-  }, []);
+    let isMounted = true;
 
-  const measurePing = useCallback(async (dc: Datacenter) => {
-    setIsPinging(true);
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
-      const start = performance.now();
-      await fetch("/api/ping", {
-        cache: "no-store",
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      const measuredHost = Math.round(performance.now() - start);
+    async function detectUserLocation() {
+      try {
+        const pingRes = await fetch("/api/ping", { cache: "no-store" });
+        const pingData = await pingRes.json();
+        if (isMounted && pingData?.geo?.lat && pingData?.geo?.lng) {
+          setUserLocation({
+            lat: Number(pingData.geo.lat),
+            lng: Number(pingData.geo.lng),
+            city: pingData.geo.city,
+            country: pingData.geo.country,
+          });
+          return;
+        }
+      } catch {}
 
-      if (dc.isHost) {
-        setPing(Math.max(4, measuredHost));
-      } else {
-        const regionalPing = Math.round(measuredHost + (dc.fallbackPing - 8));
-        setPing(Math.max(14, regionalPing));
-      }
-    } catch {
-      setPing(dc.fallbackPing);
-    } finally {
-      setIsPinging(false);
+      try {
+        const res = await fetch("https://freeipapi.com/api/json");
+        const data = await res.json();
+        if (isMounted && data?.latitude && data?.longitude) {
+          setUserLocation({
+            lat: Number(data.latitude),
+            lng: Number(data.longitude),
+            city: data.cityName || data.city,
+            country: data.countryName || data.country,
+          });
+          return;
+        }
+      } catch {}
+
+      try {
+        const res = await fetch("https://api.country.is/");
+        const data = await res.json();
+        if (isMounted && data?.country) {
+          const match = DATACENTERS.find((d) =>
+            d.country.toLowerCase().includes(data.country.toLowerCase()),
+          );
+          if (match) {
+            setUserLocation({
+              lat: match.lat,
+              lng: match.lng,
+              city: match.city,
+              country: match.country,
+            });
+            return;
+          }
+        }
+      } catch {}
     }
+
+    detectUserLocation();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const measurePing = useCallback(
+    async (dc: Datacenter) => {
+      setIsPinging(true);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const start = performance.now();
+        await fetch("/api/ping", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        const measuredBase = Math.round(performance.now() - start);
+
+        const originLat = userLocation?.lat ?? 6.9271;
+        const originLng = userLocation?.lng ?? 79.8612;
+        const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
+
+        if (distKm < 60) {
+          setPing(Math.max(4, Math.min(10, measuredBase)));
+        } else {
+          const calculated = Math.round(distKm * 0.016 + Math.min(measuredBase, 20));
+          setPing(Math.max(10, calculated));
+        }
+      } catch {
+        const originLat = userLocation?.lat ?? 6.9271;
+        const originLng = userLocation?.lng ?? 79.8612;
+        const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
+        const fallbackCalculated = Math.round(distKm * 0.016 + 10);
+        setPing(Math.max(10, fallbackCalculated));
+      } finally {
+        setIsPinging(false);
+      }
+    },
+    [userLocation],
+  );
 
   const selectDatacenter = useCallback(
     (dc: Datacenter) => {
@@ -327,42 +396,70 @@ export function LatencyGlobe() {
       particlePositions[i * 3 + 1] = y;
       particlePositions[i * 3 + 2] = z;
     }
+
     const dotGeo = new THREE.BufferGeometry();
     dotGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
     const dotMat = new THREE.PointsMaterial({
       color: 0x334155,
-      size: 2.0,
+      size: 1.45,
       transparent: true,
       opacity: 0.75,
     });
     const dotsMesh = new THREE.Points(dotGeo, dotMat);
     globeGroup.add(dotsMesh);
 
+    let userNodeMesh: THREE.Mesh | null = null;
+    let userRingMesh: THREE.Mesh | null = null;
+    let userMarkerGeo: THREE.SphereGeometry | null = null;
+    let userMarkerMat: THREE.MeshBasicMaterial | null = null;
+    let userRingGeo: THREE.RingGeometry | null = null;
+    let userRingMat: THREE.MeshBasicMaterial | null = null;
+
+    if (userLocation) {
+      const uPos = latLngToVector3(userLocation.lat, userLocation.lng, globeRadius + 1.2);
+      userMarkerGeo = new THREE.SphereGeometry(3.6, 16, 16);
+      userMarkerMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+      userNodeMesh = new THREE.Mesh(userMarkerGeo, userMarkerMat);
+      userNodeMesh.position.copy(uPos);
+      globeGroup.add(userNodeMesh);
+
+      userRingGeo = new THREE.RingGeometry(4.2, 6.2, 24);
+      userRingMat = new THREE.MeshBasicMaterial({
+        color: 0x38bdf8,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.85,
+      });
+      userRingMesh = new THREE.Mesh(userRingGeo, userRingMat);
+      userRingMesh.position.copy(uPos);
+      userRingMesh.lookAt(new THREE.Vector3(0, 0, 0));
+      globeGroup.add(userRingMesh);
+    }
+
     const clickTargets: THREE.Mesh[] = [];
 
     DATACENTERS.forEach((dc) => {
       const pos = latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2);
       const isSelected = selectedDc?.id === dc.id;
-      const isHostOrigin = Boolean(dc.isHost && selectedDc && !selectedDc.isHost);
 
-      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : isHostOrigin ? 3.4 : 2.8, 16, 16);
+      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : 2.8, 16, 16);
       const markerMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0x10b981 : isHostOrigin ? 0x059669 : 0x1e293b,
+        color: isSelected ? 0x10b981 : 0x1e293b,
       });
       const marker = new THREE.Mesh(markerGeo, markerMat);
       marker.position.copy(pos);
       globeGroup.add(marker);
 
       const nodeRingGeo = new THREE.RingGeometry(
-        isSelected ? 4.5 : isHostOrigin ? 4.0 : 3.4,
-        isSelected ? 7.2 : isHostOrigin ? 6.2 : 5.0,
+        isSelected ? 4.5 : 3.4,
+        isSelected ? 7.2 : 5.0,
         24,
       );
       const nodeRingMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0x10b981 : isHostOrigin ? 0x10b981 : 0x64748b,
+        color: isSelected ? 0x10b981 : 0x64748b,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: isSelected ? 1.0 : isHostOrigin ? 0.9 : 0.6,
+        opacity: isSelected ? 1.0 : 0.6,
       });
       const nodeRing = new THREE.Mesh(nodeRingGeo, nodeRingMat);
       nodeRing.position.copy(pos);
@@ -383,35 +480,39 @@ export function LatencyGlobe() {
     let tracerCurve: THREE.QuadraticBezierCurve3 | null = null;
     let tracerT = 0;
 
-    if (selectedDc && !selectedDc.isHost) {
-      const p1 = latLngToVector3(HOST_LAT, HOST_LNG, globeRadius + 1.5);
+    const effectiveOrigin = userLocation ?? { lat: 6.9271, lng: 79.8612 };
+
+    if (selectedDc) {
+      const p1 = latLngToVector3(effectiveOrigin.lat, effectiveOrigin.lng, globeRadius + 1.5);
       const p2 = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 1.5);
 
-      const mid = p1.clone().add(p2).multiplyScalar(0.5);
       const distance = p1.distanceTo(p2);
-      mid.normalize().multiplyScalar(globeRadius + Math.max(14, distance * 0.32));
+      if (distance > 3) {
+        const mid = p1.clone().add(p2).multiplyScalar(0.5);
+        mid.normalize().multiplyScalar(globeRadius + Math.max(14, distance * 0.32));
 
-      const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
-      tracerCurve = curve;
-      const points = curve.getPoints(50);
-      const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
-      const arcMat = new THREE.LineBasicMaterial({
-        color: 0x10b981,
-        transparent: true,
-        opacity: 0.95,
-      });
-      arcLine = new THREE.Line(arcGeo, arcMat);
-      globeGroup.add(arcLine);
+        const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+        tracerCurve = curve;
+        const points = curve.getPoints(50);
+        const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
+        const arcMat = new THREE.LineBasicMaterial({
+          color: 0x10b981,
+          transparent: true,
+          opacity: 0.95,
+        });
+        arcLine = new THREE.Line(arcGeo, arcMat);
+        globeGroup.add(arcLine);
 
-      const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
-      const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
-      tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
-      globeGroup.add(tracerMesh);
+        const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
+        const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+        tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
+        globeGroup.add(tracerMesh);
+      }
     }
 
     if (selectedDc) {
       const targetRotY = -((selectedDc.lng + 90) * (Math.PI / 180));
-      const targetRotX = (selectedDc.lat * (Math.PI / 180)) * 0.35;
+      const targetRotX = selectedDc.lat * (Math.PI / 180) * 0.35;
       globeGroup.rotation.y = targetRotY;
       globeGroup.rotation.x = targetRotX;
     }
@@ -542,6 +643,22 @@ export function LatencyGlobe() {
           el.style.pointerEvents = "none";
         }
       }
+
+      if (userLocation && userLabelRef.current) {
+        const uPos = latLngToVector3(userLocation.lat, userLocation.lng, globeRadius + 1.2);
+        const worldPos = uPos.applyMatrix4(globeGroup.matrixWorld);
+        if (worldPos.z > -2) {
+          const projected = worldPos.project(camera);
+          const screenX = projected.x * halfW + halfW;
+          const screenY = -projected.y * halfH + halfH;
+          const depthAlpha = worldPos.z > 8 ? 1 : Math.max(0, (worldPos.z + 2) / 10);
+
+          userLabelRef.current.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px + 9px), 0)`;
+          userLabelRef.current.style.opacity = `${depthAlpha}`;
+        } else {
+          userLabelRef.current.style.opacity = "0";
+        }
+      }
     };
 
     let animId: number;
@@ -603,13 +720,17 @@ export function LatencyGlobe() {
       equatorMat.dispose();
       dotGeo.dispose();
       dotMat.dispose();
+      if (userMarkerGeo) userMarkerGeo.dispose();
+      if (userMarkerMat) userMarkerMat.dispose();
+      if (userRingGeo) userRingGeo.dispose();
+      if (userRingMat) userRingMat.dispose();
       if (arcLine) arcLine.geometry.dispose();
       if (tracerMesh) {
         tracerMesh.geometry.dispose();
         (tracerMesh.material as THREE.Material).dispose();
       }
     };
-  }, [selectedDc, selectDatacenter]);
+  }, [selectedDc, selectDatacenter, userLocation]);
 
   return (
     <div className="pure-globe-container">
@@ -631,6 +752,17 @@ export function LatencyGlobe() {
             <span>{dc.city}</span>
           </div>
         ))}
+
+        {userLocation && (
+          <div
+            ref={userLabelRef}
+            className="globe-node-label user-location-badge"
+            style={{ opacity: 0, transform: "translate3d(-9999px, -9999px, 0)" }}
+          >
+            <span className="node-label-flag">📍</span>
+            <span>{userLocation.city ? `You (${userLocation.city})` : "You"}</span>
+          </div>
+        )}
 
         <div
           ref={calloutRef}
