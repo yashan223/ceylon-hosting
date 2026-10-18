@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CountrySelect } from "@/components/ui/country-select";
 
 type ProfileFormProps = { user: { email: string; firstName?: string; country?: string } };
 
@@ -46,17 +47,7 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
       </label>
       <label>
         Country
-        <select name="country" defaultValue={user.country ?? ""}>
-          <option value="">Select your country</option>
-          <option value="Sri Lanka">Sri Lanka</option>
-          <option value="India">India</option>
-          <option value="Pakistan">Pakistan</option>
-          <option value="Bangladesh">Bangladesh</option>
-          <option value="United Kingdom">United Kingdom</option>
-          <option value="United States">United States</option>
-          <option value="Australia">Australia</option>
-          <option value="Other">Other</option>
-        </select>
+        <CountrySelect name="country" defaultValue={user.country ?? ""} />
       </label>
       <Button type="submit" disabled={isSaving}>
         {isSaving ? "Saving..." : "Save profile"}

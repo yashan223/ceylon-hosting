@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Eye, EyeOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CountrySelect } from "@/components/ui/country-select";
 
 type AuthFormProps = { mode: "sign-in" | "sign-up" };
 
@@ -29,7 +30,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [canResend, setCanResend] = useState(false);
-  // Only registration opens the verify-email popup; every other notice stays inline.
   const [pendingVerification, setPendingVerification] = useState("");
   const [verificationPopupOpen, setVerificationPopupOpen] = useState(false);
   const [verificationFeedback, setVerificationFeedback] = useState("");
@@ -65,6 +65,10 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError("");
     setNotice("");
     setCanResend(false);
+    if (isSignUp && !country.trim()) {
+      setError("Please select your country.");
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -157,17 +161,11 @@ export function AuthForm({ mode }: AuthFormProps) {
         {isSignUp && (
           <label>
             Country
-            <select value={country} onChange={(event) => setCountry(event.target.value)} required>
-              <option value="">Select your country</option>
-              <option value="Sri Lanka">Sri Lanka</option>
-              <option value="India">India</option>
-              <option value="Pakistan">Pakistan</option>
-              <option value="Bangladesh">Bangladesh</option>
-              <option value="United Kingdom">United Kingdom</option>
-              <option value="United States">United States</option>
-              <option value="Australia">Australia</option>
-              <option value="Other">Other</option>
-            </select>
+            <CountrySelect
+              value={country}
+              onChange={setCountry}
+              required
+            />
           </label>
         )}
         <label>
