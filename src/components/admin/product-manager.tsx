@@ -495,12 +495,6 @@ export function ProductManager({
                 ? "No products found in the catalog."
                 : "No items match your filter criteria."}
             </p>
-            {products.length === 0 && (
-              <Button size="sm" type="button" onClick={openCreate}>
-                <Plus size={14} style={{ marginRight: 4 }} />
-                Add first item
-              </Button>
-            )}
           </div>
         ) : (
           <div className="admin-product-grid">
