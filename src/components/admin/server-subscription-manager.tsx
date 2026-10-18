@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Server, Bell, CheckCircle2, Clock, AlertTriangle, RefreshCw, Send } from "lucide-react";
+import { Bell, CheckCircle2, Clock, RefreshCw, Send } from "lucide-react";
 import type { ServerSubscriptionWithTiming } from "@/server/subscriptions/servers";
 
 export function ServerSubscriptionManager({
@@ -9,7 +9,7 @@ export function ServerSubscriptionManager({
 }: {
   subscriptions: ServerSubscriptionWithTiming[];
 }) {
-  const [subscriptions, setSubscriptions] = useState(initialSubscriptions);
+  const [subscriptions] = useState(initialSubscriptions);
   const [isRunningCheck, setIsRunningCheck] = useState(false);
   const [checkResult, setCheckResult] = useState<string | null>(null);
 
@@ -31,7 +31,9 @@ export function ServerSubscriptionManager({
         `Scanned ${data.totalChecked} servers: ${data.remindersSent} Day 25 reminder email(s) sent, ${data.expiredMarked} marked expired.`,
       );
 
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 2500);
     } catch (err) {
       setCheckResult(err instanceof Error ? err.message : "Error running reminder checks.");
     } finally {

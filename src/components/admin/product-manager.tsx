@@ -784,7 +784,10 @@ export function ProductManager({
                       accept="image/*"
                       type="file"
                       style={{ display: "none" }}
-                      onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                      onChange={(event) => {
+                        setImageFile(event.target.files?.[0] ?? null);
+                        event.target.value = "";
+                      }}
                     />
                     <div
                       style={{

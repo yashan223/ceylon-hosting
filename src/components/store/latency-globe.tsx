@@ -209,67 +209,10 @@ export function LatencyGlobe() {
   const [ping, setPing] = useState<number | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    async function detectUserLocation() {
-      try {
-        const pingRes = await fetch("/api/ping", { cache: "no-store" });
-        const pingData = await pingRes.json();
-        if (isMounted && pingData?.geo?.lat && pingData?.geo?.lng) {
-          setUserLocation({
-            lat: Number(pingData.geo.lat),
-            lng: Number(pingData.geo.lng),
-            city: pingData.geo.city,
-            country: pingData.geo.country,
-          });
-          return;
-        }
-      } catch {}
-
-      try {
-        const res = await fetch("https://freeipapi.com/api/json");
-        const data = await res.json();
-        if (isMounted && data?.latitude && data?.longitude) {
-          setUserLocation({
-            lat: Number(data.latitude),
-            lng: Number(data.longitude),
-            city: data.cityName || data.city,
-            country: data.countryName || data.country,
-          });
-          return;
-        }
-      } catch {}
-
-      try {
-        const res = await fetch("https://api.country.is/");
-        const data = await res.json();
-        if (isMounted && data?.country) {
-          const match = DATACENTERS.find((d) =>
-            d.country.toLowerCase().includes(data.country.toLowerCase()),
-          );
-          if (match) {
-            setUserLocation({
-              lat: match.lat,
-              lng: match.lng,
-              city: match.city,
-              country: match.country,
-            });
-            return;
-          }
-        }
-      } catch {}
-    }
-
-    detectUserLocation();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const selectedDcRef = useRef<Datacenter | null>(null);
 
   const measurePing = useCallback(
-    async (dc: Datacenter) => {
+    async (dc: Datacenter, overrideLocation?: UserLocation) => {
       setIsPinging(true);
       try {
         const controller = new AbortController();
@@ -282,8 +225,9 @@ export function LatencyGlobe() {
         clearTimeout(timeoutId);
         const measuredBase = Math.round(performance.now() - start);
 
-        const originLat = userLocation?.lat ?? 6.9271;
-        const originLng = userLocation?.lng ?? 79.8612;
+        const loc = overrideLocation ?? userLocation;
+        const originLat = loc?.lat ?? 6.9271;
+        const originLng = loc?.lng ?? 79.8612;
         const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
 
         if (distKm < 60) {
@@ -293,8 +237,9 @@ export function LatencyGlobe() {
           setPing(Math.max(10, calculated));
         }
       } catch {
-        const originLat = userLocation?.lat ?? 6.9271;
-        const originLng = userLocation?.lng ?? 79.8612;
+        const loc = overrideLocation ?? userLocation;
+        const originLat = loc?.lat ?? 6.9271;
+        const originLng = loc?.lng ?? 79.8612;
         const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
         const fallbackCalculated = Math.round(distKm * 0.016 + 10);
         setPing(Math.max(10, fallbackCalculated));
@@ -307,11 +252,83 @@ export function LatencyGlobe() {
 
   const selectDatacenter = useCallback(
     (dc: Datacenter) => {
+      selectedDcRef.current = dc;
       setSelectedDc(dc);
       measurePing(dc);
     },
     [measurePing],
   );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function detectUserLocation() {
+      try {
+        const pingRes = await fetch("/api/ping", { cache: "no-store" });
+        const pingData = await pingRes.json();
+        if (isMounted && pingData?.geo?.lat && pingData?.geo?.lng) {
+          const loc: UserLocation = {
+            lat: Number(pingData.geo.lat),
+            lng: Number(pingData.geo.lng),
+            city: pingData.geo.city,
+            country: pingData.geo.country,
+          };
+          setUserLocation(loc);
+          if (selectedDcRef.current) {
+            measurePing(selectedDcRef.current, loc);
+          }
+          return;
+        }
+      } catch {}
+
+      try {
+        const res = await fetch("https://freeipapi.com/api/json");
+        const data = await res.json();
+        if (isMounted && data?.latitude && data?.longitude) {
+          const loc: UserLocation = {
+            lat: Number(data.latitude),
+            lng: Number(data.longitude),
+            city: data.cityName || data.city,
+            country: data.countryName || data.country,
+          };
+          setUserLocation(loc);
+          if (selectedDcRef.current) {
+            measurePing(selectedDcRef.current, loc);
+          }
+          return;
+        }
+      } catch {}
+
+      try {
+        const res = await fetch("https://api.country.is/");
+        const data = await res.json();
+        if (isMounted && data?.country) {
+          const match = DATACENTERS.find((d) =>
+            d.country.toLowerCase().includes(data.country.toLowerCase()),
+          );
+          if (match) {
+            const loc: UserLocation = {
+              lat: match.lat,
+              lng: match.lng,
+              city: match.city,
+              country: match.country,
+            };
+            setUserLocation(loc);
+            if (selectedDcRef.current) {
+              measurePing(selectedDcRef.current, loc);
+            }
+            return;
+          }
+        }
+      } catch {}
+    }
+
+    detectUserLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [measurePing]);
 
   useEffect(() => {
     const container = mountRef.current;

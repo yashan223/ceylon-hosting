@@ -276,16 +276,9 @@ export type ReminderCheckResult = {
   }[];
 };
 
-/**
- * Scans all servers and sends reminder emails to customers on Day 25 (5 days or less remaining)
- * for the current monthly cycle.
- */
 export async function checkAndSendServerReminders(): Promise<ReminderCheckResult> {
   const collection = await getSubscriptionCollection();
   const now = new Date();
-  const nowMs = now.getTime();
-
-  // Find all subscriptions that are not cancelled
   const subscriptions = await collection.find({ status: { $ne: "cancelled" } }).toArray();
 
   let remindersSent = 0;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, Search, UserCheck, UserX, Shield } from "lucide-react";
+import { Trash2, Search, UserCheck, UserX } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";

@@ -7,6 +7,7 @@ import {
   useMemo,
   useCallback,
   useId,
+  Fragment,
 } from "react";
 import { ChevronDown, Search, X, Check } from "lucide-react";
 import {
@@ -31,7 +32,6 @@ export function CountrySelect({
   defaultValue = "",
   onChange,
   name,
-  required = false,
   disabled = false,
   placeholder = "Select your country",
   id,
@@ -132,9 +132,9 @@ export function CountrySelect({
 
   useEffect(() => {
     if (focusedIndex >= 0 && listRef.current) {
-      const activeEl = listRef.current.children[
-        focusedIndex
-      ] as HTMLElement | undefined;
+      const activeEl = listRef.current.querySelector<HTMLElement>(
+        `[data-index="${focusedIndex}"]`
+      );
       activeEl?.scrollIntoView({ block: "nearest" });
     }
   }, [focusedIndex]);
@@ -180,7 +180,7 @@ export function CountrySelect({
   return (
     <div
       ref={containerRef}
-      className="country-select-container"
+      className={`country-select-container ${isOpen ? "is-open" : ""}`}
       onKeyDown={handleKeyDown}
     >
       <button
@@ -212,22 +212,9 @@ export function CountrySelect({
       </button>
 
       <input
-        type="text"
-        tabIndex={-1}
-        aria-hidden="true"
+        type="hidden"
         name={name}
-        required={required}
         value={selectedValue}
-        onChange={() => {}}
-        style={{
-          position: "absolute",
-          opacity: 0,
-          pointerEvents: "none",
-          width: 0,
-          height: 0,
-          bottom: 0,
-          left: 0,
-        }}
       />
 
       {isOpen && (
@@ -251,6 +238,7 @@ export function CountrySelect({
                 className="country-select-clear-btn"
                 onClick={() => {
                   setQuery("");
+                  setFocusedIndex(0);
                   searchInputRef.current?.focus();
                 }}
                 aria-label="Clear search"
@@ -276,31 +264,52 @@ export function CountrySelect({
                   selectedCountry?.name.toLowerCase() ===
                   country.name.toLowerCase();
                 const isFocused = index === focusedIndex;
+                const isPopularHeader = showSections && index === 0;
+                const isAllHeader =
+                  showSections && index === POPULAR_COUNTRIES.length;
 
                 return (
-                  <li
-                    key={country.code + country.name}
-                    role="option"
-                    aria-selected={isSelected}
-                    className={`country-select-option ${
-                      isSelected ? "is-selected" : ""
-                    } ${isFocused ? "is-focused" : ""}`}
-                    onClick={() => handleSelect(country)}
-                    onMouseEnter={() => setFocusedIndex(index)}
-                  >
-                    <span className="country-select-flag">
-                      {country.flag}
-                    </span>
-                    <span className="country-select-option-name">
-                      {country.name}
-                    </span>
-                    <span className="country-select-code-badge">
-                      {country.code}
-                    </span>
-                    {isSelected && (
-                      <Check size={14} className="country-select-check" />
+                  <Fragment key={country.code + country.name}>
+                    {isPopularHeader && (
+                      <li
+                        className="country-select-section-header"
+                        role="presentation"
+                      >
+                        Suggested
+                      </li>
                     )}
-                  </li>
+                    {isAllHeader && (
+                      <li
+                        className="country-select-section-header"
+                        role="presentation"
+                      >
+                        All Countries
+                      </li>
+                    )}
+                    <li
+                      role="option"
+                      data-index={index}
+                      aria-selected={isSelected}
+                      className={`country-select-option ${
+                        isSelected ? "is-selected" : ""
+                      } ${isFocused ? "is-focused" : ""}`}
+                      onClick={() => handleSelect(country)}
+                      onMouseEnter={() => setFocusedIndex(index)}
+                    >
+                      <span className="country-select-flag">
+                        {country.flag}
+                      </span>
+                      <span className="country-select-option-name">
+                        {country.name}
+                      </span>
+                      <span className="country-select-code-badge">
+                        {country.code}
+                      </span>
+                      {isSelected && (
+                        <Check size={14} className="country-select-check" />
+                      )}
+                    </li>
+                  </Fragment>
                 );
               })
             )}

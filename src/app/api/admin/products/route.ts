@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
 import { getDatabase } from "@/server/db/mongodb";
+import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type Product, type ProductType } from "@/types/product";
 
 type ProductRecord = Omit<Product, "createdAt" | "updatedAt"> & {
@@ -44,8 +45,6 @@ function productInput(body: Record<string, unknown>) {
       : undefined,
   };
 }
-
-import { recordAuditLog } from "@/server/admin/audit";
 
 export async function POST(request: Request) {
   const admin = await requireAdmin();

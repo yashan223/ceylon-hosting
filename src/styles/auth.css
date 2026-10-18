@@ -510,6 +510,10 @@
   width: 100%;
 }
 
+.country-select-container.is-open {
+  z-index: 50;
+}
+
 .country-select-trigger {
   align-items: center;
   background: #ffffff;

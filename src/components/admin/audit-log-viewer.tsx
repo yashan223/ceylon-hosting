@@ -3,15 +3,12 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
-  ShieldAlert,
   Search,
-  Filter,
   Package,
   User,
   ShoppingCart,
   Terminal,
   Clock,
-  ArrowUpRight,
   Server,
 } from "lucide-react";
 import type { AuditLogEntry, AuditAction } from "@/server/admin/audit";

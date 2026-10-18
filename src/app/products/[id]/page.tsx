@@ -3,7 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Check, MapPin, PackageCheck, Server, Wrench } from "lucide-react";
+import { ArrowLeft, Check, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { isAdminUser } from "@/server/auth/admin";
@@ -12,7 +12,6 @@ import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { absoluteUrl, siteName } from "@/lib/seo";
-import { cn } from "@/lib/utils";
 import { parseProductFeatures } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
