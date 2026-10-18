@@ -365,7 +365,17 @@ export function Storefront({
                   <User size={15} />
                   <span>{isAdmin ? "Admin" : "Dashboard"}</span>
                 </Link>
-                <form action="/api/auth/sign-out" method="post" className="mobile-nav-signout-form">
+                <form
+                  action="/api/auth/sign-out"
+                  method="post"
+                  className="mobile-nav-signout-form"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    await fetch("/api/auth/sign-out", { method: "POST" });
+                    router.push("/");
+                    router.refresh();
+                  }}
+                >
                   <button className="mobile-nav-link mobile-nav-signout-btn" type="submit">
                     <LogOut size={15} />
                     <span>Sign out</span>
@@ -403,7 +413,17 @@ export function Storefront({
             </Button>
           )}
           {currentUser && (
-            <form action="/api/auth/sign-out" method="post" className="desktop-sign-out-form">
+            <form
+              action="/api/auth/sign-out"
+              method="post"
+              className="desktop-sign-out-form"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await fetch("/api/auth/sign-out", { method: "POST" });
+                router.push("/");
+                router.refresh();
+              }}
+            >
               <button className="ui-button ui-button-ghost sign-in-button" type="submit">
                 Sign out
               </button>
