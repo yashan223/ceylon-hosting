@@ -22,9 +22,15 @@ git pull origin master
 echo "📦 Installing dependencies..."
 npm install --prefer-offline --no-audit
 
-# 3. Build Next.js application
-echo "⚙️ Building Next.js application..."
-npm run build
+# 3. Ensure MongoDB database is running
+if command -v docker > /dev/null 2>&1; then
+    echo "🍃 Ensuring MongoDB is running..."
+    docker compose up -d mongodb || true
+fi
+
+# 4. Build Next.js application
+echo "⚙️ Building Next.js application (low-memory optimized)..."
+npm run build:low-mem
 
 # 4. Reload or Start PM2 process
 echo "🔄 Reloading PM2 process (zero downtime)..."
