@@ -198,6 +198,13 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   return R * c;
 }
 
+type SceneControls = {
+  updateArc: (origin: UserLocation | null, destination: Datacenter | null) => void;
+  updateUserMarker: (loc: UserLocation | null) => void;
+  setTargetRotation: (dc: Datacenter | null) => void;
+  updateNodeHighlights: (selectedId: string | null) => void;
+};
+
 export function LatencyGlobe() {
   const mountRef = useRef<HTMLDivElement>(null);
   const calloutRef = useRef<HTMLDivElement>(null);
@@ -210,6 +217,9 @@ export function LatencyGlobe() {
   const [isPinging, setIsPinging] = useState(false);
 
   const selectedDcRef = useRef<Datacenter | null>(null);
+  const currentSelectedDcRef = useRef<Datacenter | null>(null);
+  const currentUserLocationRef = useRef<UserLocation | null>(null);
+  const sceneControlsRef = useRef<SceneControls | null>(null);
 
   const measurePing = useCallback(
     async (dc: Datacenter, overrideLocation?: UserLocation) => {
@@ -334,15 +344,15 @@ export function LatencyGlobe() {
     const container = mountRef.current;
     if (!container) return;
 
-    const width = container.clientWidth || 440;
-    const height = container.clientHeight || 420;
+    let containerW = container.clientWidth || 440;
+    let containerH = container.clientHeight || 420;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(45, containerW / containerH, 0.1, 1000);
     camera.position.z = 200;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    renderer.setSize(containerW, containerH);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
@@ -405,13 +415,9 @@ export function LatencyGlobe() {
       const r = globeRadius + (Math.random() * 0.5 - 0.25);
 
       const sinPhi = Math.sin(phi);
-      const x = r * sinPhi * Math.cos(theta);
-      const y = r * Math.cos(phi);
-      const z = r * sinPhi * Math.sin(theta);
-
-      particlePositions[i * 3] = x;
-      particlePositions[i * 3 + 1] = y;
-      particlePositions[i * 3 + 2] = z;
+      particlePositions[i * 3] = r * sinPhi * Math.cos(theta);
+      particlePositions[i * 3 + 1] = r * Math.cos(phi);
+      particlePositions[i * 3 + 2] = r * sinPhi * Math.sin(theta);
     }
 
     const dotGeo = new THREE.BufferGeometry();
@@ -432,56 +438,69 @@ export function LatencyGlobe() {
     let userRingGeo: THREE.RingGeometry | null = null;
     let userRingMat: THREE.MeshBasicMaterial | null = null;
 
-    if (userLocation) {
-      const uPos = latLngToVector3(userLocation.lat, userLocation.lng, globeRadius + 1.2);
-      userMarkerGeo = new THREE.SphereGeometry(3.6, 16, 16);
-      userMarkerMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
-      userNodeMesh = new THREE.Mesh(userMarkerGeo, userMarkerMat);
+    const updateUserMarker = (loc: UserLocation | null) => {
+      if (!loc) {
+        if (userNodeMesh) userNodeMesh.visible = false;
+        if (userRingMesh) userRingMesh.visible = false;
+        return;
+      }
+      const uPos = latLngToVector3(loc.lat, loc.lng, globeRadius + 1.2);
+      if (!userNodeMesh) {
+        userMarkerGeo = new THREE.SphereGeometry(3.6, 16, 16);
+        userMarkerMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
+        userNodeMesh = new THREE.Mesh(userMarkerGeo, userMarkerMat);
+        globeGroup.add(userNodeMesh);
+      }
       userNodeMesh.position.copy(uPos);
-      globeGroup.add(userNodeMesh);
+      userNodeMesh.visible = true;
 
-      userRingGeo = new THREE.RingGeometry(4.2, 6.2, 24);
-      userRingMat = new THREE.MeshBasicMaterial({
-        color: 0x38bdf8,
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity: 0.85,
-      });
-      userRingMesh = new THREE.Mesh(userRingGeo, userRingMat);
+      if (!userRingMesh) {
+        userRingGeo = new THREE.RingGeometry(4.2, 6.2, 24);
+        userRingMat = new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.85,
+        });
+        userRingMesh = new THREE.Mesh(userRingGeo, userRingMat);
+        globeGroup.add(userRingMesh);
+      }
       userRingMesh.position.copy(uPos);
       userRingMesh.lookAt(new THREE.Vector3(0, 0, 0));
-      globeGroup.add(userRingMesh);
-    }
+      userRingMesh.visible = true;
+    };
 
     const clickTargets: THREE.Mesh[] = [];
+    const nodeMeshes: {
+      dc: Datacenter;
+      marker: THREE.Mesh;
+      markerMat: THREE.MeshBasicMaterial;
+      ring: THREE.Mesh;
+      ringMat: THREE.MeshBasicMaterial;
+    }[] = [];
 
     DATACENTERS.forEach((dc) => {
       const pos = latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2);
-      const isSelected = selectedDc?.id === dc.id;
 
-      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : 2.8, 16, 16);
-      const markerMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0x10b981 : 0x1e293b,
-      });
+      const markerGeo = new THREE.SphereGeometry(2.8, 16, 16);
+      const markerMat = new THREE.MeshBasicMaterial({ color: 0x1e293b });
       const marker = new THREE.Mesh(markerGeo, markerMat);
       marker.position.copy(pos);
       globeGroup.add(marker);
 
-      const nodeRingGeo = new THREE.RingGeometry(
-        isSelected ? 4.5 : 3.4,
-        isSelected ? 7.2 : 5.0,
-        24,
-      );
+      const nodeRingGeo = new THREE.RingGeometry(3.4, 5.0, 24);
       const nodeRingMat = new THREE.MeshBasicMaterial({
-        color: isSelected ? 0x10b981 : 0x64748b,
+        color: 0x64748b,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: isSelected ? 1.0 : 0.6,
+        opacity: 0.6,
       });
       const nodeRing = new THREE.Mesh(nodeRingGeo, nodeRingMat);
       nodeRing.position.copy(pos);
       nodeRing.lookAt(new THREE.Vector3(0, 0, 0));
       globeGroup.add(nodeRing);
+
+      nodeMeshes.push({ dc, marker, markerMat, ring: nodeRing, ringMat: nodeRingMat });
 
       const hitGeo = new THREE.SphereGeometry(12.0, 10, 10);
       const hitMat = new THREE.MeshBasicMaterial({ visible: false });
@@ -492,18 +511,45 @@ export function LatencyGlobe() {
       clickTargets.push(hitMesh);
     });
 
+    const updateNodeHighlights = (selectedId: string | null) => {
+      nodeMeshes.forEach(({ dc, marker, markerMat, ring, ringMat }) => {
+        const isSelected = selectedId === dc.id;
+        markerMat.color.setHex(isSelected ? 0x10b981 : 0x1e293b);
+        marker.scale.setScalar(isSelected ? 1.4 : 1.0);
+        ringMat.color.setHex(isSelected ? 0x10b981 : 0x64748b);
+        ringMat.opacity = isSelected ? 1.0 : 0.6;
+        ring.scale.setScalar(isSelected ? 1.4 : 1.0);
+      });
+    };
+
     let arcLine: THREE.Line | null = null;
     let tracerMesh: THREE.Mesh | null = null;
     let tracerCurve: THREE.QuadraticBezierCurve3 | null = null;
     let tracerT = 0;
 
-    const effectiveOrigin = userLocation ?? { lat: 6.9271, lng: 79.8612 };
+    const updateArc = (origin: UserLocation | null, destination: Datacenter | null) => {
+      if (arcLine) {
+        globeGroup.remove(arcLine);
+        arcLine.geometry.dispose();
+        (arcLine.material as THREE.Material).dispose();
+        arcLine = null;
+      }
+      if (tracerMesh) {
+        globeGroup.remove(tracerMesh);
+        tracerMesh.geometry.dispose();
+        (tracerMesh.material as THREE.Material).dispose();
+        tracerMesh = null;
+      }
+      tracerCurve = null;
+      tracerT = 0;
 
-    if (selectedDc) {
-      const p1 = latLngToVector3(effectiveOrigin.lat, effectiveOrigin.lng, globeRadius + 1.5);
-      const p2 = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 1.5);
+      if (!destination) return;
 
+      const effOrigin = origin ?? { lat: 6.9271, lng: 79.8612 };
+      const p1 = latLngToVector3(effOrigin.lat, effOrigin.lng, globeRadius + 1.5);
+      const p2 = latLngToVector3(destination.lat, destination.lng, globeRadius + 1.5);
       const distance = p1.distanceTo(p2);
+
       if (distance > 3) {
         const mid = p1.clone().add(p2).multiplyScalar(0.5);
         mid.normalize().multiplyScalar(globeRadius + Math.max(14, distance * 0.32));
@@ -523,16 +569,38 @@ export function LatencyGlobe() {
         const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
         const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
         tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
+        tracerMesh.position.copy(p1);
         globeGroup.add(tracerMesh);
       }
-    }
+    };
 
-    if (selectedDc) {
-      const targetRotY = -((selectedDc.lng + 90) * (Math.PI / 180));
-      const targetRotX = selectedDc.lat * (Math.PI / 180) * 0.35;
-      globeGroup.rotation.y = targetRotY;
-      globeGroup.rotation.x = targetRotX;
-    }
+    let isTargeting = false;
+    let targetRotX = 0;
+    let targetRotY = 0;
+
+    const setTargetRotation = (dc: Datacenter | null) => {
+      if (!dc) {
+        isTargeting = false;
+        return;
+      }
+      targetRotY = -((dc.lng + 90) * (Math.PI / 180));
+      targetRotX = dc.lat * (Math.PI / 180) * 0.35;
+      isTargeting = true;
+      autoRotate = false;
+      velX = 0;
+      velY = 0;
+      if (autoRotateResumeTimeout) {
+        clearTimeout(autoRotateResumeTimeout);
+        autoRotateResumeTimeout = null;
+      }
+    };
+
+    sceneControlsRef.current = {
+      updateArc,
+      updateUserMarker,
+      setTargetRotation,
+      updateNodeHighlights,
+    };
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -542,48 +610,60 @@ export function LatencyGlobe() {
     let startY = 0;
     let prevMouseX = 0;
     let prevMouseY = 0;
+    let velX = 0;
+    let velY = 0;
     let autoRotate = true;
+    let autoRotateResumeTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const onPointerDown = (e: PointerEvent) => {
       isDragging = true;
       autoRotate = false;
+      isTargeting = false;
+      velX = 0;
+      velY = 0;
       startX = e.clientX;
       startY = e.clientY;
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
+      if (autoRotateResumeTimeout) {
+        clearTimeout(autoRotateResumeTimeout);
+        autoRotateResumeTimeout = null;
+      }
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(clickTargets);
-      if (intersects.length > 0) {
-        renderer.domElement.style.cursor = "pointer";
-      } else {
-        renderer.domElement.style.cursor = isDragging ? "grabbing" : "grab";
+      if (!isDragging) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / containerW) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / containerH) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(clickTargets);
+        renderer.domElement.style.cursor = intersects.length > 0 ? "pointer" : "grab";
+        return;
       }
 
-      if (!isDragging) return;
       const deltaX = e.clientX - prevMouseX;
       const deltaY = e.clientY - prevMouseY;
-      globeGroup.rotation.y += deltaX * 0.007;
-      globeGroup.rotation.x += deltaY * 0.007;
+      velX = deltaX * 0.005;
+      velY = deltaY * 0.005;
+      globeGroup.rotation.y += velX;
+      globeGroup.rotation.x = Math.max(-0.6, Math.min(0.6, globeGroup.rotation.x + velY));
       prevMouseX = e.clientX;
       prevMouseY = e.clientY;
     };
 
     const onPointerUp = (e: PointerEvent) => {
+      if (!isDragging) return;
       isDragging = false;
+      renderer.domElement.style.cursor = "grab";
+
       const diffX = Math.abs(e.clientX - startX);
       const diffY = Math.abs(e.clientY - startY);
 
       if (diffX < 6 && diffY < 6) {
         const rect = renderer.domElement.getBoundingClientRect();
-        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        mouse.x = ((e.clientX - rect.left) / containerW) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / containerH) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(clickTargets);
         if (intersects.length > 0) {
@@ -595,9 +675,9 @@ export function LatencyGlobe() {
         }
       }
 
-      setTimeout(() => {
+      autoRotateResumeTimeout = setTimeout(() => {
         autoRotate = true;
-      }, 4000);
+      }, 3200);
     };
 
     const onDocumentPointerDown = (e: PointerEvent) => {
@@ -613,47 +693,48 @@ export function LatencyGlobe() {
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointerdown", onDocumentPointerDown);
 
+    const _calloutPos = new THREE.Vector3();
     const updateCalloutPosition = () => {
-      if (!calloutRef.current || !container || !selectedDc) {
+      const activeDc = currentSelectedDcRef.current;
+      if (!calloutRef.current || !activeDc) {
         if (calloutRef.current) calloutRef.current.style.opacity = "0";
         return;
       }
-      const pos = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 3.0);
-      pos.applyMatrix4(globeGroup.matrixWorld);
+      _calloutPos.copy(latLngToVector3(activeDc.lat, activeDc.lng, globeRadius + 3.0));
+      _calloutPos.applyMatrix4(globeGroup.matrixWorld);
 
-      if (pos.z > -15) {
-        const projected = pos.clone().project(camera);
-        const rect = container.getBoundingClientRect();
-        const screenX = ((projected.x + 1) * rect.width) / 2;
-        const screenY = ((-projected.y + 1) * rect.height) / 2;
-        calloutRef.current.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px - 145%), 0)`;
+      if (_calloutPos.z > -15) {
+        _calloutPos.project(camera);
+        const screenX = ((_calloutPos.x + 1) * containerW) * 0.5;
+        const screenY = ((-_calloutPos.y + 1) * containerH) * 0.5;
+        calloutRef.current.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, -145%)`;
         calloutRef.current.style.opacity = "1";
       } else {
         calloutRef.current.style.opacity = "0";
       }
     };
 
+    const _labelPos = new THREE.Vector3();
+    const _userPos = new THREE.Vector3();
+
     const updateLabels = () => {
-      if (!container) return;
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      const halfW = w / 2;
-      const halfH = h / 2;
+      const halfW = containerW * 0.5;
+      const halfH = containerH * 0.5;
 
       for (let i = 0; i < dcPositions.length; i++) {
         const item = dcPositions[i];
         const el = labelRefs.current[item.dc.id];
         if (!el) continue;
 
-        const worldPos = item.pos.clone().applyMatrix4(globeGroup.matrixWorld);
-        if (worldPos.z > -2) {
-          const projected = worldPos.project(camera);
-          const screenX = projected.x * halfW + halfW;
-          const screenY = -projected.y * halfH + halfH;
-          const depthAlpha = worldPos.z > 8 ? 1 : Math.max(0, (worldPos.z + 2) / 10);
+        _labelPos.copy(item.pos).applyMatrix4(globeGroup.matrixWorld);
+        if (_labelPos.z > -2) {
+          _labelPos.project(camera);
+          const screenX = _labelPos.x * halfW + halfW;
+          const screenY = -_labelPos.y * halfH + halfH;
+          const depthAlpha = _labelPos.z > 8 ? 1 : Math.max(0, (_labelPos.z + 2) / 10);
 
-          el.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px + 9px), 0)`;
-          el.style.opacity = `${depthAlpha}`;
+          el.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, 9px)`;
+          el.style.opacity = depthAlpha.toFixed(2);
           el.style.pointerEvents = depthAlpha > 0.4 ? "auto" : "none";
         } else {
           el.style.opacity = "0";
@@ -661,37 +742,64 @@ export function LatencyGlobe() {
         }
       }
 
-      if (userLocation && userLabelRef.current) {
-        const uPos = latLngToVector3(userLocation.lat, userLocation.lng, globeRadius + 1.2);
-        const worldPos = uPos.applyMatrix4(globeGroup.matrixWorld);
-        if (worldPos.z > -2) {
-          const projected = worldPos.project(camera);
-          const screenX = projected.x * halfW + halfW;
-          const screenY = -projected.y * halfH + halfH;
-          const depthAlpha = worldPos.z > 8 ? 1 : Math.max(0, (worldPos.z + 2) / 10);
+      const curUserLoc = currentUserLocationRef.current;
+      if (curUserLoc && userLabelRef.current) {
+        _userPos.copy(latLngToVector3(curUserLoc.lat, curUserLoc.lng, globeRadius + 1.2));
+        _userPos.applyMatrix4(globeGroup.matrixWorld);
+        if (_userPos.z > -2) {
+          _userPos.project(camera);
+          const screenX = _userPos.x * halfW + halfW;
+          const screenY = -_userPos.y * halfH + halfH;
+          const depthAlpha = _userPos.z > 8 ? 1 : Math.max(0, (_userPos.z + 2) / 10);
 
-          userLabelRef.current.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px + 9px), 0)`;
-          userLabelRef.current.style.opacity = `${depthAlpha}`;
+          userLabelRef.current.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, 9px)`;
+          userLabelRef.current.style.opacity = depthAlpha.toFixed(2);
         } else {
           userLabelRef.current.style.opacity = "0";
         }
       }
     };
 
+    const clock = new THREE.Clock();
     let animId: number;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
+      const delta = Math.min(clock.getDelta(), 0.05);
+
       if (tracerMesh && tracerCurve) {
-        tracerT = (tracerT + 0.018) % 1.0;
+        tracerT = (tracerT + delta * 0.85) % 1.0;
         tracerMesh.position.copy(tracerCurve.getPoint(tracerT));
       }
 
       atmoMesh.lookAt(camera.position);
 
-      if (autoRotate && !isDragging) {
-        globeGroup.rotation.y += 0.002;
+      if (isDragging) {
+      } else if (isTargeting) {
+        let diffY = (targetRotY - globeGroup.rotation.y) % (Math.PI * 2);
+        if (diffY > Math.PI) diffY -= Math.PI * 2;
+        if (diffY < -Math.PI) diffY += Math.PI * 2;
+
+        const step = Math.min(1, delta * 5.0);
+        globeGroup.rotation.y += diffY * step;
+        globeGroup.rotation.x += (targetRotX - globeGroup.rotation.x) * step;
+
+        if (Math.abs(diffY) < 0.001 && Math.abs(targetRotX - globeGroup.rotation.x) < 0.001) {
+          isTargeting = false;
+          autoRotateResumeTimeout = setTimeout(() => {
+            autoRotate = true;
+          }, 3500);
+        }
+      } else if (Math.abs(velX) > 0.0001 || Math.abs(velY) > 0.0001) {
+        globeGroup.rotation.y += velX;
+        globeGroup.rotation.x = Math.max(-0.6, Math.min(0.6, globeGroup.rotation.x + velY));
+        const friction = Math.pow(0.04, delta);
+        velX *= friction;
+        velY *= friction;
+      } else if (autoRotate) {
+        globeGroup.rotation.y += delta * 0.14;
+        globeGroup.rotation.x += (0 - globeGroup.rotation.x) * (delta * 1.2);
       }
 
       updateCalloutPosition();
@@ -703,9 +811,11 @@ export function LatencyGlobe() {
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const newWidth = entry.contentRect.width;
-        const newHeight = entry.contentRect.height;
-        if (newWidth > 0 && newHeight > 0) {
+        const newWidth = Math.round(entry.contentRect.width);
+        const newHeight = Math.round(entry.contentRect.height);
+        if (newWidth > 0 && newHeight > 0 && (newWidth !== containerW || newHeight !== containerH)) {
+          containerW = newWidth;
+          containerH = newHeight;
           camera.aspect = newWidth / newHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(newWidth, newHeight);
@@ -717,6 +827,8 @@ export function LatencyGlobe() {
     return () => {
       cancelAnimationFrame(animId);
       resizeObserver.disconnect();
+      if (autoRotateResumeTimeout) clearTimeout(autoRotateResumeTimeout);
+
       dom.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
@@ -741,13 +853,29 @@ export function LatencyGlobe() {
       if (userMarkerMat) userMarkerMat.dispose();
       if (userRingGeo) userRingGeo.dispose();
       if (userRingMat) userRingMat.dispose();
-      if (arcLine) arcLine.geometry.dispose();
+      if (arcLine) {
+        arcLine.geometry.dispose();
+        (arcLine.material as THREE.Material).dispose();
+      }
       if (tracerMesh) {
         tracerMesh.geometry.dispose();
         (tracerMesh.material as THREE.Material).dispose();
       }
+      sceneControlsRef.current = null;
     };
-  }, [selectedDc, selectDatacenter, userLocation]);
+  }, [selectDatacenter]);
+
+  useEffect(() => {
+    currentSelectedDcRef.current = selectedDc;
+    currentUserLocationRef.current = userLocation;
+
+    if (sceneControlsRef.current) {
+      sceneControlsRef.current.updateArc(userLocation, selectedDc);
+      sceneControlsRef.current.updateUserMarker(userLocation);
+      sceneControlsRef.current.setTargetRotation(selectedDc);
+      sceneControlsRef.current.updateNodeHighlights(selectedDc?.id ?? null);
+    }
+  }, [selectedDc, userLocation]);
 
   return (
     <div className="pure-globe-container">
