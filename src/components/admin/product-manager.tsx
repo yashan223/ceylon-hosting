@@ -9,13 +9,8 @@ import {
   Eye,
   EyeOff,
   Trash2,
-  Tag,
-  Check,
-  Upload,
   FileText,
   Search,
-  ExternalLink,
-  CheckCircle2,
   AlertCircle,
   Camera,
   MapPin,
@@ -63,15 +58,6 @@ const blankDraft: Draft = {
   imageUrl: "",
   images: [],
 };
-
-const ACCENT_OPTIONS = [
-  { value: "slate", label: "Slate", color: "#64748b", bg: "#f1f5f9" },
-  { value: "blue", label: "Blue", color: "#3b82f6", bg: "#eff6ff" },
-  { value: "indigo", label: "Indigo", color: "#6366f1", bg: "#eef2ff" },
-  { value: "cyan", label: "Cyan", color: "#06b6d4", bg: "#ecfeff" },
-  { value: "emerald", label: "Emerald", color: "#10b981", bg: "#ecfdf5" },
-  { value: "violet", label: "Violet", color: "#8b5cf6", bg: "#f5f3ff" },
-];
 
 export function ProductManager({
   products: initialProducts,
@@ -700,24 +686,6 @@ export function ProductManager({
                 />
               </label>
 
-              <label>
-                Visual Accent Theme
-                <div className="admin-accent-selector">
-                  {ACCENT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`admin-accent-chip ${draft.accent === opt.value ? "selected" : ""}`}
-                      onClick={() => changeDraft("accent", opt.value)}
-                      title={opt.label}
-                    >
-                      <span className="admin-accent-dot" style={{ backgroundColor: opt.color }} />
-                      <span>{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </label>
-
               <div className="product-editor-toggle-row">
                 <div className="admin-toggle-card">
                   <label className="admin-checkbox-label">
@@ -750,43 +718,106 @@ export function ProductManager({
                 </div>
               </div>
 
-              <label className="product-editor-file-label">
-                Product Image
-                <div className="admin-file-upload-box">
+              <div className="product-editor-wide">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+                    Product Image
+                  </label>
+                </div>
+
+                <div className="admin-file-upload-box admin-gallery-box">
                   {draft.imageUrl && !imageFile && (
-                    <div className="admin-current-preview">
-                      <Image
-                        src={draft.imageUrl}
-                        alt="Current preview"
-                        width={60}
-                        height={40}
-                        style={{ objectFit: "cover", borderRadius: 4 }}
-                      />
-                      <span>Current image set</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        style={{
-                          marginLeft: "auto",
-                          color: "#ef4444",
-                          height: 28,
-                          padding: "0 8px",
-                        }}
-                        onClick={() => changeDraft("imageUrl", "")}
-                      >
-                        <Trash2 size={13} style={{ marginRight: 4 }} /> Remove
-                      </Button>
+                    <div>
+                      <small style={{ display: "block", marginBottom: 8, color: "#64748b" }}>
+                        Saved image:
+                      </small>
+                      <div className="admin-gallery-items-grid">
+                        <div className="admin-gallery-item-card">
+                          <img src={draft.imageUrl} alt="Current preview" />
+                          <span className="admin-gallery-item-badge">Cover</span>
+                          <button
+                            type="button"
+                            className="admin-gallery-item-remove"
+                            title="Remove image"
+                            onClick={() => changeDraft("imageUrl", "")}
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  <input
-                    accept="image/*"
-                    type="file"
-                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-                  />
-                  <small>Upload PNG, JPG, or WebP (up to 10MB)</small>
+
+                  {imageFile && (
+                    <div style={{ marginTop: draft.imageUrl ? 8 : 0 }}>
+                      <small style={{ display: "block", marginBottom: 8, color: "#0284c7", fontWeight: 600 }}>
+                        Pending upload (1 file):
+                      </small>
+                      <div className="admin-gallery-items-grid">
+                        <div className="admin-gallery-item-card" style={{ borderColor: "#38bdf8" }}>
+                          <img src={URL.createObjectURL(imageFile)} alt={imageFile.name} />
+                          <span className="admin-gallery-item-badge" style={{ background: "#0284c7" }}>
+                            New
+                          </span>
+                          <button
+                            type="button"
+                            className="admin-gallery-item-remove"
+                            title="Remove image"
+                            onClick={() => setImageFile(null)}
+                          >
+                            <Trash2 size={11} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <label style={{ display: "block", cursor: "pointer", marginTop: 4 }}>
+                    <input
+                      accept="image/*"
+                      type="file"
+                      style={{ display: "none" }}
+                      onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                    />
+                    <div
+                      style={{
+                        border: "1.5px dashed #94a3b8",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        textAlign: "center",
+                        background: "#f8fafc",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "#2563eb",
+                          fontWeight: 600,
+                          fontSize: 13,
+                        }}
+                      >
+                        <Camera size={15} />
+                        <span>
+                          {imageFile || draft.imageUrl ? "Change Product Image" : "Add Product Image"}
+                        </span>
+                      </div>
+                      <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
+                        Upload PNG, JPG, or WebP (up to 10MB)
+                      </small>
+                    </div>
+                  </label>
                 </div>
-              </label>
+              </div>
 
               <div className="product-editor-wide">
                 <div
@@ -933,7 +964,7 @@ export function ProductManager({
                 </div>
               </div>
 
-              <label className="product-editor-file-label">
+              <label className="product-editor-wide">
                 Downloadable File (Digital Delivery)
                 <div className="admin-file-upload-box">
                   {editingProduct?.downloadName && !downloadFile && (
