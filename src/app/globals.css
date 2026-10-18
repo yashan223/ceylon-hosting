@@ -1791,7 +1791,6 @@ footer[id] {
     inset 0 1px rgba(255, 255, 255, 0.95);
   transform: translateY(-2px);
 }
-/* Pure Borderless 3D Datacenter Globe */
 .pure-globe-container {
   display: flex;
   flex-direction: column;
@@ -1812,7 +1811,6 @@ footer[id] {
   outline: none;
 }
 
-/* 3D Datacenter Node Callout */
 .globe-node-callout {
   align-items: center;
   background: rgba(23, 23, 23, 0.92);
@@ -1880,7 +1878,6 @@ footer[id] {
   width: 6px;
 }
 
-/* 3D Datacenter Location Badge Under Dot */
 .globe-node-label {
   align-items: center;
   background: rgba(255, 255, 255, 0.96);

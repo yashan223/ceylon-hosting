@@ -206,12 +206,10 @@ export function LatencyGlobe() {
   const [ping, setPing] = useState<number | null>(null);
   const [isPinging, setIsPinging] = useState(false);
 
-  // Pre-warm /api/ping endpoint on mount
   useEffect(() => {
     fetch("/api/ping", { cache: "no-store" }).catch(() => {});
   }, []);
 
-  // Measure live roundtrip ping from user's browser/ISP to Colombo, then calculate datacenter latency
   const measurePing = useCallback(async (dc: Datacenter) => {
     setIsPinging(true);
     try {
@@ -246,7 +244,6 @@ export function LatencyGlobe() {
     [measurePing],
   );
 
-  // 3D Three.js Interactive Datacenter Globe
   useEffect(() => {
     const container = mountRef.current;
     if (!container) return;
@@ -267,13 +264,11 @@ export function LatencyGlobe() {
     const globeGroup = new THREE.Group();
     scene.add(globeGroup);
 
-    // Pre-calculate datacenter 3D positions for fast per-frame projection
     const dcPositions = DATACENTERS.map((dc) => ({
       dc,
       pos: latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2),
     }));
 
-    // 0. Atmospheric Rim Glow behind the globe
     const atmoGeo = new THREE.RingGeometry(globeRadius + 0.4, globeRadius + 3.8, 64);
     const atmoMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
@@ -284,7 +279,6 @@ export function LatencyGlobe() {
     const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
     scene.add(atmoMesh);
 
-    // 1. Semi-translucent inner core to give globe 3D substance and hide the back side
     const coreGeo = new THREE.SphereGeometry(globeRadius - 0.5, 36, 36);
     const coreMat = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -294,7 +288,6 @@ export function LatencyGlobe() {
     const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     globeGroup.add(coreMesh);
 
-    // 2. High-contrast wireframe lines
     const sphereGeometry = new THREE.SphereGeometry(globeRadius, 28, 28);
     const wireframeMaterial = new THREE.MeshBasicMaterial({
       color: 0x52525b,
@@ -305,7 +298,6 @@ export function LatencyGlobe() {
     const sphereMesh = new THREE.Mesh(sphereGeometry, wireframeMaterial);
     globeGroup.add(sphereMesh);
 
-    // 3. Highlighted Equator Ring
     const equatorGeo = new THREE.RingGeometry(globeRadius - 0.3, globeRadius + 0.3, 64);
     const equatorMat = new THREE.MeshBasicMaterial({
       color: 0x10b981,
@@ -317,7 +309,6 @@ export function LatencyGlobe() {
     equator.rotation.x = Math.PI / 2;
     globeGroup.add(equator);
 
-    // 4. Continents surface particles with bold definition
     const particleCount = 1400;
     const particlePositions = new Float32Array(particleCount * 3);
     for (let i = 0; i < particleCount; i++) {
@@ -347,7 +338,6 @@ export function LatencyGlobe() {
     const dotsMesh = new THREE.Points(dotGeo, dotMat);
     globeGroup.add(dotsMesh);
 
-    // 5. Clickable Datacenter Hit Meshes
     const clickTargets: THREE.Mesh[] = [];
 
     DATACENTERS.forEach((dc) => {
@@ -355,7 +345,6 @@ export function LatencyGlobe() {
       const isSelected = selectedDc?.id === dc.id;
       const isHostOrigin = Boolean(dc.isHost && selectedDc && !selectedDc.isHost);
 
-      // Visible point mesh
       const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : isHostOrigin ? 3.4 : 2.8, 16, 16);
       const markerMat = new THREE.MeshBasicMaterial({
         color: isSelected ? 0x10b981 : isHostOrigin ? 0x059669 : 0x1e293b,
@@ -364,7 +353,6 @@ export function LatencyGlobe() {
       marker.position.copy(pos);
       globeGroup.add(marker);
 
-      // Ring around datacenter node
       const nodeRingGeo = new THREE.RingGeometry(
         isSelected ? 4.5 : isHostOrigin ? 4.0 : 3.4,
         isSelected ? 7.2 : isHostOrigin ? 6.2 : 5.0,
@@ -381,7 +369,6 @@ export function LatencyGlobe() {
       nodeRing.lookAt(new THREE.Vector3(0, 0, 0));
       globeGroup.add(nodeRing);
 
-      // Invisible hit mesh for effortless clicking
       const hitGeo = new THREE.SphereGeometry(12.0, 10, 10);
       const hitMat = new THREE.MeshBasicMaterial({ visible: false });
       const hitMesh = new THREE.Mesh(hitGeo, hitMat);
@@ -391,7 +378,6 @@ export function LatencyGlobe() {
       clickTargets.push(hitMesh);
     });
 
-    // 7. Curved Arc from Colombo to Selected Datacenter
     let arcLine: THREE.Line | null = null;
     let tracerMesh: THREE.Mesh | null = null;
     let tracerCurve: THREE.QuadraticBezierCurve3 | null = null;
@@ -417,14 +403,12 @@ export function LatencyGlobe() {
       arcLine = new THREE.Line(arcGeo, arcMat);
       globeGroup.add(arcLine);
 
-      // Animated glowing tracer particle along the arc
       const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
       const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
       tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
       globeGroup.add(tracerMesh);
     }
 
-    // Orient globe towards selected datacenter if one is selected
     if (selectedDc) {
       const targetRotY = -((selectedDc.lng + 90) * (Math.PI / 180));
       const targetRotX = (selectedDc.lat * (Math.PI / 180)) * 0.35;
@@ -432,7 +416,6 @@ export function LatencyGlobe() {
       globeGroup.rotation.x = targetRotX;
     }
 
-    // Raycaster for clicking datacenter points directly
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
@@ -457,7 +440,6 @@ export function LatencyGlobe() {
       mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
-      // Check hover
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(clickTargets);
       if (intersects.length > 0) {
@@ -480,7 +462,6 @@ export function LatencyGlobe() {
       const diffX = Math.abs(e.clientX - startX);
       const diffY = Math.abs(e.clientY - startY);
 
-      // If clicked without dragging (distance < 6px)
       if (diffX < 6 && diffY < 6) {
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -491,7 +472,6 @@ export function LatencyGlobe() {
           const hitDc = intersects[0].object.userData.datacenter as Datacenter;
           selectDatacenter(hitDc);
         } else {
-          // Clicked empty space on globe canvas -> unselect
           setSelectedDc(null);
           setPing(null);
         }
@@ -502,7 +482,6 @@ export function LatencyGlobe() {
       }, 4000);
     };
 
-    // Click outside globe container -> unselect
     const onDocumentPointerDown = (e: PointerEvent) => {
       if (container && !container.contains(e.target as Node)) {
         setSelectedDc(null);
@@ -516,7 +495,6 @@ export function LatencyGlobe() {
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointerdown", onDocumentPointerDown);
 
-    // Callout 3D-to-2D tracking
     const updateCalloutPosition = () => {
       if (!calloutRef.current || !container || !selectedDc) {
         if (calloutRef.current) calloutRef.current.style.opacity = "0";
@@ -525,7 +503,6 @@ export function LatencyGlobe() {
       const pos = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 3.0);
       pos.applyMatrix4(globeGroup.matrixWorld);
 
-      // Show callout only if facing front towards camera
       if (pos.z > -15) {
         const projected = pos.clone().project(camera);
         const rect = container.getBoundingClientRect();
@@ -538,7 +515,6 @@ export function LatencyGlobe() {
       }
     };
 
-    // Update 3D-to-2D positions for all small datacenter location labels under dots
     const updateLabels = () => {
       if (!container) return;
       const w = container.clientWidth;
@@ -552,7 +528,6 @@ export function LatencyGlobe() {
         if (!el) continue;
 
         const worldPos = item.pos.clone().applyMatrix4(globeGroup.matrixWorld);
-        // Show with crisp visibility on front-facing hemisphere
         if (worldPos.z > -2) {
           const projected = worldPos.project(camera);
           const screenX = projected.x * halfW + halfW;
@@ -569,19 +544,16 @@ export function LatencyGlobe() {
       }
     };
 
-    // Animation Loop
     let animId: number;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
 
-      // Animate packet along arc
       if (tracerMesh && tracerCurve) {
         tracerT = (tracerT + 0.018) % 1.0;
         tracerMesh.position.copy(tracerCurve.getPoint(tracerT));
       }
 
-      // Keep atmospheric glow billboarded towards camera
       atmoMesh.lookAt(camera.position);
 
       if (autoRotate && !isDragging) {
@@ -595,7 +567,6 @@ export function LatencyGlobe() {
     };
     animate();
 
-    // Resize observer
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = entry.contentRect.width;
@@ -642,9 +613,7 @@ export function LatencyGlobe() {
 
   return (
     <div className="pure-globe-container">
-      {/* 3D Interactive World Globe Canvas */}
       <div className="pure-globe-canvas" ref={mountRef}>
-        {/* Datacenter Badges Under Nodes */}
         {DATACENTERS.map((dc) => (
           <div
             key={dc.id}
@@ -663,7 +632,6 @@ export function LatencyGlobe() {
           </div>
         ))}
 
-        {/* Floating Callout Anchored Directly to the Clicked Datacenter */}
         <div
           ref={calloutRef}
           className="globe-node-callout"
