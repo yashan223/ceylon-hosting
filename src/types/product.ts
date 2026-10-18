@@ -16,7 +16,7 @@ export type Product = {
   name: string;
   description: string;
   price: number;
-  meta: string;
+  meta?: string;
   tag?: string;
   accent: string;
   imageUrl?: string;

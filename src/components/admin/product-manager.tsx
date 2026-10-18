@@ -117,7 +117,7 @@ export function ProductManager({
       name: product.name,
       type: product.type,
       description: product.description,
-      meta: product.meta,
+      meta: product.meta ?? "",
       price: String(product.price),
       accent: product.accent || "slate",
       active: product.active !== false,
@@ -356,7 +356,7 @@ export function ProductManager({
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesName = product.name.toLowerCase().includes(query);
-        const matchesMeta = product.meta.toLowerCase().includes(query);
+        const matchesMeta = product.meta ? product.meta.toLowerCase().includes(query) : false;
         const matchesTag = product.tag?.toLowerCase().includes(query);
         const matchesDesc = product.description.toLowerCase().includes(query);
         if (!matchesName && !matchesMeta && !matchesTag && !matchesDesc) return false;
@@ -506,7 +506,7 @@ export function ProductManager({
                     </div>
 
                     <div className="admin-card-specs-row">
-                      <span className="admin-card-meta">{product.meta}</span>
+                      {product.meta && <span className="admin-card-meta">{product.meta}</span>}
                       {product.downloadName && (
                         <span
                           className="admin-card-download-indicator"
@@ -623,15 +623,6 @@ export function ProductManager({
                   step="1"
                   value={draft.price}
                   onChange={(event) => changeDraft("price", event.target.value)}
-                  required
-                />
-              </label>
-
-              <label>
-                Specification / Meta *
-                <Input
-                  value={draft.meta}
-                  onChange={(event) => changeDraft("meta", event.target.value)}
                   required
                 />
               </label>

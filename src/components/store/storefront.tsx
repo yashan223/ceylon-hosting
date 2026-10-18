@@ -225,7 +225,7 @@ export function Storefront({
       const matchesCategory = category === "all" || product.type === category;
       const matchesQuery =
         !normalizedQuery ||
-        `${product.name} ${product.description} ${product.meta}`
+        `${product.name} ${product.description} ${product.meta ?? ""}`
           .toLowerCase()
           .includes(normalizedQuery);
       return matchesCategory && matchesQuery;

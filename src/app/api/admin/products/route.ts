@@ -17,7 +17,6 @@ function productInput(body: Record<string, unknown>) {
   if (
     !name ||
     !description ||
-    !meta ||
     !productTypes.includes(type as ProductType) ||
     !Number.isInteger(price) ||
     price < 0
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
   const input = productInput((await request.json()) as Record<string, unknown>);
   if (!input)
     return NextResponse.json(
-      { error: "Enter a valid name, type, description, specification, and price." },
+      { error: "Enter a valid name, type, description, and price." },
       { status: 400 },
     );
   const now = new Date();

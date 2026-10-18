@@ -28,13 +28,16 @@ export async function PATCH(request: Request, context: RouteContext) {
   );
   if (Object.keys(update).length === 0)
     return NextResponse.json({ error: "No valid product fields to update." }, { status: 400 });
-  for (const field of ["name", "description", "meta"] as const) {
+  for (const field of ["name", "description"] as const) {
     if (field in update) {
       const value = update[field];
       if (typeof value !== "string" || !value.trim())
         return NextResponse.json({ error: "Enter valid product details." }, { status: 400 });
       update[field] = value.trim();
     }
+  }
+  if ("meta" in update) {
+    update.meta = typeof update.meta === "string" ? update.meta.trim() : "";
   }
   if (update.type !== undefined && !productTypes.includes(update.type as ProductType))
     return NextResponse.json({ error: "Enter a valid product type." }, { status: 400 });

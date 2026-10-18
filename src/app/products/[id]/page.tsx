@@ -157,9 +157,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   </li>
                 ))}
               </ul>
-            ) : (
+            ) : product.meta ? (
               <strong>{product.meta}</strong>
-            )}
+            ) : null}
           </div>
           <div className="product-detail-buy">
             <div>
