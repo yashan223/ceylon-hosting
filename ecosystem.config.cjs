@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "ceylonhosting",
-      cwd: "/home/admin/xoxod33p-store",
+      cwd: __dirname,
       script: "npm",
       args: "start",
       env: {

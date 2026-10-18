@@ -1,9 +1,3 @@
-/**
- * Centralized environment configuration helper.
- * Retrieves application URLs dynamically from environment variables
- * without hardcoding or vendor-specific (e.g. Vercel) fallbacks.
- */
-
 export function getAppUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (envUrl) {
@@ -13,6 +7,9 @@ export function getAppUrl(): string {
       return envUrl.replace(/\/+$/, "");
     }
   }
+  if (process.env.NODE_ENV === "production") {
+    return "https://ceylonhosting.tech";
+  }
   return "http://localhost:4000";
 }
 
@@ -20,11 +17,6 @@ export function getCorsAllowedOrigin(): string {
   return process.env.CORS_ALLOWED_ORIGIN || getAppUrl();
 }
 
-/**
- * Returns the public origin/base URL for incoming requests,
- * taking into account reverse proxy headers (X-Forwarded-Host / X-Forwarded-Proto).
- * Prevents redirects to internal localhost/127.0.0.1 addresses.
- */
 export function getRequestBaseUrl(request?: Request): string {
   if (request) {
     const forwardedHost = request.headers.get("x-forwarded-host");

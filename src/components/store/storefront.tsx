@@ -771,7 +771,7 @@ export function Storefront({
           </div>
           <div>
             <span>Contact</span>
-            <a href="mailto:support@ceylonhosting.com">support@ceylonhosting.com</a>
+            <a href="mailto:support@ceylonhosting.tech">support@ceylonhosting.tech</a>
             <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">
               WhatsApp: +94 77 123 4567
             </a>
