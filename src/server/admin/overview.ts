@@ -18,6 +18,8 @@ export async function getAdminOverview() {
     totalOrders,
     totalUsers,
     activeSubscriptions,
+    totalFiles,
+    storageAgg,
   ] = await Promise.all([
     products.countDocuments(),
     products.countDocuments({ active: true }),
@@ -27,7 +29,16 @@ export async function getAdminOverview() {
     orders.countDocuments(),
     users.countDocuments(),
     subscriptions.countDocuments({ status: { $ne: "cancelled" } }),
+    products.countDocuments({ downloadKey: { $exists: true, $ne: "" } }),
+    products
+      .aggregate<{ totalBytes: number }>([
+        { $match: { downloadKey: { $exists: true, $ne: "" } } },
+        { $group: { _id: null, totalBytes: { $sum: "$downloadSize" } } },
+      ])
+      .toArray(),
   ]);
+
+  const totalStorageBytes = storageAgg[0]?.totalBytes ?? 0;
 
   return {
     totalProducts,
@@ -38,6 +49,8 @@ export async function getAdminOverview() {
     totalOrders,
     totalUsers,
     activeSubscriptions,
+    totalFiles,
+    totalStorageBytes,
   };
 }
 

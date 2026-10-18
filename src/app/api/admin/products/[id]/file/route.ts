@@ -111,3 +111,32 @@ export async function DELETE(_request: Request, context: RouteContext) {
 
   return NextResponse.json({ removed: true });
 }
+
+export async function PATCH(request: Request, context: RouteContext) {
+  await requireAdmin();
+  const { id } = await context.params;
+  const body = (await request.json()) as { downloadName?: string };
+  const downloadName = typeof body.downloadName === "string" ? body.downloadName.trim() : "";
+  if (!downloadName) {
+    return NextResponse.json({ error: "Provide a valid file name." }, { status: 400 });
+  }
+
+  const database = await getDatabase();
+  const product = await database.collection("products").findOne({ id });
+  if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
+  if (!product.downloadKey) {
+    return NextResponse.json({ error: "This product does not have a file attached." }, { status: 400 });
+  }
+
+  await database.collection("products").updateOne(
+    { id },
+    {
+      $set: {
+        downloadName,
+        updatedAt: new Date(),
+      },
+    },
+  );
+
+  return NextResponse.json({ updated: true, downloadName });
+}

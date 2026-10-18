@@ -8,9 +8,11 @@ import {
   Users,
   ArrowUpRight,
   RefreshCw,
+  HardDrive,
 } from "lucide-react";
 import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
+import { formatBytes } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <main className="admin-page">
-      <section className="admin-stat-grid admin-stat-grid-7">
+      <section className="admin-stat-grid admin-stat-grid-8">
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
             <Users size={18} />
@@ -82,6 +84,15 @@ export default async function AdminDashboardPage() {
           <span>Subscriptions</span>
           <strong>{overview.activeSubscriptions}</strong>
           <small>Active server plans</small>
+        </Link>
+        <Link href="/admin/files" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <HardDrive size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
+          <span>Digital files</span>
+          <strong>{overview.totalFiles}</strong>
+          <small>{formatBytes(overview.totalStorageBytes) || "0 MB"} storage used</small>
         </Link>
       </section>
 
