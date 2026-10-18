@@ -1927,18 +1927,6 @@ footer[id] {
   color: #ffffff;
 }
 
-.globe-node-label.host {
-  background: #059669;
-  border-color: #059669;
-  box-shadow: 0 2px 10px rgba(5, 150, 105, 0.35);
-  color: #ffffff;
-  font-weight: 800;
-}
-.globe-node-label.host:hover {
-  background: #047857;
-  border-color: #047857;
-}
-
 .globe-node-label.selected {
   background: #171717;
   border-color: #171717;

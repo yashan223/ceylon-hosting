@@ -347,57 +347,34 @@ export function LatencyGlobe() {
     const dotsMesh = new THREE.Points(dotGeo, dotMat);
     globeGroup.add(dotsMesh);
 
-    // 5. Colombo Host Node (prominent emerald beacon)
-    const hostPos = latLngToVector3(HOST_LAT, HOST_LNG, globeRadius + 1.2);
-    const hostNodeGeo = new THREE.SphereGeometry(3.8, 16, 16);
-    const hostNodeMat = new THREE.MeshBasicMaterial({ color: 0x059669 });
-    const hostNode = new THREE.Mesh(hostNodeGeo, hostNodeMat);
-    hostNode.position.copy(hostPos);
-    globeGroup.add(hostNode);
-
-    // Inner host core
-    const hostInnerGeo = new THREE.SphereGeometry(2.0, 12, 12);
-    const hostInnerMat = new THREE.MeshBasicMaterial({ color: 0x171717 });
-    const hostInner = new THREE.Mesh(hostInnerGeo, hostInnerMat);
-    hostInner.position.copy(hostPos);
-    globeGroup.add(hostInner);
-
-    // Host pulse ring
-    const ringGeo = new THREE.RingGeometry(4.2, 7.2, 28);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x10b981,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.95,
-    });
-    const hostRing = new THREE.Mesh(ringGeo, ringMat);
-    hostRing.position.copy(hostPos);
-    hostRing.lookAt(new THREE.Vector3(0, 0, 0));
-    globeGroup.add(hostRing);
-
-    // 6. Clickable Datacenter Hit Meshes
+    // 5. Clickable Datacenter Hit Meshes
     const clickTargets: THREE.Mesh[] = [];
 
     DATACENTERS.forEach((dc) => {
       const pos = latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2);
       const isSelected = selectedDc?.id === dc.id;
+      const isHostOrigin = Boolean(dc.isHost && selectedDc && !selectedDc.isHost);
 
       // Visible point mesh
-      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : 2.8, 16, 16);
+      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : isHostOrigin ? 3.4 : 2.8, 16, 16);
       const markerMat = new THREE.MeshBasicMaterial({
-        color: dc.isHost ? 0x059669 : isSelected ? 0x10b981 : 0x1e293b,
+        color: isSelected ? 0x10b981 : isHostOrigin ? 0x059669 : 0x1e293b,
       });
       const marker = new THREE.Mesh(markerGeo, markerMat);
       marker.position.copy(pos);
       globeGroup.add(marker);
 
-      // Beacon ring around datacenter node
-      const nodeRingGeo = new THREE.RingGeometry(isSelected ? 4.5 : 3.4, isSelected ? 7.2 : 5.0, 24);
+      // Ring around datacenter node
+      const nodeRingGeo = new THREE.RingGeometry(
+        isSelected ? 4.5 : isHostOrigin ? 4.0 : 3.4,
+        isSelected ? 7.2 : isHostOrigin ? 6.2 : 5.0,
+        24,
+      );
       const nodeRingMat = new THREE.MeshBasicMaterial({
-        color: dc.isHost ? 0x10b981 : isSelected ? 0x10b981 : 0x64748b,
+        color: isSelected ? 0x10b981 : isHostOrigin ? 0x10b981 : 0x64748b,
         side: THREE.DoubleSide,
         transparent: true,
-        opacity: isSelected ? 1.0 : 0.7,
+        opacity: isSelected ? 1.0 : isHostOrigin ? 0.9 : 0.6,
       });
       const nodeRing = new THREE.Mesh(nodeRingGeo, nodeRingMat);
       nodeRing.position.copy(pos);
@@ -594,20 +571,9 @@ export function LatencyGlobe() {
 
     // Animation Loop
     let animId: number;
-    let ringScale = 1;
-    let ringGrowing = true;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
-
-      if (ringGrowing) {
-        ringScale += 0.012;
-        if (ringScale >= 1.6) ringGrowing = false;
-      } else {
-        ringScale -= 0.012;
-        if (ringScale <= 1.0) ringGrowing = true;
-      }
-      hostRing.scale.set(ringScale, ringScale, 1);
 
       // Animate packet along arc
       if (tracerMesh && tracerCurve) {
@@ -666,12 +632,6 @@ export function LatencyGlobe() {
       equatorMat.dispose();
       dotGeo.dispose();
       dotMat.dispose();
-      hostNodeGeo.dispose();
-      hostNodeMat.dispose();
-      hostInnerGeo.dispose();
-      hostInnerMat.dispose();
-      ringGeo.dispose();
-      ringMat.dispose();
       if (arcLine) arcLine.geometry.dispose();
       if (tracerMesh) {
         tracerMesh.geometry.dispose();
@@ -691,7 +651,7 @@ export function LatencyGlobe() {
             ref={(el) => {
               labelRefs.current[dc.id] = el;
             }}
-            className={`globe-node-label ${selectedDc?.id === dc.id ? "selected" : ""} ${dc.isHost ? "host" : ""}`}
+            className={`globe-node-label ${selectedDc?.id === dc.id ? "selected" : ""}`}
             style={{ opacity: 0, transform: "translate3d(-9999px, -9999px, 0)" }}
             onClick={(e) => {
               e.stopPropagation();
