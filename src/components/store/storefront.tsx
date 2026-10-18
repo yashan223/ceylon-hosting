@@ -9,6 +9,7 @@ import {
   Check,
   LogIn,
   LogOut,
+  MapPin,
   Menu,
   PackageCheck,
   Search,
@@ -225,7 +226,7 @@ export function Storefront({
       const matchesCategory = category === "all" || product.type === category;
       const matchesQuery =
         !normalizedQuery ||
-        `${product.name} ${product.description} ${product.meta ?? ""}`
+        `${product.name} ${product.description} ${product.location ?? ""} ${product.meta ?? ""}`
           .toLowerCase()
           .includes(normalizedQuery);
       return matchesCategory && matchesQuery;
@@ -599,6 +600,12 @@ export function Storefront({
                   <div className="product-info">
                     <div>
                       <h3>{product.name}</h3>
+                      {product.type === "server" && product.location && (
+                        <div className="product-location-badge">
+                          <MapPin size={11} />
+                          <span>{product.location}</span>
+                        </div>
+                      )}
                       <p>{product.description}</p>
                       {product.type === "server" && features.length > 0 && (
                         <ul className="product-feature-points" aria-label="Server features">

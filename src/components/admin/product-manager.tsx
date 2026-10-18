@@ -18,11 +18,13 @@ import {
   CheckCircle2,
   AlertCircle,
   Camera,
+  MapPin,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { SERVER_LOCATIONS } from "@/lib/datacenters";
 import type { Product, ProductType } from "@/types/product";
 
 type ProductManagerProps = {
@@ -36,6 +38,7 @@ type Draft = {
   name: string;
   type: ProductType;
   description: string;
+  location?: string;
   meta: string;
   price: string;
   accent: string;
@@ -50,6 +53,7 @@ const blankDraft: Draft = {
   name: "",
   type: "server",
   description: "",
+  location: "",
   meta: "",
   price: "",
   accent: "slate",
@@ -89,6 +93,7 @@ export function ProductManager({
   const [searchQuery, setSearchQuery] = useState("");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCustomLocation, setIsCustomLocation] = useState(false);
 
   function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -102,6 +107,7 @@ export function ProductManager({
     setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
+    setIsCustomLocation(false);
     setIsEditorOpen(true);
   }
 
@@ -113,10 +119,13 @@ export function ProductManager({
         : product.imageUrl
           ? [product.imageUrl]
           : [];
+    const hasStandardLoc = SERVER_LOCATIONS.some((loc) => loc.label === (product.location ?? ""));
+    setIsCustomLocation(Boolean(product.location && !hasStandardLoc));
     setDraft({
       name: product.name,
       type: product.type,
       description: product.description,
+      location: product.location ?? "",
       meta: product.meta ?? "",
       price: String(product.price),
       accent: product.accent || "slate",
@@ -143,6 +152,7 @@ export function ProductManager({
     setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
+    setIsCustomLocation(false);
     setIsSaving(false);
   }
 
@@ -156,7 +166,7 @@ export function ProductManager({
         name: draft.name.trim(),
         type: draft.type,
         description: draft.description.trim(),
-        meta: draft.meta.trim(),
+        meta: (draft.meta ?? "").trim(),
         price: Number(draft.price),
         accent: draft.accent,
         active: draft.active,
@@ -164,6 +174,9 @@ export function ProductManager({
         tag: draft.tag.trim(),
         images: galleryUrls,
       };
+      if (draft.type === "server") {
+        payload.location = (draft.location ?? "").trim();
+      }
       if (editingProduct && !imageFile && draft.imageUrl !== undefined) {
         payload.imageUrl = draft.imageUrl;
       }
@@ -359,7 +372,8 @@ export function ProductManager({
         const matchesMeta = product.meta ? product.meta.toLowerCase().includes(query) : false;
         const matchesTag = product.tag?.toLowerCase().includes(query);
         const matchesDesc = product.description.toLowerCase().includes(query);
-        if (!matchesName && !matchesMeta && !matchesTag && !matchesDesc) return false;
+        const matchesLoc = product.location?.toLowerCase().includes(query);
+        if (!matchesName && !matchesMeta && !matchesTag && !matchesDesc && !matchesLoc) return false;
       }
       return true;
     });
@@ -506,6 +520,11 @@ export function ProductManager({
                     </div>
 
                     <div className="admin-card-specs-row">
+                      {product.type === "server" && product.location && (
+                        <span className="admin-card-location">
+                          <MapPin size={11} /> {product.location}
+                        </span>
+                      )}
                       {product.meta && <span className="admin-card-meta">{product.meta}</span>}
                       {product.downloadName && (
                         <span
@@ -614,6 +633,52 @@ export function ProductManager({
                   <option value="service">Remote Service</option>
                 </select>
               </label>
+
+              {draft.type === "server" && (
+                <label>
+                  Server Location *
+                  <select
+                    value={
+                      isCustomLocation
+                        ? "custom"
+                        : SERVER_LOCATIONS.some((loc) => loc.label === (draft.location ?? ""))
+                          ? draft.location
+                          : draft.location
+                            ? "custom"
+                            : ""
+                    }
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      if (val === "custom") {
+                        setIsCustomLocation(true);
+                      } else {
+                        setIsCustomLocation(false);
+                        changeDraft("location", val);
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Select server location...</option>
+                    {SERVER_LOCATIONS.map((loc) => (
+                      <option key={loc.id} value={loc.label}>
+                        {loc.flag} {loc.label}
+                      </option>
+                    ))}
+                    <option value="custom">Other / Custom location...</option>
+                  </select>
+                  {(isCustomLocation ||
+                    (draft.location &&
+                      !SERVER_LOCATIONS.some((loc) => loc.label === draft.location))) && (
+                    <Input
+                      style={{ marginTop: 8 }}
+                      placeholder="Enter custom location (e.g. Dallas, USA)"
+                      value={draft.location ?? ""}
+                      onChange={(event) => changeDraft("location", event.target.value)}
+                      required
+                    />
+                  )}
+                </label>
+              )}
 
               <label>
                 Price (Rs.) *

@@ -27,6 +27,8 @@ function productInput(body: Record<string, unknown>) {
     name,
     description,
     meta,
+    location:
+      typeof body.location === "string" && body.location.trim() ? body.location.trim() : undefined,
     price,
     accent: typeof body.accent === "string" && body.accent.trim() ? body.accent.trim() : "slate",
     active: body.active !== false,

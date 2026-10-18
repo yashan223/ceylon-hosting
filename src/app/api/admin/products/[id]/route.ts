@@ -14,6 +14,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     "name",
     "description",
     "meta",
+    "location",
     "price",
     "type",
     "accent",
@@ -38,6 +39,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   if ("meta" in update) {
     update.meta = typeof update.meta === "string" ? update.meta.trim() : "";
+  }
+  if ("location" in update) {
+    update.location = typeof update.location === "string" ? update.location.trim() : "";
   }
   if (update.type !== undefined && !productTypes.includes(update.type as ProductType))
     return NextResponse.json({ error: "Enter a valid product type." }, { status: 400 });

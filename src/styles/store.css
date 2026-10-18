@@ -534,6 +534,16 @@
   margin: 0 0 6px;
 }
 
+.product-location-badge {
+  align-items: center;
+  color: #16a34a;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
 .product-info p {
   color: var(--muted-foreground);
   font-size: 12px;

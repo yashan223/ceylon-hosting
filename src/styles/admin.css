@@ -913,6 +913,19 @@
   gap: 8px;
 }
 
+.admin-card-location {
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 4px;
+  color: #166534;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 600;
+  gap: 4px;
+  padding: 1px 6px;
+}
+
 .admin-card-meta {
   color: var(--muted-foreground);
   font-family: var(--font-dm-mono), monospace;

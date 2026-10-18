@@ -356,6 +356,25 @@
   margin: 18px 0;
 }
 
+.product-detail-location {
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #166534;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  width: fit-content;
+}
+
+.product-detail-location strong {
+  font-weight: 700;
+}
+
 .product-detail-copy > p {
   color: var(--muted-foreground);
   font-size: 16px;
