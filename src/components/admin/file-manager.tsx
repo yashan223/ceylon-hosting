@@ -370,12 +370,6 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
                 ? "No products found in the catalog."
                 : "No files match your current search or filter."}
             </p>
-            {stats.withFilesCount === 0 && (
-              <Button size="sm" type="button" onClick={() => openAttach()}>
-                <Plus size={14} style={{ marginRight: 4 }} />
-                Upload first digital file
-              </Button>
-            )}
           </div>
         ) : (
           <div className="admin-table-wrap">
