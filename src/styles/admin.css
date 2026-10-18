@@ -1132,6 +1132,96 @@
   padding: 4px 8px;
 }
 
+.admin-attached-file-card,
+.admin-pending-file-card {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding: 10px 14px;
+}
+
+.admin-pending-file-card {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.admin-attached-file-info {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+}
+
+.admin-attached-file-icon {
+  color: #0284c7;
+  flex-shrink: 0;
+}
+
+.admin-pending-file-icon {
+  color: #16a34a;
+  flex-shrink: 0;
+}
+
+.admin-attached-file-info strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-attached-file-info small {
+  color: var(--muted-foreground);
+  display: block;
+  font-size: 11px;
+}
+
+.admin-attached-file-actions {
+  align-items: center;
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.admin-file-action-btn {
+  align-items: center;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 5px;
+  padding: 6px 10px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.admin-file-action-btn.test {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #0369a1;
+}
+
+.admin-file-action-btn.test:hover {
+  background: #e0f2fe;
+}
+
+.admin-file-action-btn.danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.admin-file-action-btn.danger:hover {
+  background: #fee2e2;
+}
+
 .product-editor-status-banner {
   align-items: center;
   background: #fef2f2;

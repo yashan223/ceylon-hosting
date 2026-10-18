@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Camera,
   MapPin,
+  Download,
+  UploadCloud,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -21,6 +23,13 @@ import { Input } from "@/components/ui/input";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { SERVER_LOCATIONS } from "@/lib/datacenters";
 import type { Product, ProductType } from "@/types/product";
+
+function formatBytes(bytes?: number): string {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 type ProductManagerProps = {
   products: Product[];
@@ -79,6 +88,7 @@ export function ProductManager({
   const [searchQuery, setSearchQuery] = useState("");
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [isCustomLocation, setIsCustomLocation] = useState(false);
 
   function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
@@ -195,6 +205,9 @@ export function ProductManager({
       let downloadName = editingProduct
         ? editingProduct.downloadName
         : result.product?.downloadName;
+      let downloadSize = editingProduct
+        ? editingProduct.downloadSize
+        : result.product?.downloadSize;
       let finalImages = [...galleryUrls];
 
       if (imageFile) {
@@ -246,9 +259,10 @@ export function ProductManager({
           method: "POST",
           body: fileForm,
         });
-        const fileResult = (await fileResponse.json()) as { fileName?: string; error?: string };
+        const fileResult = (await fileResponse.json()) as { fileName?: string; size?: number; error?: string };
         if (fileResponse.ok && fileResult.fileName) {
           downloadName = fileResult.fileName;
+          downloadSize = fileResult.size;
         } else if (!fileResponse.ok) {
           setStatus(fileResult.error ?? "Product saved, but file attachment failed.");
           setIsSaving(false);
@@ -266,6 +280,7 @@ export function ProductManager({
                   imageUrl,
                   images: finalImages,
                   downloadName,
+                  downloadSize,
                   updatedAt: new Date().toISOString(),
                 }
               : item,
@@ -279,6 +294,7 @@ export function ProductManager({
             imageUrl,
             images: finalImages,
             downloadName,
+            downloadSize,
           },
           ...current,
         ]);
@@ -289,6 +305,48 @@ export function ProductManager({
       setStatus("A network error occurred while saving the item.");
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function removeAttachedFile() {
+    if (!editingProduct) return;
+    setIsDeletingFile(true);
+    setStatus("");
+    try {
+      const response = await fetch(`/api/admin/products/${editingProduct.id}/file`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setEditingProduct((prev) =>
+          prev
+            ? {
+                ...prev,
+                downloadKey: undefined,
+                downloadName: undefined,
+                downloadSize: undefined,
+              }
+            : null,
+        );
+        setProducts((current) =>
+          current.map((item) =>
+            item.id === editingProduct.id
+              ? {
+                  ...item,
+                  downloadKey: undefined,
+                  downloadName: undefined,
+                  downloadSize: undefined,
+                }
+              : item,
+          ),
+        );
+      } else {
+        const data = (await response.json()) as { error?: string };
+        setStatus(data.error ?? "Failed to delete attached file.");
+      }
+    } catch {
+      setStatus("Network error while removing attached file.");
+    } finally {
+      setIsDeletingFile(false);
     }
   }
 
@@ -518,6 +576,7 @@ export function ProductManager({
                           title="Downloadable file attached"
                         >
                           <FileText size={11} /> {product.downloadName}
+                          {product.downloadSize ? ` (${formatBytes(product.downloadSize)})` : ""}
                         </span>
                       )}
                     </div>
@@ -967,22 +1026,126 @@ export function ProductManager({
                 </div>
               </div>
 
-              <label className="product-editor-wide">
-                Downloadable File (Digital Delivery)
+              <div className="product-editor-wide">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+                    Downloadable File (Digital Delivery)
+                  </label>
+                  <span className="admin-gallery-pill">
+                    <FileText size={12} /> Max 500 MB
+                  </span>
+                </div>
+
                 <div className="admin-file-upload-box">
                   {editingProduct?.downloadName && !downloadFile && (
-                    <div className="admin-current-file">
-                      <FileText size={16} />
-                      <span>{editingProduct.downloadName}</span>
+                    <div className="admin-attached-file-card">
+                      <div className="admin-attached-file-info">
+                        <FileText size={18} className="admin-attached-file-icon" />
+                        <div>
+                          <strong>{editingProduct.downloadName}</strong>
+                          <small>
+                            {editingProduct.downloadSize
+                              ? formatBytes(editingProduct.downloadSize)
+                              : "Stored securely on server"}
+                          </small>
+                        </div>
+                      </div>
+                      <div className="admin-attached-file-actions">
+                        <a
+                          href={`/api/admin/products/${editingProduct.id}/file`}
+                          className="admin-file-action-btn test"
+                          download={editingProduct.downloadName}
+                          title="Test download file"
+                        >
+                          <Download size={12} />
+                          <span>Test Download</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="admin-file-action-btn danger"
+                          onClick={() => void removeAttachedFile()}
+                          disabled={isDeletingFile}
+                          title="Remove file from storage"
+                        >
+                          <Trash2 size={12} />
+                          <span>{isDeletingFile ? "Removing..." : "Remove"}</span>
+                        </button>
+                      </div>
                     </div>
                   )}
-                  <input
-                    type="file"
-                    onChange={(event) => setDownloadFile(event.target.files?.[0] ?? null)}
-                  />
-                  <small>For mods/configs/tools (ZIP, RAR, 7Z up to 500MB)</small>
+
+                  {downloadFile && (
+                    <div className="admin-pending-file-card">
+                      <div className="admin-attached-file-info">
+                        <UploadCloud size={18} className="admin-pending-file-icon" />
+                        <div>
+                          <strong>{downloadFile.name}</strong>
+                          <small>{formatBytes(downloadFile.size)} (Pending upload on save)</small>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="admin-file-action-btn danger"
+                        onClick={() => setDownloadFile(null)}
+                        title="Cancel selected file"
+                      >
+                        <X size={12} />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  )}
+
+                  <label style={{ display: "block", cursor: "pointer", marginTop: 6 }}>
+                    <input
+                      type="file"
+                      accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        setDownloadFile(event.target.files?.[0] ?? null);
+                        event.target.value = "";
+                      }}
+                    />
+                    <div
+                      style={{
+                        border: "1.5px dashed #94a3b8",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        textAlign: "center",
+                        background: "#f8fafc",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "#2563eb",
+                          fontWeight: 600,
+                          fontSize: 13,
+                        }}
+                      >
+                        <UploadCloud size={15} />
+                        <span>
+                          {downloadFile || editingProduct?.downloadName
+                            ? "Replace Downloadable File"
+                            : "Upload Digital File (ZIP, RAR, 7Z, CFG up to 500MB)"}
+                        </span>
+                      </div>
+                      <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
+                        Digital deliveries are securely encrypted & accessible to verified buyers only.
+                      </small>
+                    </div>
+                  </label>
                 </div>
-              </label>
+              </div>
 
               <label className="product-editor-wide">
                 Description *

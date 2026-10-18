@@ -46,6 +46,7 @@ export async function uploadProductFile(productId: string, file: File) {
     key: relative(root, filePath).replace(/\\/g, "/"),
     fileName: safeFileName(file.name),
     contentType: file.type || "application/octet-stream",
+    size: file.size,
   };
 }
 

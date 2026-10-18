@@ -29,6 +29,7 @@ export type Product = {
   available?: boolean;
   downloadKey?: string;
   downloadName?: string;
+  downloadSize?: number;
   createdAt?: string;
   updatedAt?: string;
 };

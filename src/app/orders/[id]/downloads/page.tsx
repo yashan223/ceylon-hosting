@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { getActiveProductsByIds } from "@/server/catalog/products";
+import { getProductsByIds } from "@/server/catalog/products";
 import { requireUser } from "@/server/auth/session";
 import { getOrderForUser } from "@/server/orders/orders";
 import { StorePageHeader } from "@/components/store/store-page-header";
+import { formatBytes } from "@/lib/utils";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -11,11 +12,12 @@ export default async function OrderDownloadsPage({ params }: PageProps) {
   const user = await requireUser(`/orders/${encodeURIComponent(id)}/downloads`);
   const order = await getOrderForUser(id, user.id);
   if (!order) notFound();
-  const products = await getActiveProductsByIds(order.items.map((item) => item.productId));
+  const products = await getProductsByIds(order.items.map((item) => item.productId));
   const productsById = new Map(products.map((product) => [product.id, product]));
-  const downloadableItems = order.items.filter(
-    (item) => productsById.get(item.productId)?.type === "mod",
-  );
+  const downloadableItems = order.items.filter((item) => {
+    const prod = productsById.get(item.productId);
+    return Boolean(prod?.downloadKey || prod?.type === "mod");
+  });
 
   return (
     <main className="downloads-page">
@@ -42,7 +44,11 @@ export default async function OrderDownloadsPage({ params }: PageProps) {
               <div className="download-item" key={item.productId}>
                 <div>
                   <strong>{item.name}</strong>
-                  <span>{product?.meta ?? "Purchased product"}</span>
+                  <span>
+                    {product?.downloadName
+                      ? `File: ${product.downloadName}${product.downloadSize ? ` (${formatBytes(product.downloadSize)})` : ""}`
+                      : (product?.meta ?? "Purchased product")}
+                  </span>
                 </div>
                 {product?.downloadKey ? (
                   <a

@@ -239,9 +239,18 @@ export async function canDownloadProduct(orderId: string, userId: string, produc
     id: orderId,
     userId,
     paymentStatus: "paid",
-    items: { $elemMatch: { productId, type: "mod" } },
+    items: { $elemMatch: { productId } },
   });
   return Boolean(order);
+}
+
+export async function getPaidOrderForProduct(userId: string, productId: string) {
+  const { orders } = await collections();
+  return orders.findOne({
+    userId,
+    paymentStatus: "paid",
+    items: { $elemMatch: { productId } },
+  });
 }
 
 export async function listOrders() {

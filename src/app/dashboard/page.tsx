@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Clock3,
+  Download,
   LayoutDashboard,
   LifeBuoy,
   MessageCircle,
@@ -11,6 +12,8 @@ import {
 import { requireUser } from "@/server/auth/session";
 import { listOrdersForUser } from "@/server/orders/orders";
 import { listSubscriptionsForUser, syncExistingPaidServers } from "@/server/subscriptions/servers";
+import { getProductsByIds } from "@/server/catalog/products";
+import { formatBytes } from "@/lib/utils";
 import { ServerSubscriptionsCard } from "@/components/dashboard/server-subscriptions-card";
 
 export const dynamic = "force-dynamic";
@@ -23,13 +26,25 @@ export default async function DashboardPage() {
     listSubscriptionsForUser(user.id),
   ]);
 
+  const purchasedItemIds = Array.from(
+    new Set(orders.flatMap((order) => order.items.map((item) => item.productId))),
+  );
+  const products = await getProductsByIds(purchasedItemIds);
+  const productsById = new Map(products.map((p) => [p.id, p]));
+
   const openOrders = orders.filter(
     (order) => !["completed", "cancelled"].includes(order.status),
   ).length;
   const paidOrders = orders.filter((order) => order.paymentStatus === "paid").length;
   const chats = orders.filter((order) => order.latestMessage).length;
   const purchasedItems = orders.flatMap((order) =>
-    order.items.map((item) => ({ ...item, orderId: order.id, orderStatus: order.status })),
+    order.items.map((item) => ({
+      ...item,
+      orderId: order.id,
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+      product: productsById.get(item.productId),
+    })),
   );
 
   return (
@@ -124,25 +139,57 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="dashboard-items">
-              {purchasedItems.map((item) => (
-                <article className="dashboard-item" key={`${item.orderId}-${item.productId}`}>
-                  <div>
-                    <span className="profile-order-id">
-                      {item.type.toUpperCase()} / {item.orderId}
-                    </span>
-                    <h3>{item.name}</h3>
-                    <p>
-                      {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
-                    </p>
-                  </div>
-                  <div className="dashboard-item-side">
-                    <span className="order-status">{item.orderStatus.replace("_", " ")}</span>
-                    <Link className="profile-order-link" href={`/orders/${item.orderId}`}>
-                      View order
-                    </Link>
-                  </div>
-                </article>
-              ))}
+              {purchasedItems.map((item) => {
+                const isPaid = item.paymentStatus === "paid";
+                const hasDownload = Boolean(item.product?.downloadKey || item.type === "mod");
+                return (
+                  <article className="dashboard-item" key={`${item.orderId}-${item.productId}`}>
+                    <div>
+                      <span className="profile-order-id">
+                        {item.type.toUpperCase()} / {item.orderId}
+                      </span>
+                      <h3>{item.name}</h3>
+                      <p>
+                        {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
+                        {item.product?.downloadName && (
+                          <span className="dashboard-item-filename">
+                            {" "}• {item.product.downloadName}
+                            {item.product.downloadSize
+                              ? ` (${formatBytes(item.product.downloadSize)})`
+                              : ""}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="dashboard-item-side">
+                      <span className="order-status">{item.orderStatus.replace("_", " ")}</span>
+                      {hasDownload && (
+                        isPaid && item.product?.downloadKey ? (
+                          <a
+                            className="dashboard-download-btn"
+                            href={`/api/downloads/${item.productId}`}
+                            download={item.product.downloadName}
+                          >
+                            <Download size={12} />
+                            Download
+                          </a>
+                        ) : !isPaid ? (
+                          <span className="dashboard-file-badge pending">
+                            Pay to unlock
+                          </span>
+                        ) : (
+                          <span className="dashboard-file-badge info">
+                            Preparing file
+                          </span>
+                        )
+                      )}
+                      <Link className="profile-order-link" href={`/orders/${item.orderId}`}>
+                        View order
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </section>
