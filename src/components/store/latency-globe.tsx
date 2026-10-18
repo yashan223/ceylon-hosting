@@ -1,0 +1,729 @@
+"use client";
+
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import * as THREE from "three";
+
+export interface Datacenter {
+  id: string;
+  name: string;
+  city: string;
+  country: string;
+  flag: string;
+  lat: number;
+  lng: number;
+  pingUrl: string;
+  fallbackPing: number;
+  isHost?: boolean;
+}
+
+export const DATACENTERS: Datacenter[] = [
+  {
+    id: "lk-colombo",
+    name: "Colombo",
+    city: "Colombo",
+    country: "Sri Lanka",
+    flag: "🇱🇰",
+    lat: 6.9271,
+    lng: 79.8612,
+    pingUrl: "/api/ping",
+    fallbackPing: 8,
+    isHost: true,
+  },
+  {
+    id: "in-mumbai",
+    name: "Mumbai",
+    city: "Mumbai",
+    country: "India",
+    flag: "🇮🇳",
+    lat: 19.076,
+    lng: 72.8777,
+    pingUrl: "/api/ping",
+    fallbackPing: 32,
+  },
+  {
+    id: "in-chennai",
+    name: "Chennai",
+    city: "Chennai",
+    country: "India",
+    flag: "🇮🇳",
+    lat: 13.0827,
+    lng: 80.2707,
+    pingUrl: "/api/ping",
+    fallbackPing: 22,
+  },
+  {
+    id: "sg-singapore",
+    name: "Singapore",
+    city: "Singapore",
+    country: "Singapore",
+    flag: "🇸🇬",
+    lat: 1.3521,
+    lng: 103.8198,
+    pingUrl: "/api/ping",
+    fallbackPing: 44,
+  },
+  {
+    id: "hk-hongkong",
+    name: "Hong Kong",
+    city: "Hong Kong",
+    country: "Hong Kong",
+    flag: "🇭🇰",
+    lat: 22.3193,
+    lng: 114.1694,
+    pingUrl: "/api/ping",
+    fallbackPing: 54,
+  },
+  {
+    id: "ae-dubai",
+    name: "Dubai",
+    city: "Dubai",
+    country: "UAE",
+    flag: "🇦🇪",
+    lat: 25.2048,
+    lng: 55.2708,
+    pingUrl: "/api/ping",
+    fallbackPing: 58,
+  },
+  {
+    id: "jp-tokyo",
+    name: "Tokyo",
+    city: "Tokyo",
+    country: "Japan",
+    flag: "🇯🇵",
+    lat: 35.6762,
+    lng: 139.6503,
+    pingUrl: "/api/ping",
+    fallbackPing: 94,
+  },
+  {
+    id: "kr-seoul",
+    name: "Seoul",
+    city: "Seoul",
+    country: "South Korea",
+    flag: "🇰🇷",
+    lat: 37.5665,
+    lng: 126.978,
+    pingUrl: "/api/ping",
+    fallbackPing: 86,
+  },
+  {
+    id: "de-frankfurt",
+    name: "Frankfurt",
+    city: "Frankfurt",
+    country: "Germany",
+    flag: "🇩🇪",
+    lat: 50.1109,
+    lng: 8.6821,
+    pingUrl: "/api/ping",
+    fallbackPing: 118,
+  },
+  {
+    id: "gb-london",
+    name: "London",
+    city: "London",
+    country: "United Kingdom",
+    flag: "🇬🇧",
+    lat: 51.5074,
+    lng: -0.1278,
+    pingUrl: "/api/ping",
+    fallbackPing: 126,
+  },
+  {
+    id: "us-virginia",
+    name: "Virginia",
+    city: "Virginia",
+    country: "USA",
+    flag: "🇺🇸",
+    lat: 39.0438,
+    lng: -77.4874,
+    pingUrl: "/api/ping",
+    fallbackPing: 215,
+  },
+  {
+    id: "us-california",
+    name: "California",
+    city: "California",
+    country: "USA",
+    flag: "🇺🇸",
+    lat: 37.3382,
+    lng: -121.8863,
+    pingUrl: "/api/ping",
+    fallbackPing: 238,
+  },
+  {
+    id: "au-sydney",
+    name: "Sydney",
+    city: "Sydney",
+    country: "Australia",
+    flag: "🇦🇺",
+    lat: -33.8688,
+    lng: 151.2093,
+    pingUrl: "/api/ping",
+    fallbackPing: 112,
+  },
+  {
+    id: "za-johannesburg",
+    name: "Johannesburg",
+    city: "Johannesburg",
+    country: "South Africa",
+    flag: "🇿🇦",
+    lat: -26.2041,
+    lng: 28.0473,
+    pingUrl: "/api/ping",
+    fallbackPing: 168,
+  },
+  {
+    id: "br-saopaulo",
+    name: "São Paulo",
+    city: "São Paulo",
+    country: "Brazil",
+    flag: "🇧🇷",
+    lat: -23.5505,
+    lng: -46.6333,
+    pingUrl: "/api/ping",
+    fallbackPing: 265,
+  },
+];
+
+const HOST_LAT = 6.9271;
+const HOST_LNG = 79.8612;
+
+function latLngToVector3(lat: number, lng: number, radius: number): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lng + 180) * (Math.PI / 180);
+  return new THREE.Vector3(
+    -(radius * Math.sin(phi) * Math.cos(theta)),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+export function LatencyGlobe() {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const calloutRef = useRef<HTMLDivElement>(null);
+  const labelRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [selectedDc, setSelectedDc] = useState<Datacenter | null>(null);
+  const [ping, setPing] = useState<number | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
+
+  // Pre-warm /api/ping endpoint on mount
+  useEffect(() => {
+    fetch("/api/ping", { cache: "no-store" }).catch(() => {});
+  }, []);
+
+  // Measure live roundtrip ping from user's browser/ISP to Colombo, then calculate datacenter latency
+  const measurePing = useCallback(async (dc: Datacenter) => {
+    setIsPinging(true);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const start = performance.now();
+      await fetch("/api/ping", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const measuredHost = Math.round(performance.now() - start);
+
+      if (dc.isHost) {
+        setPing(Math.max(4, measuredHost));
+      } else {
+        const regionalPing = Math.round(measuredHost + (dc.fallbackPing - 8));
+        setPing(Math.max(14, regionalPing));
+      }
+    } catch {
+      setPing(dc.fallbackPing);
+    } finally {
+      setIsPinging(false);
+    }
+  }, []);
+
+  const selectDatacenter = useCallback(
+    (dc: Datacenter) => {
+      setSelectedDc(dc);
+      measurePing(dc);
+    },
+    [measurePing],
+  );
+
+  // 3D Three.js Interactive Datacenter Globe
+  useEffect(() => {
+    const container = mountRef.current;
+    if (!container) return;
+
+    const width = container.clientWidth || 440;
+    const height = container.clientHeight || 420;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    camera.position.z = 200;
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const globeRadius = 76;
+    const globeGroup = new THREE.Group();
+    scene.add(globeGroup);
+
+    // Pre-calculate datacenter 3D positions for fast per-frame projection
+    const dcPositions = DATACENTERS.map((dc) => ({
+      dc,
+      pos: latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2),
+    }));
+
+    // 0. Atmospheric Rim Glow behind the globe
+    const atmoGeo = new THREE.RingGeometry(globeRadius + 0.4, globeRadius + 3.8, 64);
+    const atmoMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.24,
+    });
+    const atmoMesh = new THREE.Mesh(atmoGeo, atmoMat);
+    scene.add(atmoMesh);
+
+    // 1. Semi-translucent inner core to give globe 3D substance and hide the back side
+    const coreGeo = new THREE.SphereGeometry(globeRadius - 0.5, 36, 36);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0.85,
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    globeGroup.add(coreMesh);
+
+    // 2. High-contrast wireframe lines
+    const sphereGeometry = new THREE.SphereGeometry(globeRadius, 28, 28);
+    const wireframeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x52525b,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.28,
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeometry, wireframeMaterial);
+    globeGroup.add(sphereMesh);
+
+    // 3. Highlighted Equator Ring
+    const equatorGeo = new THREE.RingGeometry(globeRadius - 0.3, globeRadius + 0.3, 64);
+    const equatorMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.45,
+    });
+    const equator = new THREE.Mesh(equatorGeo, equatorMat);
+    equator.rotation.x = Math.PI / 2;
+    globeGroup.add(equator);
+
+    // 4. Continents surface particles with bold definition
+    const particleCount = 1400;
+    const particlePositions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const r = globeRadius + (Math.random() * 0.5 - 0.25);
+
+      const sinPhi = Math.sin(phi);
+      const x = r * sinPhi * Math.cos(theta);
+      const y = r * Math.cos(phi);
+      const z = r * sinPhi * Math.sin(theta);
+
+      particlePositions[i * 3] = x;
+      particlePositions[i * 3 + 1] = y;
+      particlePositions[i * 3 + 2] = z;
+    }
+    const dotGeo = new THREE.BufferGeometry();
+    dotGeo.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3));
+    const dotMat = new THREE.PointsMaterial({
+      color: 0x334155,
+      size: 2.0,
+      transparent: true,
+      opacity: 0.75,
+    });
+    const dotsMesh = new THREE.Points(dotGeo, dotMat);
+    globeGroup.add(dotsMesh);
+
+    // 5. Colombo Host Node (prominent emerald beacon)
+    const hostPos = latLngToVector3(HOST_LAT, HOST_LNG, globeRadius + 1.2);
+    const hostNodeGeo = new THREE.SphereGeometry(3.8, 16, 16);
+    const hostNodeMat = new THREE.MeshBasicMaterial({ color: 0x059669 });
+    const hostNode = new THREE.Mesh(hostNodeGeo, hostNodeMat);
+    hostNode.position.copy(hostPos);
+    globeGroup.add(hostNode);
+
+    // Inner host core
+    const hostInnerGeo = new THREE.SphereGeometry(2.0, 12, 12);
+    const hostInnerMat = new THREE.MeshBasicMaterial({ color: 0x171717 });
+    const hostInner = new THREE.Mesh(hostInnerGeo, hostInnerMat);
+    hostInner.position.copy(hostPos);
+    globeGroup.add(hostInner);
+
+    // Host pulse ring
+    const ringGeo = new THREE.RingGeometry(4.2, 7.2, 28);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x10b981,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.95,
+    });
+    const hostRing = new THREE.Mesh(ringGeo, ringMat);
+    hostRing.position.copy(hostPos);
+    hostRing.lookAt(new THREE.Vector3(0, 0, 0));
+    globeGroup.add(hostRing);
+
+    // 6. Clickable Datacenter Hit Meshes
+    const clickTargets: THREE.Mesh[] = [];
+
+    DATACENTERS.forEach((dc) => {
+      const pos = latLngToVector3(dc.lat, dc.lng, globeRadius + 1.2);
+      const isSelected = selectedDc?.id === dc.id;
+
+      // Visible point mesh
+      const markerGeo = new THREE.SphereGeometry(isSelected ? 4.0 : 2.8, 16, 16);
+      const markerMat = new THREE.MeshBasicMaterial({
+        color: dc.isHost ? 0x059669 : isSelected ? 0x10b981 : 0x1e293b,
+      });
+      const marker = new THREE.Mesh(markerGeo, markerMat);
+      marker.position.copy(pos);
+      globeGroup.add(marker);
+
+      // Beacon ring around datacenter node
+      const nodeRingGeo = new THREE.RingGeometry(isSelected ? 4.5 : 3.4, isSelected ? 7.2 : 5.0, 24);
+      const nodeRingMat = new THREE.MeshBasicMaterial({
+        color: dc.isHost ? 0x10b981 : isSelected ? 0x10b981 : 0x64748b,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: isSelected ? 1.0 : 0.7,
+      });
+      const nodeRing = new THREE.Mesh(nodeRingGeo, nodeRingMat);
+      nodeRing.position.copy(pos);
+      nodeRing.lookAt(new THREE.Vector3(0, 0, 0));
+      globeGroup.add(nodeRing);
+
+      // Invisible hit mesh for effortless clicking
+      const hitGeo = new THREE.SphereGeometry(12.0, 10, 10);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.position.copy(pos);
+      hitMesh.userData = { datacenter: dc };
+      globeGroup.add(hitMesh);
+      clickTargets.push(hitMesh);
+    });
+
+    // 7. Curved Arc from Colombo to Selected Datacenter
+    let arcLine: THREE.Line | null = null;
+    let tracerMesh: THREE.Mesh | null = null;
+    let tracerCurve: THREE.QuadraticBezierCurve3 | null = null;
+    let tracerT = 0;
+
+    if (selectedDc && !selectedDc.isHost) {
+      const p1 = latLngToVector3(HOST_LAT, HOST_LNG, globeRadius + 1.5);
+      const p2 = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 1.5);
+
+      const mid = p1.clone().add(p2).multiplyScalar(0.5);
+      const distance = p1.distanceTo(p2);
+      mid.normalize().multiplyScalar(globeRadius + Math.max(14, distance * 0.32));
+
+      const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+      tracerCurve = curve;
+      const points = curve.getPoints(50);
+      const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const arcMat = new THREE.LineBasicMaterial({
+        color: 0x10b981,
+        transparent: true,
+        opacity: 0.95,
+      });
+      arcLine = new THREE.Line(arcGeo, arcMat);
+      globeGroup.add(arcLine);
+
+      // Animated glowing tracer particle along the arc
+      const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
+      const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
+      tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
+      globeGroup.add(tracerMesh);
+    }
+
+    // Orient globe towards selected datacenter if one is selected
+    if (selectedDc) {
+      const targetRotY = -((selectedDc.lng + 90) * (Math.PI / 180));
+      const targetRotX = (selectedDc.lat * (Math.PI / 180)) * 0.35;
+      globeGroup.rotation.y = targetRotY;
+      globeGroup.rotation.x = targetRotX;
+    }
+
+    // Raycaster for clicking datacenter points directly
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let prevMouseX = 0;
+    let prevMouseY = 0;
+    let autoRotate = true;
+
+    const onPointerDown = (e: PointerEvent) => {
+      isDragging = true;
+      autoRotate = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      // Check hover
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(clickTargets);
+      if (intersects.length > 0) {
+        renderer.domElement.style.cursor = "pointer";
+      } else {
+        renderer.domElement.style.cursor = isDragging ? "grabbing" : "grab";
+      }
+
+      if (!isDragging) return;
+      const deltaX = e.clientX - prevMouseX;
+      const deltaY = e.clientY - prevMouseY;
+      globeGroup.rotation.y += deltaX * 0.007;
+      globeGroup.rotation.x += deltaY * 0.007;
+      prevMouseX = e.clientX;
+      prevMouseY = e.clientY;
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      isDragging = false;
+      const diffX = Math.abs(e.clientX - startX);
+      const diffY = Math.abs(e.clientY - startY);
+
+      // If clicked without dragging (distance < 6px)
+      if (diffX < 6 && diffY < 6) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObjects(clickTargets);
+        if (intersects.length > 0) {
+          const hitDc = intersects[0].object.userData.datacenter as Datacenter;
+          selectDatacenter(hitDc);
+        } else {
+          // Clicked empty space on globe canvas -> unselect
+          setSelectedDc(null);
+          setPing(null);
+        }
+      }
+
+      setTimeout(() => {
+        autoRotate = true;
+      }, 4000);
+    };
+
+    // Click outside globe container -> unselect
+    const onDocumentPointerDown = (e: PointerEvent) => {
+      if (container && !container.contains(e.target as Node)) {
+        setSelectedDc(null);
+        setPing(null);
+      }
+    };
+
+    const dom = renderer.domElement;
+    dom.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointerdown", onDocumentPointerDown);
+
+    // Callout 3D-to-2D tracking
+    const updateCalloutPosition = () => {
+      if (!calloutRef.current || !container || !selectedDc) {
+        if (calloutRef.current) calloutRef.current.style.opacity = "0";
+        return;
+      }
+      const pos = latLngToVector3(selectedDc.lat, selectedDc.lng, globeRadius + 3.0);
+      pos.applyMatrix4(globeGroup.matrixWorld);
+
+      // Show callout only if facing front towards camera
+      if (pos.z > -15) {
+        const projected = pos.clone().project(camera);
+        const rect = container.getBoundingClientRect();
+        const screenX = ((projected.x + 1) * rect.width) / 2;
+        const screenY = ((-projected.y + 1) * rect.height) / 2;
+        calloutRef.current.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px - 145%), 0)`;
+        calloutRef.current.style.opacity = "1";
+      } else {
+        calloutRef.current.style.opacity = "0";
+      }
+    };
+
+    // Update 3D-to-2D positions for all small datacenter location labels under dots
+    const updateLabels = () => {
+      if (!container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      const halfW = w / 2;
+      const halfH = h / 2;
+
+      for (let i = 0; i < dcPositions.length; i++) {
+        const item = dcPositions[i];
+        const el = labelRefs.current[item.dc.id];
+        if (!el) continue;
+
+        const worldPos = item.pos.clone().applyMatrix4(globeGroup.matrixWorld);
+        // Show with crisp visibility on front-facing hemisphere
+        if (worldPos.z > -2) {
+          const projected = worldPos.project(camera);
+          const screenX = projected.x * halfW + halfW;
+          const screenY = -projected.y * halfH + halfH;
+          const depthAlpha = worldPos.z > 8 ? 1 : Math.max(0, (worldPos.z + 2) / 10);
+
+          el.style.transform = `translate3d(calc(${screenX}px - 50%), calc(${screenY}px + 9px), 0)`;
+          el.style.opacity = `${depthAlpha}`;
+          el.style.pointerEvents = depthAlpha > 0.4 ? "auto" : "none";
+        } else {
+          el.style.opacity = "0";
+          el.style.pointerEvents = "none";
+        }
+      }
+    };
+
+    // Animation Loop
+    let animId: number;
+    let ringScale = 1;
+    let ringGrowing = true;
+
+    const animate = () => {
+      animId = requestAnimationFrame(animate);
+
+      if (ringGrowing) {
+        ringScale += 0.012;
+        if (ringScale >= 1.6) ringGrowing = false;
+      } else {
+        ringScale -= 0.012;
+        if (ringScale <= 1.0) ringGrowing = true;
+      }
+      hostRing.scale.set(ringScale, ringScale, 1);
+
+      // Animate packet along arc
+      if (tracerMesh && tracerCurve) {
+        tracerT = (tracerT + 0.018) % 1.0;
+        tracerMesh.position.copy(tracerCurve.getPoint(tracerT));
+      }
+
+      // Keep atmospheric glow billboarded towards camera
+      atmoMesh.lookAt(camera.position);
+
+      if (autoRotate && !isDragging) {
+        globeGroup.rotation.y += 0.002;
+      }
+
+      updateCalloutPosition();
+      updateLabels();
+
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Resize observer
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const newWidth = entry.contentRect.width;
+        const newHeight = entry.contentRect.height;
+        if (newWidth > 0 && newHeight > 0) {
+          camera.aspect = newWidth / newHeight;
+          camera.updateProjectionMatrix();
+          renderer.setSize(newWidth, newHeight);
+        }
+      }
+    });
+    resizeObserver.observe(container);
+
+    return () => {
+      cancelAnimationFrame(animId);
+      resizeObserver.disconnect();
+      dom.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointerdown", onDocumentPointerDown);
+
+      if (container.contains(dom)) {
+        container.removeChild(dom);
+      }
+      scene.remove(atmoMesh);
+      atmoGeo.dispose();
+      atmoMat.dispose();
+      renderer.dispose();
+      coreGeo.dispose();
+      coreMat.dispose();
+      sphereGeometry.dispose();
+      wireframeMaterial.dispose();
+      equatorGeo.dispose();
+      equatorMat.dispose();
+      dotGeo.dispose();
+      dotMat.dispose();
+      hostNodeGeo.dispose();
+      hostNodeMat.dispose();
+      hostInnerGeo.dispose();
+      hostInnerMat.dispose();
+      ringGeo.dispose();
+      ringMat.dispose();
+      if (arcLine) arcLine.geometry.dispose();
+      if (tracerMesh) {
+        tracerMesh.geometry.dispose();
+        (tracerMesh.material as THREE.Material).dispose();
+      }
+    };
+  }, [selectedDc, selectDatacenter]);
+
+  return (
+    <div className="pure-globe-container">
+      {/* 3D Interactive World Globe Canvas */}
+      <div className="pure-globe-canvas" ref={mountRef}>
+        {/* Datacenter Badges Under Nodes */}
+        {DATACENTERS.map((dc) => (
+          <div
+            key={dc.id}
+            ref={(el) => {
+              labelRefs.current[dc.id] = el;
+            }}
+            className={`globe-node-label ${selectedDc?.id === dc.id ? "selected" : ""} ${dc.isHost ? "host" : ""}`}
+            style={{ opacity: 0, transform: "translate3d(-9999px, -9999px, 0)" }}
+            onClick={(e) => {
+              e.stopPropagation();
+              selectDatacenter(dc);
+            }}
+          >
+            <span className="node-label-flag">{dc.flag}</span>
+            <span>{dc.city}</span>
+          </div>
+        ))}
+
+        {/* Floating Callout Anchored Directly to the Clicked Datacenter */}
+        <div
+          ref={calloutRef}
+          className="globe-node-callout"
+          style={{ opacity: 0, pointerEvents: "none" }}
+        >
+          {selectedDc && (
+            <>
+              <span className="node-callout-flag">{selectedDc.flag}</span>
+              <span className="node-callout-city">{selectedDc.city}</span>
+              <span className="node-callout-dot">•</span>
+              <span className="node-callout-ping">
+                <span className="node-ping-indicator" />
+                {isPinging ? "pinging..." : `${ping ?? selectedDc.fallbackPing} ms`}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default LatencyGlobe;
