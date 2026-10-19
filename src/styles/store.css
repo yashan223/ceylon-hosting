@@ -537,7 +537,7 @@
   flex-direction: column;
   gap: 6px;
   list-style: none;
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   padding: 0;
 }
 
@@ -545,11 +545,11 @@
   align-items: center;
   color: var(--muted-foreground);
   display: flex;
-  font-family: var(--font-dm-mono), monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   gap: 7px;
   letter-spacing: -0.01em;
+  line-height: 1.4;
 }
 
 .product-feature-icon {
@@ -583,8 +583,7 @@
   color: var(--muted-foreground);
   font-size: 12px;
   line-height: 1.5;
-  margin: 0;
-  min-height: 38px;
+  margin: 0 0 6px;
 }
 
 .product-meta {

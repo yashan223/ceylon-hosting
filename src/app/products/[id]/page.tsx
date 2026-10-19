@@ -12,7 +12,7 @@ import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { ProductGallery } from "@/components/store/product-gallery";
 import { absoluteUrl, siteName } from "@/lib/seo";
-import { parseProductFeatures } from "@/lib/products";
+import { parseProductDetails } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +56,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const isService = product.type === "service";
   const currentUser = await getCurrentUser();
   const isAdmin = await isAdminUser();
-  const features = parseProductFeatures(product);
+  const { summary: cleanDescription, features } = parseProductDetails(product);
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -148,24 +148,26 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <span>Server Location: <strong>{product.location}</strong></span>
             </div>
           )}
-          <p>{product.description}</p>
-          <div className="product-detail-spec">
-            <span>
-              {product.type === "server" ? "Server Features & Specifications" : "Specifications"}
-            </span>
-            {features.length > 0 ? (
-              <ul className="product-detail-feature-points" aria-label="Product features">
-                {features.map((feat, idx) => (
-                  <li key={idx} className="product-detail-feature-item">
-                    <Check size={14} className="feature-check-icon" strokeWidth={2.5} />
-                    <span>{feat}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : product.meta ? (
-              <strong>{product.meta}</strong>
-            ) : null}
-          </div>
+          {cleanDescription && <p>{cleanDescription}</p>}
+          {(features.length > 0 || product.meta) && (
+            <div className="product-detail-spec">
+              <span>
+                {product.type === "server" ? "Server Features & Specifications" : "Specifications"}
+              </span>
+              {features.length > 0 ? (
+                <ul className="product-detail-feature-points" aria-label="Product features">
+                  {features.map((feat, idx) => (
+                    <li key={idx} className="product-detail-feature-item">
+                      <Check size={14} className="feature-check-icon" strokeWidth={2.5} />
+                      <span>{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : product.meta ? (
+                <strong>{product.meta}</strong>
+              ) : null}
+            </div>
+          )}
           <div className="product-detail-buy">
             <div>
               <span>

@@ -928,8 +928,38 @@
   color: var(--muted-foreground);
   font-size: 11px;
   line-height: 1.5;
-  margin: 0;
-  min-height: 34px;
+  margin: 0 0 4px;
+}
+
+.admin-card-feature-points {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  list-style: none;
+  margin: 6px 0 10px;
+  padding: 0;
+}
+
+.admin-card-feature-point {
+  align-items: center;
+  color: var(--muted-foreground);
+  display: flex;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 6px;
+  line-height: 1.4;
+}
+
+.admin-card-feature-icon {
+  color: #10b981;
+  flex-shrink: 0;
+}
+
+.admin-field-tip {
+  color: #64748b;
+  display: block;
+  font-size: 11px;
+  margin-top: 4px;
 }
 
 .admin-card-specs-row {

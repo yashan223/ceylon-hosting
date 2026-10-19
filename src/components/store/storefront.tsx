@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import PixelBlast from "@/components/PixelBlast";
 import { LatencyGlobe } from "@/components/store/latency-globe";
 import { cn } from "@/lib/utils";
-import { parseProductFeatures } from "@/lib/products";
+import { parseProductDetails } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 const categories = [
@@ -557,7 +557,7 @@ export function Storefront({
             const inCart = cart.some((item) => item.productId === product.id);
             const isService = product.type === "service";
             const isAvailable = product.type !== "server" || product.available !== false;
-            const features = parseProductFeatures(product);
+            const { summary: cleanDescription, features } = parseProductDetails(product);
             return (
               <Card
                 className="product-card"
@@ -626,9 +626,9 @@ export function Storefront({
                           <span>{product.location}</span>
                         </div>
                       )}
-                      <p>{product.description}</p>
-                      {product.type === "server" && features.length > 0 && (
-                        <ul className="product-feature-points" aria-label="Server features">
+                      {cleanDescription && <p>{cleanDescription}</p>}
+                      {features.length > 0 && (
+                        <ul className="product-feature-points" aria-label="Product features">
                           {features.map((feature, idx) => (
                             <li key={idx} className="product-feature-point">
                               <Check size={12} className="product-feature-icon" strokeWidth={2.5} />

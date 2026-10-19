@@ -16,12 +16,14 @@ import {
   MapPin,
   Download,
   UploadCloud,
+  Check,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import { SERVER_LOCATIONS } from "@/lib/datacenters";
+import { parseProductDetails } from "@/lib/products";
 import type { Product, ProductType } from "@/types/product";
 
 function formatBytes(bytes?: number): string {
@@ -500,6 +502,7 @@ export function ProductManager({
           <div className="admin-product-grid">
             {filteredProducts.map((product) => {
               const isAvailable = product.available !== false;
+              const { summary: cleanDescription, features } = parseProductDetails(product);
               return (
                 <article className="admin-product-card" key={product.id}>
                   <div className={`admin-product-art product-art-${product.accent || "slate"}`}>
@@ -554,7 +557,17 @@ export function ProductManager({
                         </button>
                       </div>
                       <h3>{product.name}</h3>
-                      <p>{product.description}</p>
+                      {cleanDescription && <p>{cleanDescription}</p>}
+                      {features.length > 0 && (
+                        <ul className="admin-card-feature-points" aria-label="Product features">
+                          {features.map((feature, idx) => (
+                            <li key={idx} className="admin-card-feature-point">
+                              <Check size={11} className="admin-card-feature-icon" strokeWidth={2.5} />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
 
                     <div className="admin-card-specs-row">
@@ -1147,8 +1160,12 @@ export function ProductManager({
                   value={draft.description}
                   onChange={(event) => changeDraft("description", event.target.value)}
                   rows={4}
+                  placeholder="Enter product description or specifications (separate lines or bullets will display as points)"
                   required
                 />
+                <small className="admin-field-tip">
+                  Tip: Put specifications or features on separate lines to display them as bullet points.
+                </small>
               </label>
 
               {status && (
