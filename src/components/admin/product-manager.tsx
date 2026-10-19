@@ -82,7 +82,6 @@ export function ProductManager({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [downloadFile, setDownloadFile] = useState<File | null>(null);
@@ -100,7 +99,6 @@ export function ProductManager({
   function openCreate() {
     setEditingProduct(null);
     setDraft(blankDraft);
-    setImageFile(null);
     setExtraImageFiles([]);
     setGalleryUrls([]);
     setDownloadFile(null);
@@ -133,7 +131,6 @@ export function ProductManager({
       imageUrl: product.imageUrl ?? "",
       images: existingImages,
     });
-    setImageFile(null);
     setExtraImageFiles([]);
     setGalleryUrls(existingImages);
     setDownloadFile(null);
@@ -145,7 +142,6 @@ export function ProductManager({
     setIsEditorOpen(false);
     setEditingProduct(null);
     setDraft(blankDraft);
-    setImageFile(null);
     setExtraImageFiles([]);
     setGalleryUrls([]);
     setDownloadFile(null);
@@ -160,6 +156,7 @@ export function ProductManager({
     setStatus("");
 
     try {
+      const coverUrl = galleryUrls[0] ?? "";
       const payload: Record<string, unknown> = {
         name: draft.name.trim(),
         type: draft.type,
@@ -171,12 +168,10 @@ export function ProductManager({
         available: draft.available,
         tag: draft.tag.trim(),
         images: galleryUrls,
+        imageUrl: coverUrl,
       };
       if (draft.type === "server") {
         payload.location = (draft.location ?? "").trim();
-      }
-      if (editingProduct && !imageFile && draft.imageUrl !== undefined) {
-        payload.imageUrl = draft.imageUrl;
       }
 
       const response = await fetch(
@@ -201,9 +196,7 @@ export function ProductManager({
         return;
       }
 
-      let imageUrl = editingProduct
-        ? (draft.imageUrl ?? editingProduct.imageUrl)
-        : result.product?.imageUrl;
+      let imageUrl = coverUrl;
       let downloadName = editingProduct
         ? editingProduct.downloadName
         : result.product?.downloadName;
@@ -211,26 +204,6 @@ export function ProductManager({
         ? editingProduct.downloadSize
         : result.product?.downloadSize;
       let finalImages = [...galleryUrls];
-
-      if (imageFile) {
-        const imageForm = new FormData();
-        imageForm.append("file", imageFile);
-        const imageResponse = await fetch(`/api/admin/products/${productId}/image`, {
-          method: "POST",
-          body: imageForm,
-        });
-        const imageResult = (await imageResponse.json()) as { imageUrl?: string; error?: string };
-        if (imageResponse.ok && imageResult.imageUrl) {
-          imageUrl = imageResult.imageUrl;
-          if (!finalImages.includes(imageUrl)) {
-            finalImages = [imageUrl, ...finalImages];
-          }
-        } else if (!imageResponse.ok) {
-          setStatus(imageResult.error ?? "Product saved, but image upload failed.");
-          setIsSaving(false);
-          return;
-        }
-      }
 
       if (extraImageFiles.length > 0) {
         const extraForm = new FormData();
@@ -244,11 +217,11 @@ export function ProductManager({
         const extraResult = (await extraResponse.json()) as { images?: string[]; error?: string };
         if (extraResponse.ok && Array.isArray(extraResult.images)) {
           finalImages = extraResult.images;
-          if (!imageUrl && finalImages.length > 0) {
+          if (finalImages.length > 0) {
             imageUrl = finalImages[0];
           }
         } else if (!extraResponse.ok) {
-          setStatus(extraResult.error ?? "Product saved, but screenshot upload failed.");
+          setStatus(extraResult.error ?? "Product saved, but image upload failed.");
           setIsSaving(false);
           return;
         }
@@ -794,119 +767,11 @@ export function ProductManager({
                   }}
                 >
                   <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
-                    Product Image
+                    Product Images & Gallery
                   </label>
-                </div>
-
-                <div className="admin-file-upload-box admin-gallery-box">
-                  {draft.imageUrl && !imageFile && (
-                    <div>
-                      <small style={{ display: "block", marginBottom: 8, color: "#64748b" }}>
-                        Saved image:
-                      </small>
-                      <div className="admin-gallery-items-grid">
-                        <div className="admin-gallery-item-card">
-                          <img src={draft.imageUrl} alt="Current preview" />
-                          <span className="admin-gallery-item-badge">Cover</span>
-                          <button
-                            type="button"
-                            className="admin-gallery-item-remove"
-                            title="Remove image"
-                            onClick={() => changeDraft("imageUrl", "")}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {imageFile && (
-                    <div style={{ marginTop: draft.imageUrl ? 8 : 0 }}>
-                      <small style={{ display: "block", marginBottom: 8, color: "#0284c7", fontWeight: 600 }}>
-                        Pending upload (1 file):
-                      </small>
-                      <div className="admin-gallery-items-grid">
-                        <div className="admin-gallery-item-card" style={{ borderColor: "#38bdf8" }}>
-                          <img src={URL.createObjectURL(imageFile)} alt={imageFile.name} />
-                          <span className="admin-gallery-item-badge" style={{ background: "#0284c7" }}>
-                            New
-                          </span>
-                          <button
-                            type="button"
-                            className="admin-gallery-item-remove"
-                            title="Remove image"
-                            onClick={() => setImageFile(null)}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <label style={{ display: "block", cursor: "pointer", marginTop: 4 }}>
-                    <input
-                      accept="image/*"
-                      type="file"
-                      style={{ display: "none" }}
-                      onChange={(event) => {
-                        setImageFile(event.target.files?.[0] ?? null);
-                        event.target.value = "";
-                      }}
-                    />
-                    <div
-                      style={{
-                        border: "1.5px dashed #94a3b8",
-                        borderRadius: 8,
-                        padding: "12px 16px",
-                        textAlign: "center",
-                        background: "#f8fafc",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          color: "#2563eb",
-                          fontWeight: 600,
-                          fontSize: 13,
-                        }}
-                      >
-                        <Camera size={15} />
-                        <span>
-                          {imageFile || draft.imageUrl ? "Change Product Image" : "Add Product Image"}
-                        </span>
-                      </div>
-                      <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
-                        Upload PNG, JPG, or WebP (up to 10MB)
-                      </small>
-                    </div>
-                  </label>
-                </div>
-              </div>
-
-              <div className="product-editor-wide">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
-                  }}
-                >
-                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
-                    {draft.type === "mod"
-                      ? "Mod Screenshots & Gallery"
-                      : "Additional Gallery Images"}
-                  </label>
-                  {draft.type === "mod" && (
-                    <span className="admin-gallery-pill">
-                      <Camera size={12} /> Mod Pack Showcase
-                    </span>
-                  )}
+                  <span className="admin-gallery-pill">
+                    <Camera size={12} /> First image is Cover
+                  </span>
                 </div>
 
                 <div className="admin-file-upload-box admin-gallery-box">
@@ -918,20 +783,38 @@ export function ProductManager({
                       <div className="admin-gallery-items-grid">
                         {galleryUrls.map((url, idx) => (
                           <div key={url + idx} className="admin-gallery-item-card">
-                            <img src={url} alt={`Gallery item ${idx + 1}`} />
-                            <span className="admin-gallery-item-badge">
+                            <img src={url} alt={`Product image ${idx + 1}`} />
+                            <span
+                              className="admin-gallery-item-badge"
+                              style={{ background: idx === 0 ? "#16a34a" : "rgba(15, 23, 42, 0.85)" }}
+                            >
                               {idx === 0 ? "Cover" : `#${idx + 1}`}
                             </span>
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                className="admin-gallery-item-make-cover"
+                                title="Set as cover image"
+                                onClick={() => {
+                                  const nextList = [
+                                    url,
+                                    ...galleryUrls.filter((_, i) => i !== idx),
+                                  ];
+                                  setGalleryUrls(nextList);
+                                  changeDraft("imageUrl", nextList[0]);
+                                }}
+                              >
+                                Set Cover
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="admin-gallery-item-remove"
                               title="Remove image"
                               onClick={() => {
-                                const nextList = galleryUrls.filter((u) => u !== url);
+                                const nextList = galleryUrls.filter((_, i) => i !== idx);
                                 setGalleryUrls(nextList);
-                                if (draft.imageUrl === url) {
-                                  changeDraft("imageUrl", nextList[0] ?? "");
-                                }
+                                changeDraft("imageUrl", nextList[0] ?? "");
                               }}
                             >
                               <Trash2 size={11} />
@@ -943,7 +826,7 @@ export function ProductManager({
                   )}
 
                   {extraImageFiles.length > 0 && (
-                    <div style={{ marginTop: 8 }}>
+                    <div style={{ marginTop: galleryUrls.length > 0 ? 10 : 0 }}>
                       <small
                         style={{
                           display: "block",
@@ -967,7 +850,7 @@ export function ProductManager({
                               className="admin-gallery-item-badge"
                               style={{ background: "#0284c7" }}
                             >
-                              New
+                              {galleryUrls.length === 0 && idx === 0 ? "Cover" : "New"}
                             </span>
                             <button
                               type="button"
@@ -985,7 +868,13 @@ export function ProductManager({
                     </div>
                   )}
 
-                  <label style={{ display: "block", cursor: "pointer", marginTop: 4 }}>
+                  <label
+                    style={{
+                      display: "block",
+                      cursor: "pointer",
+                      marginTop: galleryUrls.length > 0 || extraImageFiles.length > 0 ? 10 : 0,
+                    }}
+                  >
                     <input
                       accept="image/*"
                       type="file"
@@ -1003,7 +892,7 @@ export function ProductManager({
                       style={{
                         border: "1.5px dashed #94a3b8",
                         borderRadius: 8,
-                        padding: "12px 16px",
+                        padding: "14px 16px",
                         textAlign: "center",
                         background: "#f8fafc",
                         cursor: "pointer",
@@ -1021,12 +910,13 @@ export function ProductManager({
                       >
                         <Camera size={15} />
                         <span>
-                          Add {draft.type === "mod" ? "Mod Screenshots" : "Gallery Images"} (Select
-                          multiple)
+                          {galleryUrls.length > 0 || extraImageFiles.length > 0
+                            ? "Add More Images"
+                            : "Upload Product Images (Select one or multiple)"}
                         </span>
                       </div>
                       <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
-                        Upload multiple images/screenshots (PNG, JPG, WebP up to 10MB each)
+                        Upload PNG, JPG, or WebP (up to 10MB each). First image is used as the cover.
                       </small>
                     </div>
                   </label>

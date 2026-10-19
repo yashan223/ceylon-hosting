@@ -1940,6 +1940,28 @@
   transform: scale(1.1);
 }
 
+.admin-gallery-item-make-cover {
+  background: rgba(15, 23, 42, 0.85);
+  border: none;
+  border-radius: 4px;
+  bottom: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 8px;
+  font-weight: 700;
+  left: 4px;
+  padding: 3px 4px;
+  position: absolute;
+  right: 4px;
+  text-align: center;
+  text-transform: uppercase;
+  transition: background 0.15s ease;
+}
+
+.admin-gallery-item-make-cover:hover {
+  background: #2563eb;
+}
+
 .admin-order-link {
   font-weight: 700;
 }
