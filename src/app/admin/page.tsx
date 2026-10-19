@@ -169,7 +169,14 @@ export default async function AdminDashboardPage() {
                       </small>
                     </div>
                   </td>
-                  <td data-label="Customer">{order.email}</td>
+                  <td data-label="Customer">
+                    <div>{order.email}</div>
+                    {order.whatsapp && (
+                      <small style={{ display: "block", color: "#16a34a", fontWeight: 500, marginTop: "2px" }}>
+                        WA: {order.whatsapp}
+                      </small>
+                    )}
+                  </td>
                   <td data-label="Payment">
                     <div className="admin-payment-cell">
                       <span className={`admin-status ${order.paymentStatus === "paid" ? "active" : ""}`}>

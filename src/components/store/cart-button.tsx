@@ -208,7 +208,11 @@ export function CartButton({
   });
 
   const cartSubtotal = cartProducts.reduce(
-    (total, item) => total + (item.product.price + getExtraSlotsCost(item.extraSlots)) * item.quantity,
+    (total, item) =>
+      total +
+      (item.product.price +
+        (item.product.type === "server" ? getExtraSlotsCost(item.extraSlots) : 0)) *
+        item.quantity,
     0,
   );
   const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
@@ -227,7 +231,7 @@ export function CartButton({
           orderId: createOrderReference(),
           items: cartProducts.map(
             ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => {
-              const slotsCount = getExtraSlotsCount(extraSlots);
+              const slotsCount = product.type === "server" ? getExtraSlotsCount(extraSlots) : 0;
               return {
                 productId: product.id,
                 quantity,
@@ -242,6 +246,7 @@ export function CartButton({
         }),
       });
       if (response.status === 401) {
+        setCheckoutState("idle");
         const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/";
         startTransition(() => {
           router.push(`/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`);
@@ -329,14 +334,14 @@ export function CartButton({
                                 ? "Setup service"
                                 : "Mod or tool"}
                         </span>
-                        {getExtraSlotsCount(extraSlots) > 0 && (
+                        {product.type === "server" && getExtraSlotsCount(extraSlots) > 0 && (
                           <span style={{ display: "inline-block", fontSize: "11px", color: "#2563eb", fontWeight: 600, marginTop: "2px" }}>
                             +{getExtraSlotsCount(extraSlots)} Extra Slots (+{formatPrice(getExtraSlotsCost(extraSlots))})
                           </span>
                         )}
                       </div>
                       <div className="drawer-item-actions">
-                        <b>{formatPrice(product.price + getExtraSlotsCost(extraSlots))}</b>
+                        <b>{formatPrice(product.price + (product.type === "server" ? getExtraSlotsCost(extraSlots) : 0))}</b>
                         <Button
                           variant="ghost"
                           size="icon"

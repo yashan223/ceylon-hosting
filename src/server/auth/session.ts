@@ -83,6 +83,7 @@ export async function getCurrentSession(): Promise<{ user: AuthUser; rememberMe:
       id: user.id,
       email: user.email,
       firstName: user.firstName,
+      whatsapp: user.whatsapp,
       emailVerified: user.emailVerified,
     },
     rememberMe:

@@ -70,8 +70,11 @@ export function AuthForm({ mode }: AuthFormProps) {
       setError("Please select your country.");
       return;
     }
-    if (isSignUp && (!whatsapp.trim() || whatsapp.trim().length < 6)) {
-      setError("Please enter your WhatsApp number.");
+    if (
+      isSignUp &&
+      (!whatsapp.trim() || !/^[0-9+\s()-]{6,25}$/.test(whatsapp.trim()))
+    ) {
+      setError("Please enter a valid WhatsApp number.");
       return;
     }
     setIsLoading(true);

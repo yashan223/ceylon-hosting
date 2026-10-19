@@ -21,7 +21,7 @@ type UserRecord = {
   updatedAt: Date;
 };
 
-export type AuthUser = Pick<UserRecord, "id" | "email" | "firstName" | "emailVerified">;
+export type AuthUser = Pick<UserRecord, "id" | "email" | "firstName" | "whatsapp" | "emailVerified">;
 
 export type AdminUser = Pick<
   UserRecord,
@@ -84,6 +84,12 @@ export async function findUserByEmail(email: string) {
 export async function findUserById(id: string) {
   const collection = await usersCollection();
   return collection.findOne({ id });
+}
+
+export async function findUsersByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+  const collection = await usersCollection();
+  return collection.find({ id: { $in: ids } }).toArray();
 }
 
 export async function updateUserProfile(

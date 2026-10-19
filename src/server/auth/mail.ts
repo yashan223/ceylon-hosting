@@ -183,6 +183,7 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
   customerEmail: string;
   customerName?: string;
   customerCountry?: string;
+  customerWhatsapp?: string;
   paymentId: string;
   amountCents: number;
   items: Array<{
@@ -308,6 +309,15 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
           <span class="details-label">Customer:</span>
           <span class="details-val">${customerDisplay}</span>
         </div>
+        ${
+          input.customerWhatsapp
+            ? `
+        <div class="details-row">
+          <span class="details-label">WhatsApp:</span>
+          <span class="details-val">${escapeHtml(input.customerWhatsapp)}</span>
+        </div>`
+            : ""
+        }
         <div class="details-row">
           <span class="details-label">Total Amount:</span>
           <span class="details-val">${totalFormatted}</span>

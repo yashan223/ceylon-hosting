@@ -23,6 +23,7 @@ type OrderRecord = {
   id: string;
   userId: string;
   email: string;
+  whatsapp?: string;
   items: OrderItem[];
   subtotal?: number;
   taxRate?: number;
@@ -134,10 +135,12 @@ export async function createOrder(
       if (product.type === "server" && product.available === false)
         throw new Error("One or more products are not available to order.");
       const slotsCount =
-        typeof extraSlots === "number"
-          ? Math.min(12, Math.max(0, Math.floor(extraSlots)))
-          : extraSlots
-          ? 4
+        product.type === "server"
+          ? typeof extraSlots === "number"
+            ? Math.min(12, Math.max(0, Math.round(extraSlots / 4) * 4))
+            : extraSlots
+            ? 4
+            : 0
           : 0;
       const slotsCost = Math.round((slotsCount / 4) * 100);
       const unitPrice = product.price + slotsCost;
@@ -166,6 +169,7 @@ export async function createOrder(
     id: input.orderId,
     userId: user.id,
     email: user.email,
+    ...(user.whatsapp ? { whatsapp: user.whatsapp } : {}),
     items,
     subtotal,
     taxRate,
@@ -205,7 +209,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     ? Math.round(order.taxAmount * 100)
     : (settings.taxEnabled ? Math.round(subtotalCents * (settings.taxRate / 100)) : 0);
   const expectedAmountCents = subtotalCents + taxCents;
-  if (amountCents !== expectedAmountCents) return false;
+  if (Math.abs(amountCents - expectedAmountCents) > 1) return false;
   const result = await orders.updateOne(
     { id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } },
     { $set: { paymentStatus: "paid", paymentId, updatedAt: now } },
@@ -251,6 +255,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
       customerEmail: order.email,
       customerName: user?.firstName,
       customerCountry: user?.country,
+      customerWhatsapp: user?.whatsapp || order.whatsapp,
       paymentId,
       amountCents,
       items: order.items,
@@ -330,6 +335,13 @@ export async function getOrderForAdmin(orderId: string) {
     const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
     if (ev?.details) order.paymentId = ev.details;
   }
+  if (!order.whatsapp) {
+    try {
+      const { findUserById } = await import("@/server/auth/users");
+      const user = await findUserById(order.userId);
+      if (user?.whatsapp) order.whatsapp = user.whatsapp;
+    } catch {}
+  }
   const orderMessages = await messages
     .find({ orderId: { $in: [order.id, rawId] } })
     .sort({ createdAt: 1 })
@@ -360,11 +372,25 @@ export async function getPaidOrderForProduct(userId: string, productId: string) 
 export async function listOrders() {
   const { orders, events } = await collections();
   const list = await orders.find({}).sort({ updatedAt: -1 }).toArray();
+  const missingUserIds = [...new Set(list.filter((o) => !o.whatsapp).map((o) => o.userId))];
+  const userMap = new Map<string, string>();
+  if (missingUserIds.length > 0) {
+    try {
+      const { findUsersByIds } = await import("@/server/auth/users");
+      const users = await findUsersByIds(missingUserIds);
+      for (const u of users) {
+        if (u.whatsapp) userMap.set(u.id, u.whatsapp);
+      }
+    } catch {}
+  }
   return Promise.all(
     list.map(async (order) => {
       if (order.paymentStatus === "paid" && !order.paymentId) {
         const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
         if (ev?.details) order.paymentId = ev.details;
+      }
+      if (!order.whatsapp && userMap.has(order.userId)) {
+        order.whatsapp = userMap.get(order.userId);
       }
       return order;
     }),

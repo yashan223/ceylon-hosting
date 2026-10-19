@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!whatsapp || whatsapp.length < 6 || whatsapp.length > 25) {
+  if (!whatsapp || whatsapp.length < 6 || whatsapp.length > 25 || !/^[0-9+\s()-]{6,25}$/.test(whatsapp)) {
     return NextResponse.json(
       { error: "Please provide a valid WhatsApp number." },
       { status: 400 },

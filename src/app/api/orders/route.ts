@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     rconPassword: typeof item.rconPassword === "string" ? item.rconPassword.trim().slice(0, 100) : undefined,
     extraSlots:
       typeof item.extraSlots === "number"
-        ? Math.min(12, Math.max(0, Math.floor(item.extraSlots)))
+        ? Math.min(12, Math.max(0, Math.round(item.extraSlots / 4) * 4))
         : item.extraSlots === true
         ? 4
         : undefined,

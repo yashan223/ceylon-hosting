@@ -13,6 +13,12 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Invalid country." }, { status: 400 });
   if (body.whatsapp !== undefined && typeof body.whatsapp !== "string")
     return NextResponse.json({ error: "Invalid WhatsApp number." }, { status: 400 });
+  if (
+    typeof body.whatsapp === "string" &&
+    body.whatsapp.trim().length > 0 &&
+    !/^[0-9+\s()-]{6,25}$/.test(body.whatsapp.trim())
+  )
+    return NextResponse.json({ error: "Invalid WhatsApp number format." }, { status: 400 });
 
   const updatedUser = await updateUserProfile(user.id, {
     firstName: body.firstName as string | undefined,

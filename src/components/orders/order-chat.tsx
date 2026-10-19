@@ -47,6 +47,7 @@ type OrderMessage = {
 type Order = {
   id: string;
   email: string;
+  whatsapp?: string;
   status: string;
   paymentStatus: string;
   paymentId?: string;
@@ -738,6 +739,14 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                 <span>Customer Email</span>
                 <span className="customer-email">{order.email}</span>
               </div>
+              {order.whatsapp && (
+                <div className="order-summary-line customer">
+                  <span>Customer WhatsApp</span>
+                  <span className="customer-email" style={{ color: "#16a34a", fontWeight: 600 }}>
+                    {order.whatsapp}
+                  </span>
+                </div>
+              )}
               <div className="order-summary-line customer">
                 <span>Order Reference</span>
                 <span className="customer-email">{formatOrderReference(order.id)}</span>

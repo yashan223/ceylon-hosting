@@ -337,7 +337,9 @@ function ServerConfigDialog({
   const otherItemsTotal = useMemo(() => {
     return otherCartItems.reduce((acc, item) => {
       const found = catalogProducts.find((p) => p.id === item.productId);
-      const itemUnitPrice = (found ? found.price : 0) + getExtraSlotsCost(item.extraSlots);
+      const itemUnitPrice =
+        (found ? found.price : 0) +
+        (found?.type === "server" ? getExtraSlotsCost(item.extraSlots) : 0);
       return acc + itemUnitPrice;
     }, 0);
   }, [otherCartItems, catalogProducts]);
@@ -377,7 +379,7 @@ function ServerConfigDialog({
       return null;
     }
 
-    const clampedSlots = Math.min(12, Math.max(0, extraSlots));
+    const clampedSlots = Math.min(12, Math.max(0, Math.round(extraSlots / 4) * 4));
     return {
       serverName: cleanName,
       serverLocation: cleanLocation,
@@ -456,6 +458,7 @@ function ServerConfigDialog({
       });
 
       if (response.status === 401) {
+        setCheckoutLoading(false);
         const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/";
         router.push(`/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`);
         return;
@@ -674,6 +677,7 @@ function ServerConfigDialog({
                         const val = parseInt(e.target.value, 10);
                         setExtraSlots(isNaN(val) ? 0 : Math.max(0, Math.min(12, val)));
                       }}
+                      onBlur={() => setExtraSlots((prev) => Math.min(12, Math.max(0, Math.round(prev / 4) * 4)))}
                       className="server-slots-input"
                       aria-label="Extra player slots"
                     />
