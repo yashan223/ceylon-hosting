@@ -235,7 +235,7 @@ export function LatencyGlobe() {
         clearTimeout(timeoutId);
         const measuredBase = Math.round(performance.now() - start);
 
-        const loc = overrideLocation ?? userLocation;
+        const loc = overrideLocation ?? currentUserLocationRef.current;
         const originLat = loc?.lat ?? 6.9271;
         const originLng = loc?.lng ?? 79.8612;
         const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
@@ -247,7 +247,7 @@ export function LatencyGlobe() {
           setPing(Math.max(10, calculated));
         }
       } catch {
-        const loc = overrideLocation ?? userLocation;
+        const loc = overrideLocation ?? currentUserLocationRef.current;
         const originLat = loc?.lat ?? 6.9271;
         const originLng = loc?.lng ?? 79.8612;
         const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
@@ -257,7 +257,7 @@ export function LatencyGlobe() {
         setIsPinging(false);
       }
     },
-    [userLocation],
+    [],
   );
 
   const selectDatacenter = useCallback(
@@ -285,10 +285,8 @@ export function LatencyGlobe() {
             country: pingData.geo.country,
             isp: pingData.geo.isp,
           };
+          currentUserLocationRef.current = loc;
           setUserLocation(loc);
-          if (selectedDcRef.current) {
-            measurePing(selectedDcRef.current, loc);
-          }
           return;
         }
       } catch {}
@@ -304,10 +302,8 @@ export function LatencyGlobe() {
             country: data.country,
             isp: data.connection?.isp || data.connection?.org,
           };
+          currentUserLocationRef.current = loc;
           setUserLocation(loc);
-          if (selectedDcRef.current) {
-            measurePing(selectedDcRef.current, loc);
-          }
           return;
         }
       } catch {}
@@ -323,10 +319,8 @@ export function LatencyGlobe() {
             country: data.countryName || data.country,
             isp: data.asnOrganization,
           };
+          currentUserLocationRef.current = loc;
           setUserLocation(loc);
-          if (selectedDcRef.current) {
-            measurePing(selectedDcRef.current, loc);
-          }
           return;
         }
       } catch {}
@@ -345,10 +339,8 @@ export function LatencyGlobe() {
               city: match.city,
               country: match.country,
             };
+            currentUserLocationRef.current = loc;
             setUserLocation(loc);
-            if (selectedDcRef.current) {
-              measurePing(selectedDcRef.current, loc);
-            }
             return;
           }
         }
@@ -360,7 +352,7 @@ export function LatencyGlobe() {
     return () => {
       isMounted = false;
     };
-  }, [measurePing]);
+  }, []);
 
   useEffect(() => {
     const container = mountRef.current;
