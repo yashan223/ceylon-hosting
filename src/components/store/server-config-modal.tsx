@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Check, Server, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Server, ShoppingCart, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SERVER_LOCATIONS } from "@/lib/datacenters";
 import { parseProductFeatures } from "@/lib/products";
@@ -220,6 +220,7 @@ function ServerConfigDialog({
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
+  const [mobileTab, setMobileTab] = useState<"config" | "cart">("config");
 
   const points = useMemo(() => parseServerPoints(product), [product]);
 
@@ -310,23 +311,27 @@ function ServerConfigDialog({
     const cleanRcon = rconPassword.trim();
 
     if (!cleanName) {
+      setMobileTab("config");
       setError("Please enter a server name.");
-      document.getElementById("server-config-name")?.focus();
+      setTimeout(() => document.getElementById("server-config-name")?.focus(), 50);
       return null;
     }
     if (!cleanLocation) {
+      setMobileTab("config");
       setError("Please select a server location.");
-      document.getElementById("server-config-location")?.focus();
+      setTimeout(() => document.getElementById("server-config-location")?.focus(), 50);
       return null;
     }
     if (!cleanPass) {
+      setMobileTab("config");
       setError("Please enter a server password.");
-      document.getElementById("server-config-pass")?.focus();
+      setTimeout(() => document.getElementById("server-config-pass")?.focus(), 50);
       return null;
     }
     if (!cleanRcon) {
+      setMobileTab("config");
       setError("Please enter an RCON password for server management.");
-      document.getElementById("server-config-rcon")?.focus();
+      setTimeout(() => document.getElementById("server-config-rcon")?.focus(), 50);
       return null;
     }
 
@@ -342,6 +347,7 @@ function ServerConfigDialog({
     const config = validateConfig();
     if (!config) return;
     onConfirm(config);
+    setMobileTab("cart");
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -456,8 +462,28 @@ function ServerConfigDialog({
         </button>
       </div>
 
+      <div className="server-split-mobile-tabs">
+        <button
+          type="button"
+          className={`server-split-tab-btn ${mobileTab === "config" ? "active" : ""}`}
+          onClick={() => setMobileTab("config")}
+        >
+          <Server size={14} />
+          <span>Configure</span>
+        </button>
+        <button
+          type="button"
+          className={`server-split-tab-btn ${mobileTab === "cart" ? "active" : ""}`}
+          onClick={() => setMobileTab("cart")}
+        >
+          <ShoppingCart size={14} />
+          <span>Cart ({1 + otherCartItems.length})</span>
+          <span className="server-split-tab-price">{formatPrice(cartTotal)}</span>
+        </button>
+      </div>
+
       <div className="server-split-body">
-        <div className="server-split-left">
+        <div className={`server-split-left ${mobileTab === "cart" ? "mobile-hide" : ""}`}>
           <div className="server-split-left-inner">
             <div className="server-split-header">
               <div className="server-split-icon">
@@ -572,7 +598,7 @@ function ServerConfigDialog({
           </div>
         </div>
 
-        <aside className="server-split-right">
+        <aside className={`server-split-right ${mobileTab === "config" ? "mobile-hide" : ""}`}>
           <div className="server-split-right-inner">
             <div className="server-split-cart-title">
               <p className="section-kicker">Your selection</p>
@@ -638,7 +664,7 @@ function ServerConfigDialog({
               })}
             </div>
 
-            <div className="server-split-cart-footer">
+            <div className="server-split-cart-footer desktop-only">
               <div className="server-split-total-row">
                 <span>Subtotal</span>
                 <strong>{formatPrice(cartTotal)}</strong>
@@ -668,6 +694,37 @@ function ServerConfigDialog({
             </div>
           </div>
         </aside>
+      </div>
+
+      <div className="server-split-mobile-footer mobile-only">
+        <div className="server-split-total-row">
+          <span>Subtotal</span>
+          <strong>{formatPrice(cartTotal)}</strong>
+        </div>
+        <div className="server-split-cart-actions">
+          <Button
+            type="button"
+            variant="outline"
+            className="server-split-add-btn"
+            disabled={checkoutLoading}
+            onClick={handleAddToCartOnly}
+          >
+            Add to cart
+          </Button>
+          <Button
+            className="checkout-button server-split-checkout-btn"
+            disabled={checkoutLoading}
+            onClick={handlePayNow}
+          >
+            {checkoutLoading ? "Opening..." : "Pay now"}
+            <ArrowRight size={16} />
+          </Button>
+        </div>
+        {checkoutError ? (
+          <small className="server-split-error-note">{checkoutError}</small>
+        ) : (
+          <small className="server-split-note">You will continue to secure payment.</small>
+        )}
       </div>
     </div>
   );

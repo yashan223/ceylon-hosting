@@ -2167,10 +2167,16 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   inset: 0;
   position: fixed;
   width: 100vw;
   z-index: 10001;
+}
+
+.server-split-mobile-tabs,
+.server-split-mobile-footer {
+  display: none;
 }
 
 .server-split-topbar {
@@ -2550,22 +2556,219 @@
 }
 
 @media (max-width: 860px) {
+  .server-split-topbar {
+    height: 52px;
+    padding: 0 16px;
+  }
+
+  .server-split-back {
+    font-size: 12px;
+    gap: 6px;
+    padding: 6px 8px;
+  }
+
+  .server-split-close {
+    height: 38px;
+    width: 38px;
+  }
+
+  .server-split-mobile-tabs {
+    align-items: center;
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-shrink: 0;
+    gap: 8px;
+    padding: 8px 16px;
+  }
+
+  .server-split-tab-btn {
+    align-items: center;
+    background: #f4f4f5;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    display: inline-flex;
+    flex: 1;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    gap: 6px;
+    height: 38px;
+    justify-content: center;
+    padding: 0 10px;
+    transition: all 0.15s ease;
+  }
+
+  .server-split-tab-btn.active {
+    background: #171717;
+    color: #ffffff;
+  }
+
+  .server-split-tab-price {
+    font-family: var(--font-dm-mono), monospace;
+    font-size: 11px;
+    opacity: 0.85;
+  }
+
   .server-split-body {
     display: flex;
+    flex: 1;
     flex-direction: column;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .server-split-left.mobile-hide,
+  .server-split-right.mobile-hide {
+    display: none;
   }
 
   .server-split-left {
     height: auto;
-    padding: 24px 20px;
+    padding: 20px 16px 150px;
+    width: 100%;
+  }
+
+  .server-split-left-inner {
+    max-width: 100%;
+  }
+
+  .server-split-header {
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .server-split-icon {
+    border-radius: 10px;
+    height: 40px;
+    width: 40px;
+  }
+
+  .server-split-header h2 {
+    font-size: 20px;
+  }
+
+  .server-split-header p {
+    font-size: 12px;
+  }
+
+  .server-split-product-card {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 14px 16px;
+  }
+
+  .server-split-product-price {
+    align-items: center;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    justify-content: space-between;
+    padding-top: 10px;
+    width: 100%;
+  }
+
+  .server-split-product-price::before {
+    color: var(--muted-foreground);
+    content: "Plan price";
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .server-split-form {
+    gap: 16px;
+  }
+
+  .server-split-input {
+    font-size: 16px;
+    height: 46px;
+  }
+
+  .server-split-label {
+    font-size: 13px;
   }
 
   .server-split-right {
     border-left: none;
-    border-top: 1px solid var(--border);
+    border-top: none;
     height: auto;
-    padding: 24px 20px;
+    padding: 20px 16px 150px;
+    width: 100%;
+  }
+
+  .server-split-right-inner {
+    height: auto;
+    max-width: 100%;
+  }
+
+  .server-split-cart-title {
+    margin-bottom: 16px;
+  }
+
+  .server-split-cart-title h3 {
+    font-size: 18px;
+  }
+
+  .server-split-cart-footer.desktop-only {
+    display: none;
+  }
+
+  .server-split-mobile-footer {
+    background: #ffffff;
+    border-top: 1px solid var(--border);
+    bottom: 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    left: 0;
+    padding: 12px 16px max(14px, env(safe-area-inset-bottom));
+    position: fixed;
+    right: 0;
+    z-index: 100;
+  }
+
+  .server-split-mobile-footer .server-split-total-row {
+    align-items: baseline;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .server-split-mobile-footer .server-split-total-row span {
+    color: var(--muted-foreground);
+    font-size: 13px;
+  }
+
+  .server-split-mobile-footer .server-split-total-row strong {
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .server-split-mobile-footer .server-split-cart-actions {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: 1fr 1.25fr;
+  }
+
+  .server-split-mobile-footer .server-split-add-btn,
+  .server-split-mobile-footer .server-split-checkout-btn {
+    align-items: center;
+    border-radius: 8px;
+    display: inline-flex;
+    font-size: 13px;
+    font-weight: 600;
+    height: 44px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .server-split-error-note {
+    color: #dc2626;
+    display: block;
+    font-size: 11px;
+    text-align: center;
   }
 }
 
