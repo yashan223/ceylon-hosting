@@ -135,7 +135,7 @@ export async function createOrder(
         throw new Error("One or more products are not available to order.");
       const slotsCount =
         typeof extraSlots === "number"
-          ? Math.max(0, Math.floor(extraSlots))
+          ? Math.min(12, Math.max(0, Math.floor(extraSlots)))
           : extraSlots
           ? 4
           : 0;

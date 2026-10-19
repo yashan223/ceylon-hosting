@@ -11,14 +11,15 @@ import type { Product } from "@/types/product";
 
 function getExtraSlotsCost(slots?: number | boolean): number {
   if (typeof slots === "number") {
-    return Math.max(0, Math.round((slots / 4) * 100));
+    const clamped = Math.min(12, Math.max(0, Math.round(slots)));
+    return Math.round((clamped / 4) * 100);
   }
   return slots ? 100 : 0;
 }
 
 function getExtraSlotsCount(slots?: number | boolean): number {
   if (typeof slots === "number") {
-    return Math.max(0, Math.floor(slots));
+    return Math.min(12, Math.max(0, Math.floor(slots)));
   }
   return slots ? 4 : 0;
 }
@@ -376,12 +377,13 @@ function ServerConfigDialog({
       return null;
     }
 
+    const clampedSlots = Math.min(12, Math.max(0, extraSlots));
     return {
       serverName: cleanName,
       serverLocation: cleanLocation,
       serverPassword: cleanPass,
       rconPassword: cleanRcon,
-      ...(extraSlots > 0 ? { extraSlots } : {}),
+      ...(clampedSlots > 0 ? { extraSlots: clampedSlots } : {}),
     };
   }
 
@@ -646,7 +648,7 @@ function ServerConfigDialog({
                   <div className="server-slots-header">
                     <div>
                       <strong>Extra Player Slots</strong>
-                      <small>Every 4 slots adds Rs. 100 to server capacity</small>
+                      <small>Every 4 slots adds Rs. 100 (Max 12 extra slots)</small>
                     </div>
                     <span className="server-customization-price">
                       {extraSlots > 0 ? `+Rs. ${extraSlotsCost.toLocaleString("en-LK")}` : "+Rs. 0"}
@@ -665,12 +667,12 @@ function ServerConfigDialog({
                     <input
                       type="number"
                       min={0}
-                      max={64}
+                      max={12}
                       step={4}
                       value={extraSlots}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
-                        setExtraSlots(isNaN(val) ? 0 : Math.max(0, Math.min(64, val)));
+                        setExtraSlots(isNaN(val) ? 0 : Math.max(0, Math.min(12, val)));
                       }}
                       className="server-slots-input"
                       aria-label="Extra player slots"
@@ -678,15 +680,15 @@ function ServerConfigDialog({
                     <button
                       type="button"
                       className="server-slots-btn"
-                      onClick={() => setExtraSlots((prev) => Math.min(64, prev + 4))}
-                      disabled={extraSlots >= 64}
+                      onClick={() => setExtraSlots((prev) => Math.min(12, prev + 4))}
+                      disabled={extraSlots >= 12}
                       aria-label="Increase 4 slots"
                     >
                       +4
                     </button>
                   </div>
                   <div className="server-slots-presets">
-                    {[0, 4, 8, 12, 16, 20].map((preset) => (
+                    {[0, 4, 8, 12].map((preset) => (
                       <button
                         type="button"
                         key={preset}

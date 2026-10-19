@@ -9,14 +9,15 @@ import type { Product } from "@/types/product";
 
 function getExtraSlotsCost(slots?: number | boolean): number {
   if (typeof slots === "number") {
-    return Math.max(0, Math.round((slots / 4) * 100));
+    const clamped = Math.min(12, Math.max(0, Math.round(slots)));
+    return Math.round((clamped / 4) * 100);
   }
   return slots ? 100 : 0;
 }
 
 function getExtraSlotsCount(slots?: number | boolean): number {
   if (typeof slots === "number") {
-    return Math.max(0, Math.floor(slots));
+    return Math.min(12, Math.max(0, Math.floor(slots)));
   }
   return slots ? 4 : 0;
 }
