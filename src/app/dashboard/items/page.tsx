@@ -8,22 +8,17 @@ import {
   MessageCircle,
   ShoppingBag,
   UserRound,
-  Check,
 } from "lucide-react";
 import { requireUser } from "@/server/auth/session";
-import { getActiveProducts, getProductsByIds } from "@/server/catalog/products";
+import { getProductsByIds } from "@/server/catalog/products";
 import { listOrdersForUser } from "@/server/orders/orders";
 import { formatBytes } from "@/lib/utils";
-import { parseProductDetails } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardItemsPage() {
   const user = await requireUser("/dashboard/items");
-  const [orders, products] = await Promise.all([
-    listOrdersForUser(user.id),
-    getActiveProducts(),
-  ]);
+  const orders = await listOrdersForUser(user.id);
 
   const purchasedItemIds = Array.from(
     new Set(orders.flatMap((order) => order.items.map((item) => item.productId))),
@@ -172,61 +167,6 @@ export default async function DashboardItemsPage() {
               ))}
             </div>
           )}
-        </section>
-
-        <section className="dashboard-panel dashboard-items-panel">
-          <div className="dashboard-panel-heading">
-            <div>
-              <span className="section-kicker">Store catalog</span>
-              <h2>Available store products</h2>
-            </div>
-            <span className="profile-count">{products.length} products</span>
-          </div>
-
-          <div className="dashboard-items-content">
-            <section className="dashboard-catalog-grid">
-              {products.map((product) => {
-                const { summary: cleanDescription, features } = parseProductDetails(product);
-                return (
-                  <article className="dashboard-catalog-card" key={product.id}>
-                    <div className={`dashboard-catalog-art product-art-${product.accent}`}>
-                      <span>
-                        {product.type === "server"
-                          ? "SERVER"
-                          : product.type === "service"
-                            ? "SERVICE"
-                            : "MOD / TOOL"}
-                      </span>
-                    </div>
-                    <div className="dashboard-catalog-copy">
-                      <span className="profile-order-id">{product.type}</span>
-                      <h2>{product.name}</h2>
-                      {cleanDescription && <p>{cleanDescription}</p>}
-                      {features.length > 0 && (
-                        <ul className="product-feature-points" aria-label="Product features">
-                          {features.map((feature, idx) => (
-                            <li key={idx} className="product-feature-point">
-                              <Check size={12} className="product-feature-icon" strokeWidth={2.5} />
-                              <span>{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div>
-                        <strong>Rs. {product.price.toLocaleString("en-LK")}</strong>
-                        <Link className="profile-order-link" href={`/products/${product.id}`}>
-                          View item <ArrowUpRight size={13} />
-                        </Link>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
-            {products.length === 0 && (
-              <p className="profile-empty">No purchasable items are available right now.</p>
-            )}
-          </div>
         </section>
       </div>
     </main>
