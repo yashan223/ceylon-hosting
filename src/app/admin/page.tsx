@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
-import { formatBytes, formatOrderReference } from "@/lib/utils";
+import { formatOrderReference } from "@/lib/utils";
 import { ClearDataButton } from "@/components/admin/clear-data-button";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Orders</span>
           <strong>{overview.totalOrders}</strong>
-          <small>All-time records</small>
         </Link>
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -43,7 +42,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Registered users</span>
           <strong>{overview.totalUsers}</strong>
-          <small>Customer accounts</small>
         </Link>
         <Link href="/admin/products" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -52,7 +50,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Active products</span>
           <strong>{overview.activeProducts}</strong>
-          <small>{overview.totalProducts} total catalog items</small>
         </Link>
         <Link href="/admin/products?type=server" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -61,7 +58,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Server plans</span>
           <strong>{overview.serverProducts}</strong>
-          <small>Hosted servers</small>
         </Link>
         <Link href="/admin/subscriptions" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -70,7 +66,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Subscriptions</span>
           <strong>{overview.activeSubscriptions}</strong>
-          <small>Active server plans</small>
         </Link>
         <Link href="/admin/products?type=mod" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -79,7 +74,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Mods & tools</span>
           <strong>{overview.modProducts}</strong>
-          <small>Downloadable catalog items</small>
         </Link>
         <Link href="/admin/products?type=service" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -88,7 +82,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Services</span>
           <strong>{overview.serviceProducts}</strong>
-          <small>Remote setup work</small>
         </Link>
         <Link href="/admin/files" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -97,7 +90,6 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Digital files</span>
           <strong>{overview.totalFiles}</strong>
-          <small>{formatBytes(overview.totalStorageBytes) || "0 MB"} storage used</small>
         </Link>
       </section>
 
