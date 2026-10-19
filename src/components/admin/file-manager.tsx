@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FileText,
   Download,
@@ -41,11 +41,35 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
   const [editName, setEditName] = useState("");
   const [editFile, setEditFile] = useState<File | null>(null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isEditDragging, setIsEditDragging] = useState(false);
 
   const [isAttachOpen, setIsAttachOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState("");
   const [attachFile, setAttachFile] = useState<File | null>(null);
   const [isAttaching, setIsAttaching] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const targetSelectedProduct = useMemo(
+    () => products.find((p) => p.id === selectedProductId),
+    [products, selectedProductId],
+  );
+
+  useEffect(() => {
+    if (!isAttachOpen && !editingProduct) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isAttachOpen) closeAttach();
+        if (editingProduct) closeEdit();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAttachOpen, editingProduct]);
 
   const eligibleProducts = useMemo(() => {
     return products.filter((p) => p.type !== "server");
@@ -530,100 +554,123 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
 
       {editingProduct && (
         <div
-          className="admin-dialog-overlay"
+          className="file-modal"
           role="dialog"
           aria-modal="true"
           aria-label="Edit Stored File"
         >
-          <div className="admin-dialog-card">
-            <div className="admin-dialog-header">
+          <div className="file-modal-container">
+            <div className="file-modal-header">
               <div>
                 <span className="admin-kicker">Digital Storage</span>
-                <h2>Edit Stored File</h2>
+                <h2>Edit Stored File: {editingProduct.name}</h2>
               </div>
               <button
-                className="admin-dialog-close"
+                className="file-modal-close"
                 type="button"
                 onClick={closeEdit}
                 aria-label="Close modal"
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
 
-            <form className="admin-dialog-form" onSubmit={handleSaveEdit}>
-              <div className="admin-dialog-body">
-                <div>
-                  <span className="admin-kicker">Linked Product</span>
-                  <strong style={{ display: "block", fontSize: 15, marginTop: 2 }}>
-                    {editingProduct.name}
-                  </strong>
-                  <small style={{ color: "var(--muted-foreground)" }}>
-                    ID: {editingProduct.id} • {editingProduct.type.toUpperCase()}
-                  </small>
+            <form className="file-modal-form" onSubmit={handleSaveEdit}>
+              <div className="file-modal-body">
+                <div className="file-modal-section">
+                  <span className="file-modal-section-title">Linked Catalog Product</span>
+                  <div className="file-product-preview-card">
+                    <div className="file-product-preview-left">
+                      <span className="file-product-badge">{editingProduct.type}</span>
+                      <div>
+                        <strong style={{ display: "block", fontSize: 14 }}>{editingProduct.name}</strong>
+                        <small style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
+                          Product ID: {editingProduct.id} • Rs. {editingProduct.price.toLocaleString("en-LK")}
+                        </small>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <label>
-                  Display File Name *
+                <div className="file-modal-section">
+                  <label className="file-modal-section-title" htmlFor="edit-display-name">
+                    Display File Name *
+                  </label>
                   <Input
+                    id="edit-display-name"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="e.g. promod_custom_v2.zip"
                     required
                   />
-                  <small style={{ color: "var(--muted-foreground)", marginTop: 4, display: "block" }}>
+                  <small style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
                     This is the file name shown to clients when downloading.
                   </small>
-                </label>
+                </div>
 
-                <div>
-                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13, display: "block" }}>
-                    Replace Stored File (Optional)
-                  </label>
-                  <div className="admin-file-upload-box" style={{ marginTop: 6 }}>
-                    {editingProduct.downloadName && !editFile && (
-                      <div className="admin-attached-file-card">
-                        <div className="admin-attached-file-info">
-                          <FileText size={18} className="admin-attached-file-icon" />
-                          <div>
-                            <strong>{editingProduct.downloadName}</strong>
-                            <small>
-                              {editingProduct.downloadSize
-                                ? formatBytes(editingProduct.downloadSize)
-                                : "Current stored file"}
-                            </small>
-                          </div>
+                <div className="file-modal-section">
+                  <span className="file-modal-section-title">Stored Digital File</span>
+                  {editingProduct.downloadName && !editFile && (
+                    <div className="admin-attached-file-card">
+                      <div className="admin-attached-file-info">
+                        <FileText size={18} className="admin-attached-file-icon" />
+                        <div>
+                          <strong>{editingProduct.downloadName}</strong>
+                          <small>
+                            {editingProduct.downloadSize
+                              ? formatBytes(editingProduct.downloadSize)
+                              : "Current stored file"}
+                          </small>
                         </div>
-                        <a
-                          href={`/api/admin/products/${editingProduct.id}/file`}
-                          className="admin-file-action-btn test"
-                          download={editingProduct.downloadName}
-                        >
-                          <Download size={12} /> Test
-                        </a>
                       </div>
-                    )}
+                      <a
+                        href={`/api/admin/products/${editingProduct.id}/file`}
+                        className="admin-file-action-btn test"
+                        download={editingProduct.downloadName}
+                      >
+                        <Download size={12} /> Test Download
+                      </a>
+                    </div>
+                  )}
 
-                    {editFile && (
-                      <div className="admin-pending-file-card">
-                        <div className="admin-attached-file-info">
-                          <UploadCloud size={18} className="admin-pending-file-icon" />
-                          <div>
-                            <strong>{editFile.name}</strong>
-                            <small>{formatBytes(editFile.size)} (Will overwrite upon save)</small>
-                          </div>
+                  {editFile ? (
+                    <div className="file-selected-card">
+                      <div className="file-selected-left">
+                        <div className="file-selected-icon-wrap">
+                          <UploadCloud size={24} />
                         </div>
-                        <button
-                          type="button"
-                          className="admin-file-action-btn danger"
-                          onClick={() => setEditFile(null)}
-                        >
-                          <X size={12} /> Cancel
-                        </button>
+                        <div className="file-selected-info">
+                          <strong>{editFile.name}</strong>
+                          <small>{formatBytes(editFile.size)} • Will overwrite upon save</small>
+                        </div>
                       </div>
-                    )}
-
-                    <label style={{ display: "block", cursor: "pointer", marginTop: 6 }}>
+                      <button
+                        type="button"
+                        className="admin-file-action-btn danger"
+                        onClick={() => setEditFile(null)}
+                      >
+                        <X size={12} /> Cancel replacement
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      className={`file-dropzone-large ${isEditDragging ? "dragging" : ""}`}
+                      style={{ minHeight: 160, padding: "28px 20px" }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsEditDragging(true);
+                      }}
+                      onDragLeave={() => setIsEditDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsEditDragging(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          setEditFile(file);
+                          if (!editName) setEditName(file.name);
+                        }
+                      }}
+                    >
                       <input
                         type="file"
                         accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
@@ -637,19 +684,21 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
                           event.target.value = "";
                         }}
                       />
-                      <div className="admin-file-picker-btn">
-                        <UploadCloud size={15} />
-                        <span>{editFile ? "Choose Different File" : "Select Replacement File"}</span>
+                      <div className="file-dropzone-icon-wrap" style={{ height: 48, width: 48 }}>
+                        <UploadCloud size={22} />
                       </div>
+                      <div className="file-dropzone-title" style={{ fontSize: 14 }}>
+                        {editFile ? "Choose Different File" : "Select or Drop Replacement File (Optional)"}
+                      </div>
+                      <span className="file-dropzone-formats">
+                        Supports ZIP, RAR, 7Z, CFG up to 500 MB
+                      </span>
                     </label>
-                    <small style={{ color: "#64748b", marginTop: 4, display: "block" }}>
-                      Supports ZIP, RAR, 7Z, CFG up to 500 MB.
-                    </small>
-                  </div>
+                  )}
                 </div>
               </div>
 
-              <div className="admin-dialog-actions">
+              <div className="file-modal-actions">
                 <Button variant="outline" type="button" onClick={closeEdit} disabled={isSavingEdit}>
                   Cancel
                 </Button>
@@ -664,19 +713,19 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
 
       {isAttachOpen && (
         <div
-          className="admin-dialog-overlay"
+          className="file-modal"
           role="dialog"
           aria-modal="true"
           aria-label="Upload and Attach Digital File"
         >
-          <div className="admin-dialog-card" style={{ maxWidth: 540 }}>
-            <div className="admin-dialog-header">
+          <div className="file-modal-container">
+            <div className="file-modal-header">
               <div>
                 <span className="admin-kicker">Digital Storage</span>
                 <h2>Upload & Attach Digital File</h2>
               </div>
               <button
-                className="admin-dialog-close"
+                className="file-modal-close"
                 type="button"
                 onClick={closeAttach}
                 aria-label="Close modal"
@@ -685,11 +734,15 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
               </button>
             </div>
 
-            <form className="admin-dialog-form" onSubmit={handleAttachSubmit}>
-              <div className="admin-dialog-body">
-                <label className="product-editor-wide">
-                  Target Catalog Product *
+            <form className="file-modal-form" onSubmit={handleAttachSubmit}>
+              <div className="file-modal-body">
+                <div className="file-modal-section">
+                  <label className="file-modal-section-title" htmlFor="target-catalog-product">
+                    Target Catalog Product *
+                  </label>
                   <select
+                    id="target-catalog-product"
+                    className="file-modal-select"
                     value={selectedProductId}
                     onChange={(e) => setSelectedProductId(e.target.value)}
                     required
@@ -701,78 +754,114 @@ export function FileManager({ products: initialProducts }: FileManagerProps) {
                       </option>
                     ))}
                   </select>
-                  <small style={{ color: "var(--muted-foreground)", marginTop: 4, display: "block" }}>
+                  <small style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
                     Selected product will grant authorized 1-click downloads to verified paid customers.
                   </small>
-                </label>
 
-                <div className="product-editor-wide">
-                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13, display: "block" }}>
-                    Digital File *
-                  </label>
-                  <div className="admin-file-upload-box" style={{ marginTop: 6 }}>
-                    {attachFile ? (
-                      <div className="admin-pending-file-card">
-                        <div className="admin-attached-file-info">
-                          <UploadCloud size={18} className="admin-pending-file-icon" />
-                          <div>
-                            <strong>{attachFile.name}</strong>
-                            <small>{formatBytes(attachFile.size)} (Ready to upload)</small>
-                          </div>
+                  {targetSelectedProduct && (
+                    <div className="file-product-preview-card">
+                      <div className="file-product-preview-left">
+                        <span className="file-product-badge">{targetSelectedProduct.type}</span>
+                        <div>
+                          <strong style={{ display: "block", fontSize: 14 }}>{targetSelectedProduct.name}</strong>
+                          <small style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
+                            Price: Rs. {targetSelectedProduct.price.toLocaleString("en-LK")} • {targetSelectedProduct.downloadKey ? `Current: ${targetSelectedProduct.downloadName || "file"} (${formatBytes(targetSelectedProduct.downloadSize)})` : "No file attached"}
+                          </small>
                         </div>
+                      </div>
+                      {targetSelectedProduct.downloadKey && (
+                        <span style={{ fontSize: 11, color: "#b45309", background: "#fef3c7", padding: "3px 8px", borderRadius: 6, fontWeight: 600 }}>
+                          Will Replace
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="file-modal-section">
+                  <span className="file-modal-section-title">Digital File *</span>
+
+                  {attachFile ? (
+                    <div className="file-selected-card">
+                      <div className="file-selected-left">
+                        <div className="file-selected-icon-wrap">
+                          <UploadCloud size={24} />
+                        </div>
+                        <div className="file-selected-info">
+                          <strong>{attachFile.name}</strong>
+                          <small>{formatBytes(attachFile.size)} • Ready to upload & attach</small>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <label style={{ cursor: "pointer", margin: 0 }}>
+                          <input
+                            type="file"
+                            accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
+                            style={{ display: "none" }}
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              if (file) setAttachFile(file);
+                              event.target.value = "";
+                            }}
+                          />
+                          <span className="admin-file-action-btn edit" style={{ display: "inline-flex", cursor: "pointer" }}>
+                            Change
+                          </span>
+                        </label>
                         <button
                           type="button"
                           className="admin-file-action-btn danger"
                           onClick={() => setAttachFile(null)}
                         >
-                          <X size={12} /> Cancel
+                          <X size={12} /> Remove
                         </button>
                       </div>
-                    ) : (
-                      <label style={{ display: "block", cursor: "pointer" }}>
-                        <input
-                          type="file"
-                          accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
-                          style={{ display: "none" }}
-                          onChange={(event) => {
-                            setAttachFile(event.target.files?.[0] ?? null);
-                            event.target.value = "";
-                          }}
-                        />
-                        <div
-                          style={{
-                            border: "1.5px dashed #94a3b8",
-                            borderRadius: 8,
-                            padding: "18px 20px",
-                            textAlign: "center",
-                            background: "#f8fafc",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <div
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 6,
-                              color: "#2563eb",
-                              fontWeight: 600,
-                              fontSize: 14,
-                            }}
-                          >
-                            <UploadCloud size={18} />
-                            <span>Choose Digital File (ZIP, RAR, 7Z, CFG)</span>
-                          </div>
-                          <small style={{ display: "block", color: "#64748b", marginTop: 4 }}>
-                            Maximum size: 500 MB. Files are stored securely outside public web access.
-                          </small>
-                        </div>
-                      </label>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <label
+                      className={`file-dropzone-large ${isDragging ? "dragging" : ""}`}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragging(true);
+                      }}
+                      onDragLeave={() => setIsDragging(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDragging(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) setAttachFile(file);
+                      }}
+                    >
+                      <input
+                        type="file"
+                        accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
+                        style={{ display: "none" }}
+                        onChange={(event) => {
+                          setAttachFile(event.target.files?.[0] ?? null);
+                          event.target.value = "";
+                        }}
+                      />
+                      <div className="file-dropzone-icon-wrap">
+                        <UploadCloud size={28} />
+                      </div>
+                      <div className="file-dropzone-title">
+                        Choose Digital File or Drag & Drop Here
+                      </div>
+                      <div className="file-dropzone-desc">
+                        Browse and upload game mod files, plugins, tools, or configuration packages.
+                      </div>
+                      <span className="file-dropzone-formats">
+                        ZIP, RAR, 7Z, TAR, GZ, CFG, JSON, BIN, TXT • Max 500 MB
+                      </span>
+                    </label>
+                  )}
+                  <small style={{ color: "var(--muted-foreground)", fontSize: 12 }}>
+                    Files are stored securely outside public web access. Only authorized buyers can download.
+                  </small>
                 </div>
               </div>
 
-              <div className="admin-dialog-actions">
+              <div className="file-modal-actions">
                 <Button variant="outline" type="button" onClick={closeAttach} disabled={isAttaching}>
                   Cancel
                 </Button>
