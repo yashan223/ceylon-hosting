@@ -840,15 +840,15 @@ export function Storefront({
           </div>
           <div>
             <span>Contact</span>
-            <a href="mailto:support@ceylonhosting.tech">support@ceylonhosting.tech</a>
-            <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">
-              WhatsApp: +94 77 123 4567
+            <a href="mailto:ceylonhosting@proton.me">ceylonhostign@proton.me</a>
+            <a href="https://wa.me/9478901407" target="_blank" rel="noreferrer">
+              WhatsApp: +94 7 890 1407
             </a>
             <small>Response within one business day.</small>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2026 CeylonHosting. Built for better game nights.</span>
+          <span>© 2026 XOXOD33P. All RIGHTS RESERVED.</span>
           <span className="footer-code">SERVERS / MODS / SUPPORT</span>
         </div>
       </footer>

@@ -32,13 +32,13 @@ export default function SignInPage() {
           />
         </div>
         <div>
-          <span className="auth-kicker">Welcome back, User</span>
+          <span className="auth-kicker">Welcome , User</span>
           <h1>
             Ready when
             <br />
             <em>your squad is.</em>
           </h1>
-          <p>Get your game servers, mod packs and player support from one place.</p>
+          <p>Get your game servers, mods and player support from one place.</p>
         </div>
         <span className="auth-coordinate">CEYLONHOSTING / 2026</span>
       </section>
