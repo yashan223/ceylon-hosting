@@ -841,8 +841,8 @@ export function Storefront({
           <div>
             <span>Contact</span>
             <a href="mailto:ceylonhosting@proton.me">ceylonhostign@proton.me</a>
-            <a href="https://wa.me/9478901407" target="_blank" rel="noreferrer">
-              WhatsApp: +94 7 890 1407
+            <a href="https://wa.me/94788901407" target="_blank" rel="noreferrer">
+              WhatsApp: +94 78 890 1407
             </a>
             <small>Response within one business day.</small>
           </div>
