@@ -29,6 +29,7 @@ import { LatencyGlobe } from "@/components/store/latency-globe";
 import { cn } from "@/lib/utils";
 import { parseProductDetails } from "@/lib/products";
 import type { Product } from "@/types/product";
+import { ServerConfigModal, type ServerConfig } from "@/components/store/server-config-modal";
 
 const categories = [
   { id: "all", label: "All products" },
@@ -60,7 +61,13 @@ const faqItems = [
   },
 ];
 
-type CartItem = { productId: string; quantity: number };
+type CartItem = {
+  productId: string;
+  quantity: number;
+  serverName?: string;
+  serverPassword?: string;
+  rconPassword?: string;
+};
 const cartStorageKey = "ceylonhosting-cart";
 
 function formatPrice(price: number) {
@@ -88,6 +95,7 @@ export function Storefront({
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [serverConfigProduct, setServerConfigProduct] = useState<Product | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -236,7 +244,13 @@ export function Storefront({
   const cartProducts = cart.flatMap((item) => {
     const product = products.find((candidate) => candidate.id === item.productId);
     return product && !(product.type === "server" && product.available === false)
-      ? [{ product, quantity: item.quantity }]
+      ? [{
+          product,
+          quantity: item.quantity,
+          serverName: item.serverName,
+          serverPassword: item.serverPassword,
+          rconPassword: item.rconPassword,
+        }]
       : [];
   });
   const cartTotal = cartProducts.reduce(
@@ -248,11 +262,31 @@ export function Storefront({
   function addToCart(productId: string) {
     if (isAdmin) return;
     const product = products.find((item) => item.id === productId);
-    if (product?.type === "server" && product.available === false) return;
+    if (!product || (product.type === "server" && product.available === false)) return;
+    if (product.type === "server") {
+      setServerConfigProduct(product);
+      return;
+    }
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.productId === productId);
       return existing ? currentCart : [...currentCart, { productId, quantity: 1 }];
     });
+  }
+
+  function handleConfirmServerConfig(config: ServerConfig) {
+    if (!serverConfigProduct) return;
+    const productId = serverConfigProduct.id;
+    setCart((currentCart) => {
+      const existingIndex = currentCart.findIndex((item) => item.productId === productId);
+      if (existingIndex >= 0) {
+        const updated = [...currentCart];
+        updated[existingIndex] = { ...updated[existingIndex], ...config };
+        return updated;
+      }
+      return [...currentCart, { productId, quantity: 1, ...config }];
+    });
+    setServerConfigProduct(null);
+    setIsCartOpen(true);
   }
 
   function removeFromCart(productId: string) {
@@ -274,7 +308,15 @@ export function Storefront({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: createOrderReference(),
-          items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })),
+          items: cartProducts.map(
+            ({ product, quantity, serverName, serverPassword, rconPassword }) => ({
+              productId: product.id,
+              quantity,
+              ...(serverName ? { serverName } : {}),
+              ...(serverPassword ? { serverPassword } : {}),
+              ...(rconPassword ? { rconPassword } : {}),
+            }),
+          ),
         }),
       });
       if (response.status === 401) {
@@ -835,16 +877,18 @@ export function Storefront({
               </div>
             ) : (
               <div className="drawer-items">
-                {cartProducts.map(({ product }) => (
+                {cartProducts.map(({ product, serverName }) => (
                   <div className="drawer-item" key={product.id}>
                     <div>
                       <strong>{product.name}</strong>
                       <span>
-                        {product.type === "server"
-                          ? "Game server"
-                          : product.type === "service"
-                            ? "Setup service"
-                            : "Mod or tool"}
+                        {serverName
+                          ? `Server: ${serverName}`
+                          : product.type === "server"
+                            ? "Game server"
+                            : product.type === "service"
+                              ? "Setup service"
+                              : "Mod or tool"}
                       </span>
                     </div>
                     <div className="drawer-item-actions">
@@ -882,6 +926,13 @@ export function Storefront({
           </aside>
         </div>
       )}
+
+      <ServerConfigModal
+        isOpen={Boolean(serverConfigProduct)}
+        onClose={() => setServerConfigProduct(null)}
+        product={serverConfigProduct}
+        onConfirm={handleConfirmServerConfig}
+      />
     </main>
   );
 }

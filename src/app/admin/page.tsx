@@ -34,6 +34,15 @@ export default async function AdminDashboardPage() {
       </div>
 
       <section className="admin-stat-grid admin-stat-grid-8">
+        <Link href="/admin/orders" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <ShoppingCart size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
+          <span>Orders</span>
+          <strong>{overview.totalOrders}</strong>
+          <small>All-time records</small>
+        </Link>
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
             <Users size={18} />
@@ -61,6 +70,15 @@ export default async function AdminDashboardPage() {
           <strong>{overview.serverProducts}</strong>
           <small>Hosted servers</small>
         </Link>
+        <Link href="/admin/subscriptions" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <RefreshCw size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
+          <span>Subscriptions</span>
+          <strong>{overview.activeSubscriptions}</strong>
+          <small>Active server plans</small>
+        </Link>
         <Link href="/admin/products?type=mod" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
             <Wrench size={18} />
@@ -78,24 +96,6 @@ export default async function AdminDashboardPage() {
           <span>Services</span>
           <strong>{overview.serviceProducts}</strong>
           <small>Remote setup work</small>
-        </Link>
-        <Link href="/admin/orders" className="admin-stat admin-stat-link">
-          <div className="admin-stat-header">
-            <ShoppingCart size={18} />
-            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
-          </div>
-          <span>Orders</span>
-          <strong>{overview.totalOrders}</strong>
-          <small>All-time records</small>
-        </Link>
-        <Link href="/admin/subscriptions" className="admin-stat admin-stat-link">
-          <div className="admin-stat-header">
-            <RefreshCw size={18} />
-            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
-          </div>
-          <span>Subscriptions</span>
-          <strong>{overview.activeSubscriptions}</strong>
-          <small>Active server plans</small>
         </Link>
         <Link href="/admin/files" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -141,7 +141,18 @@ export default async function AdminDashboardPage() {
                         {order.id}
                       </Link>
                       <small>
-                        {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
+                        {order.items.map((item) => (
+                          <span key={item.productId} className="admin-order-item-line">
+                            <span>{item.name} x{item.quantity}</span>
+                            {item.serverName && (
+                              <span className="admin-order-server-badge">
+                                Server: <strong>{item.serverName}</strong>
+                                {item.serverPassword ? ` • Pass: ${item.serverPassword}` : " • No pass"}
+                                {item.rconPassword ? ` • Rcon: ${item.rconPassword}` : ""}
+                              </span>
+                            )}
+                          </span>
+                        ))}
                       </small>
                     </div>
                   </td>

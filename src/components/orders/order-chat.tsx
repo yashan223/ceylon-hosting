@@ -10,7 +10,16 @@ type Order = {
   email: string;
   status: string;
   paymentStatus: string;
-  items: { productId: string; name: string; type: string; quantity: number; unitPrice: number }[];
+  items: {
+    productId: string;
+    name: string;
+    type: string;
+    quantity: number;
+    unitPrice: number;
+    serverName?: string;
+    serverPassword?: string;
+    rconPassword?: string;
+  }[];
   messages: {
     id: string;
     senderRole: "customer" | "admin";
@@ -127,8 +136,20 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
       </div>
       <div className="order-items">
         {order.items.map((item) => (
-          <div key={item.productId}>
-            <strong>{item.name}</strong>
+          <div key={item.productId} className="order-item-entry">
+            <div>
+              <strong>{item.name}</strong>
+              {item.serverName && (
+                <div className="order-server-config-card">
+                  <span className="order-server-config-title">Server Configuration</span>
+                  <div className="order-server-config-grid">
+                    <div><span>Server Name:</span> <strong>{item.serverName}</strong></div>
+                    <div><span>Password:</span> <strong>{item.serverPassword || "(None - Public)"}</strong></div>
+                    <div><span>RCON:</span> <strong>{item.rconPassword || "(None)"}</strong></div>
+                  </div>
+                </div>
+              )}
+            </div>
             <span>
               {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
               {admin && <ProductFileUpload productId={item.productId} />}

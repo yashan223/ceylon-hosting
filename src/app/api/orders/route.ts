@@ -4,7 +4,16 @@ import { isUserAdmin } from "@/server/auth/admin";
 import { createOrder } from "@/server/orders/orders";
 import { enforceRateLimit } from "@/server/rate-limit";
 
-type OrderRequest = { orderId?: string; items?: { productId?: unknown; quantity?: unknown }[] };
+type OrderRequest = {
+  orderId?: string;
+  items?: {
+    productId?: unknown;
+    quantity?: unknown;
+    serverName?: unknown;
+    serverPassword?: unknown;
+    rconPassword?: unknown;
+  }[];
+};
 
 export async function POST(request: Request) {
   const limited = enforceRateLimit(request, "orders-create", { limit: 30, windowMs: 5 * 60_000 });
@@ -30,6 +39,9 @@ export async function POST(request: Request) {
   const items = body.items.map((item) => ({
     productId: typeof item.productId === "string" ? item.productId : "",
     quantity: typeof item.quantity === "number" ? item.quantity : 1,
+    serverName: typeof item.serverName === "string" ? item.serverName.trim().slice(0, 100) : undefined,
+    serverPassword: typeof item.serverPassword === "string" ? item.serverPassword.trim().slice(0, 100) : undefined,
+    rconPassword: typeof item.rconPassword === "string" ? item.rconPassword.trim().slice(0, 100) : undefined,
   }));
   if (
     items.some(

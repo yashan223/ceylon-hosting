@@ -69,6 +69,58 @@
   font-size: 12px;
 }
 
+.order-items .order-item-entry {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.order-server-config-card {
+  background: #fbfbfb;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex !important;
+  flex-direction: column !important;
+  margin-top: 8px;
+  padding: 10px 14px;
+}
+
+.order-server-config-title {
+  color: var(--muted-foreground);
+  display: block;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.order-server-config-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px;
+}
+
+.order-server-config-grid div {
+  align-items: center;
+  display: flex !important;
+  font-size: 12px;
+  gap: 6px;
+  justify-content: flex-start !important;
+}
+
+.order-server-config-grid span {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.order-server-config-grid strong {
+  color: var(--foreground);
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11px;
+}
+
 .order-status-actions {
   display: flex;
   flex-wrap: wrap;

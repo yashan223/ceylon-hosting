@@ -190,6 +190,9 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
     type: string;
     quantity: number;
     unitPrice: number;
+    serverName?: string;
+    serverPassword?: string;
+    rconPassword?: string;
   }>;
   paidAt?: Date;
 }) {
@@ -226,12 +229,25 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
             ? "Setup Service"
             : "Mod / Tool",
       );
+      const safeServerName = item.serverName ? escapeHtml(item.serverName) : "";
+      const safeServerPass = item.serverPassword ? escapeHtml(item.serverPassword) : "(None)";
+      const safeRconPass = item.rconPassword ? escapeHtml(item.rconPassword) : "(None)";
+      const serverDetailsHtml = item.serverName
+        ? `
+          <div style="margin-top: 6px; padding: 6px 8px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 11px; font-family: monospace; line-height: 1.4;">
+            <div><strong>Server Name:</strong> ${safeServerName}</div>
+            <div><strong>Password:</strong> ${safeServerPass}</div>
+            <div><strong>RCON:</strong> ${safeRconPass}</div>
+          </div>
+        `
+        : "";
       const itemTotal = `Rs. ${(item.unitPrice * item.quantity).toLocaleString("en-LK")}`;
       return `
         <tr>
           <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0;">
             <strong style="color: #171717;">${safeName}</strong>
             <span style="display: block; font-size: 11px; color: #737373;">${safeType}</span>
+            ${serverDetailsHtml}
           </td>
           <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: center; vertical-align: top; color: #525252;">${item.quantity}</td>
           <td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; text-align: right; vertical-align: top; font-weight: 600; color: #171717;">${itemTotal}</td>

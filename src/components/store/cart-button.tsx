@@ -7,7 +7,13 @@ import { ShoppingBag, X, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/types/product";
 
-type CartItem = { productId: string; quantity: number };
+type CartItem = {
+  productId: string;
+  quantity: number;
+  serverName?: string;
+  serverPassword?: string;
+  rconPassword?: string;
+};
 
 const cartStorageKey = "ceylonhosting-cart";
 const cartUpdatedEvent = "ceylonhosting-cart-updated";
@@ -139,13 +145,27 @@ export function CartButton({
     window.dispatchEvent(new Event(cartUpdatedEvent));
   }
 
-  const cartProducts = cart
-    .map((item) => {
-      const product = products.find((candidate) => candidate.id === item.productId);
-      if (!product) return null;
-      return { product, quantity: item.quantity };
-    })
-    .filter((entry): entry is { product: Product; quantity: number } => Boolean(entry));
+  type CartProductEntry = {
+    product: Product;
+    quantity: number;
+    serverName?: string;
+    serverPassword?: string;
+    rconPassword?: string;
+  };
+
+  const cartProducts = cart.flatMap((item): CartProductEntry[] => {
+    const product = products.find((candidate) => candidate.id === item.productId);
+    if (!product) return [];
+    return [
+      {
+        product,
+        quantity: item.quantity,
+        serverName: item.serverName,
+        serverPassword: item.serverPassword,
+        rconPassword: item.rconPassword,
+      },
+    ];
+  });
 
   const cartTotal = cartProducts.reduce(
     (total, item) => total + item.product.price * item.quantity,
@@ -163,10 +183,15 @@ export function CartButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId: createOrderReference(),
-          items: cartProducts.map(({ product, quantity }) => ({
-            productId: product.id,
-            quantity,
-          })),
+          items: cartProducts.map(
+            ({ product, quantity, serverName, serverPassword, rconPassword }) => ({
+              productId: product.id,
+              quantity,
+              ...(serverName ? { serverName } : {}),
+              ...(serverPassword ? { serverPassword } : {}),
+              ...(rconPassword ? { rconPassword } : {}),
+            }),
+          ),
         }),
       });
       if (response.status === 401) {
@@ -244,16 +269,18 @@ export function CartButton({
                 </div>
               ) : (
                 <div className="drawer-items">
-                  {cartProducts.map(({ product }) => (
+                  {cartProducts.map(({ product, serverName }) => (
                     <div className="drawer-item" key={product.id}>
                       <div>
                         <strong>{product.name}</strong>
                         <span>
-                          {product.type === "server"
-                            ? "Game server"
-                            : product.type === "service"
-                              ? "Setup service"
-                              : "Mod or tool"}
+                          {serverName
+                            ? `Server: ${serverName}`
+                            : product.type === "server"
+                              ? "Game server"
+                              : product.type === "service"
+                                ? "Setup service"
+                                : "Mod or tool"}
                         </span>
                       </div>
                       <div className="drawer-item-actions">

@@ -2177,3 +2177,25 @@
       flex-direction: column;
     }
 }
+
+.admin-order-item-line {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+}
+
+.admin-order-server-badge {
+  background: #f4f4f5;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: #18181b;
+  display: inline-block;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  margin-top: 2px;
+  padding: 3px 7px;
+  width: fit-content;
+}
+

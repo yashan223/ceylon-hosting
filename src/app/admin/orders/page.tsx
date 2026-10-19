@@ -38,7 +38,18 @@ export default async function AdminOrdersPage() {
                         {order.id}
                       </Link>
                       <small>
-                        {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
+                        {order.items.map((item) => (
+                          <span key={item.productId} className="admin-order-item-line">
+                            <span>{item.name} x{item.quantity}</span>
+                            {item.serverName && (
+                              <span className="admin-order-server-badge">
+                                Server: <strong>{item.serverName}</strong>
+                                {item.serverPassword ? ` • Pass: ${item.serverPassword}` : " • No pass"}
+                                {item.rconPassword ? ` • Rcon: ${item.rconPassword}` : ""}
+                              </span>
+                            )}
+                          </span>
+                        ))}
                       </small>
                     </div>
                   </td>

@@ -11,6 +11,9 @@ type OrderItem = {
   type: string;
   quantity: number;
   unitPrice: number;
+  serverName?: string;
+  serverPassword?: string;
+  rconPassword?: string;
 };
 
 type OrderRecord = {
@@ -98,25 +101,39 @@ export async function recordOrderEvent(
 
 export async function createOrder(
   user: AuthUser,
-  input: { orderId: string; items: { productId: string; quantity: number }[] },
+  input: {
+    orderId: string;
+    items: {
+      productId: string;
+      quantity: number;
+      serverName?: string;
+      serverPassword?: string;
+      rconPassword?: string;
+    }[];
+  },
 ) {
   const products = await getActiveProductsByIds([
     ...new Set(input.items.map((item) => item.productId)),
   ]);
   const productsById = new Map(products.map((product) => [product.id, product]));
-  const items: OrderItem[] = input.items.map(({ productId, quantity }) => {
-    const product = productsById.get(productId);
-    if (!product) throw new Error("One or more products are unavailable.");
-    if (product.type === "server" && product.available === false)
-      throw new Error("One or more products are not available to order.");
-    return {
-      productId,
-      name: product.name,
-      type: product.type,
-      quantity,
-      unitPrice: product.price,
-    };
-  });
+  const items: OrderItem[] = input.items.map(
+    ({ productId, quantity, serverName, serverPassword, rconPassword }) => {
+      const product = productsById.get(productId);
+      if (!product) throw new Error("One or more products are unavailable.");
+      if (product.type === "server" && product.available === false)
+        throw new Error("One or more products are not available to order.");
+      return {
+        productId,
+        name: product.name,
+        type: product.type,
+        quantity,
+        unitPrice: product.price,
+        ...(serverName ? { serverName } : {}),
+        ...(serverPassword ? { serverPassword } : {}),
+        ...(rconPassword ? { rconPassword } : {}),
+      };
+    },
+  );
   const now = new Date();
   const { orders, events } = await collections();
   const order: OrderRecord = {
@@ -180,7 +197,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
           userId: order.userId,
           userEmail: order.email,
           productId: item.productId,
-          serverName: item.name,
+          serverName: item.serverName || item.name,
           monthlyPrice: item.unitPrice,
           paymentId,
           subscriptionId: (order as { subscriptionId?: string }).subscriptionId,
