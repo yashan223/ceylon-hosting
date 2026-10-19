@@ -2199,3 +2199,131 @@
   width: fit-content;
 }
 
+.admin-location-box {
+  background: #fbfbfb;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+}
+
+.admin-location-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.admin-location-header span {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-location-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-location-btn {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  transition: all 0.15s;
+}
+
+.admin-location-btn:hover {
+  border-color: #171717;
+  color: #171717;
+}
+
+.admin-location-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.admin-location-chip {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  font-size: 12px;
+  gap: 8px;
+  padding: 6px 10px;
+  transition: border-color 0.15s, background-color 0.15s;
+  user-select: none;
+}
+
+.admin-location-chip:hover {
+  border-color: #a3a3a3;
+}
+
+.admin-location-chip.selected {
+  background: #f0fdf4;
+  border-color: #86efac;
+  color: #166534;
+  font-weight: 600;
+}
+
+.admin-location-chip input[type="checkbox"] {
+  accent-color: #16a34a;
+  cursor: pointer;
+  height: 14px;
+  margin: 0;
+  width: 14px;
+}
+
+.admin-location-chip span {
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.admin-custom-loc-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.admin-custom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.admin-custom-tag {
+  align-items: center;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  color: #1e40af;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 6px;
+  padding: 2px 8px;
+}
+
+.admin-custom-tag button {
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.admin-custom-tag button:hover {
+  color: #dc2626;
+}
+

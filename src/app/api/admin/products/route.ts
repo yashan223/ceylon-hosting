@@ -29,7 +29,19 @@ function productInput(body: Record<string, unknown>) {
     description,
     meta,
     location:
-      typeof body.location === "string" && body.location.trim() ? body.location.trim() : undefined,
+      typeof body.location === "string" && body.location.trim()
+        ? body.location.trim()
+        : Array.isArray(body.locations) && typeof body.locations[0] === "string" && body.locations[0].trim()
+          ? body.locations[0].trim()
+          : undefined,
+    locations: Array.isArray(body.locations)
+      ? body.locations
+          .filter((item): item is string => typeof item === "string")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : typeof body.location === "string" && body.location.trim()
+        ? [body.location.trim()]
+        : undefined,
     price,
     accent: typeof body.accent === "string" && body.accent.trim() ? body.accent.trim() : "slate",
     active: body.active !== false,

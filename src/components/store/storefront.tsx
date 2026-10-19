@@ -235,7 +235,7 @@ export function Storefront({
       const matchesCategory = category === "all" || product.type === category;
       const matchesQuery =
         !normalizedQuery ||
-        `${product.name} ${product.description} ${product.location ?? ""} ${product.meta ?? ""}`
+        `${product.name} ${product.description} ${product.location ?? ""} ${product.locations?.join(" ") ?? ""} ${product.meta ?? ""}`
           .toLowerCase()
           .includes(normalizedQuery);
       return matchesCategory && matchesQuery;
@@ -665,10 +665,14 @@ export function Storefront({
                   <div className="product-info">
                     <div>
                       <h3>{product.name}</h3>
-                      {product.type === "server" && product.location && (
+                      {product.type === "server" && (product.locations?.length || product.location) && (
                         <div className="product-location-badge">
                           <Globe size={11} />
-                          <span>{product.location}</span>
+                          <span>
+                            {product.locations && product.locations.length > 1
+                              ? `${product.locations.length} Locations Available`
+                              : product.locations?.[0] || product.location}
+                          </span>
                         </div>
                       )}
                       {cleanDescription && <p>{cleanDescription}</p>}

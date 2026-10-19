@@ -155,33 +155,63 @@ function ServerConfigDialog({
 }) {
   const router = useRouter();
   const [serverName, setServerName] = useState("");
-  const [serverLocation, setServerLocation] = useState(
-    product.location && product.location.trim() ? product.location.trim() : "",
-  );
+  const availableLocations = useMemo(() => {
+    if (product.locations && product.locations.length > 0) {
+      return product.locations.map((locName) => {
+        const clean = locName.trim();
+        const found = SERVER_LOCATIONS.find(
+          (sl) => sl.label.toLowerCase() === clean.toLowerCase(),
+        );
+        return (
+          found ?? {
+            id: clean.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            city: clean,
+            country: "",
+            label: clean,
+            flag: "📍",
+          }
+        );
+      });
+    }
+
+    if (product.location && product.location.trim()) {
+      const clean = product.location.trim();
+      const found = SERVER_LOCATIONS.find(
+        (sl) => sl.label.toLowerCase() === clean.toLowerCase(),
+      );
+      if (found) return [found];
+      return [
+        {
+          id: "product-loc",
+          city: clean,
+          country: "",
+          label: clean,
+          flag: "📍",
+        },
+      ];
+    }
+
+    return SERVER_LOCATIONS;
+  }, [product.locations, product.location]);
+
+  const [serverLocation, setServerLocation] = useState(() => {
+    if (product.locations && product.locations.length === 1) {
+      return product.locations[0].trim();
+    }
+    if (product.location && product.location.trim()) {
+      const clean = product.location.trim();
+      if (!product.locations || product.locations.length === 0 || product.locations.includes(clean)) {
+        return clean;
+      }
+    }
+    return "";
+  });
   const [serverPassword, setServerPassword] = useState("");
   const [rconPassword, setRconPassword] = useState("");
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
-
-  const availableLocations = useMemo(() => {
-    const list = [...SERVER_LOCATIONS];
-    if (
-      product.location &&
-      product.location.trim() &&
-      !list.some((loc) => loc.label.toLowerCase() === product.location?.toLowerCase().trim())
-    ) {
-      list.unshift({
-        id: "product-loc",
-        city: product.location.trim(),
-        country: "",
-        label: product.location.trim(),
-        flag: "📍",
-      });
-    }
-    return list;
-  }, [product.location]);
 
   const points = useMemo(() => parseServerPoints(product), [product]);
 

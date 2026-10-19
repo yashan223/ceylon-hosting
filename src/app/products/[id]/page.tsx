@@ -145,10 +145,16 @@ export default async function ProductDetailPage({ params }: PageProps) {
                   : "Mod or tool")}
           </Badge>
           <h1>{product.name}</h1>
-          {product.type === "server" && product.location && (
+          {product.type === "server" && (product.locations?.length || product.location) && (
             <div className="product-detail-location">
               <Globe size={15} />
-              <span>Server Location: <strong>{product.location}</strong></span>
+              <span>
+                {product.locations && product.locations.length > 1 ? (
+                  <>Available Locations: <strong>{product.locations.join(", ")}</strong></>
+                ) : (
+                  <>Server Location: <strong>{product.locations?.[0] || product.location}</strong></>
+                )}
+              </span>
             </div>
           )}
           {cleanDescription && <p>{cleanDescription}</p>}

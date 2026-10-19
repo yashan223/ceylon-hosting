@@ -45,6 +45,7 @@ type Draft = {
   type: ProductType;
   description: string;
   location?: string;
+  locations?: string[];
   meta: string;
   price: string;
   accent: string;
@@ -60,6 +61,7 @@ const blankDraft: Draft = {
   type: "server",
   description: "",
   location: "",
+  locations: [],
   meta: "",
   price: "",
   accent: "slate",
@@ -90,20 +92,69 @@ export function ProductManager({
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeletingFile, setIsDeletingFile] = useState(false);
-  const [isCustomLocation, setIsCustomLocation] = useState(false);
+  const [customLocInput, setCustomLocInput] = useState("");
+
+  const customSelectedLocations = useMemo(() => {
+    return (draft.locations || []).filter(
+      (loc) => !SERVER_LOCATIONS.some((sl) => sl.label.toLowerCase() === loc.toLowerCase()),
+    );
+  }, [draft.locations]);
 
   function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
+  function toggleLocation(label: string) {
+    const current = draft.locations || [];
+    const exists = current.includes(label);
+    const next = exists ? current.filter((l) => l !== label) : [...current, label];
+    changeDraft("locations", next);
+    if (draft.location === label && exists) {
+      changeDraft("location", next[0] || "");
+    } else if (!draft.location && !exists) {
+      changeDraft("location", label);
+    }
+  }
+
+  function selectAllLocations() {
+    const allLabels = SERVER_LOCATIONS.map((l) => l.label);
+    const current = draft.locations || [];
+    const merged = Array.from(new Set([...current, ...allLabels]));
+    changeDraft("locations", merged);
+    if (!draft.location && merged.length > 0) {
+      changeDraft("location", merged[0]);
+    }
+  }
+
+  function clearAllLocations() {
+    changeDraft("locations", []);
+    changeDraft("location", "");
+  }
+
+  function addCustomLocation() {
+    const clean = customLocInput.trim();
+    if (!clean) return;
+    const current = draft.locations || [];
+    if (!current.some((l) => l.toLowerCase() === clean.toLowerCase())) {
+      const next = [...current, clean];
+      changeDraft("locations", next);
+      if (!draft.location) changeDraft("location", clean);
+    }
+    setCustomLocInput("");
+  }
+
   function openCreate() {
     setEditingProduct(null);
-    setDraft(blankDraft);
+    setDraft({
+      ...blankDraft,
+      locations: SERVER_LOCATIONS.map((loc) => loc.label),
+      location: SERVER_LOCATIONS[0].label,
+    });
     setExtraImageFiles([]);
     setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
-    setIsCustomLocation(false);
+    setCustomLocInput("");
     setIsEditorOpen(true);
   }
 
@@ -115,13 +166,18 @@ export function ProductManager({
         : product.imageUrl
           ? [product.imageUrl]
           : [];
-    const hasStandardLoc = SERVER_LOCATIONS.some((loc) => loc.label === (product.location ?? ""));
-    setIsCustomLocation(Boolean(product.location && !hasStandardLoc));
+    const initialLocations: string[] =
+      product.locations && product.locations.length > 0
+        ? product.locations
+        : product.location && product.location.trim()
+          ? [product.location.trim()]
+          : [];
     setDraft({
       name: product.name,
       type: product.type,
       description: product.description,
-      location: product.location ?? "",
+      location: product.location ?? initialLocations[0] ?? "",
+      locations: initialLocations,
       meta: product.meta ?? "",
       price: String(product.price),
       accent: product.accent || "slate",
@@ -135,6 +191,7 @@ export function ProductManager({
     setGalleryUrls(existingImages);
     setDownloadFile(null);
     setStatus("");
+    setCustomLocInput("");
     setIsEditorOpen(true);
   }
 
@@ -146,7 +203,7 @@ export function ProductManager({
     setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
-    setIsCustomLocation(false);
+    setCustomLocInput("");
     setIsSaving(false);
   }
 
@@ -171,7 +228,14 @@ export function ProductManager({
         imageUrl: coverUrl,
       };
       if (draft.type === "server") {
-        payload.location = (draft.location ?? "").trim();
+        const cleanLocations = (draft.locations || []).map((l) => l.trim()).filter(Boolean);
+        if (cleanLocations.length === 0) {
+          setStatus("Please select at least one available datacenter location for this server.");
+          setIsSaving(false);
+          return;
+        }
+        payload.locations = cleanLocations;
+        payload.location = (draft.location || cleanLocations[0] || "").trim();
       }
 
       const response = await fetch(
@@ -391,7 +455,9 @@ export function ProductManager({
         const matchesMeta = product.meta ? product.meta.toLowerCase().includes(query) : false;
         const matchesTag = product.tag?.toLowerCase().includes(query);
         const matchesDesc = product.description.toLowerCase().includes(query);
-        const matchesLoc = product.location?.toLowerCase().includes(query);
+        const matchesLoc =
+          product.location?.toLowerCase().includes(query) ||
+          product.locations?.some((l) => l.toLowerCase().includes(query));
         if (!matchesName && !matchesMeta && !matchesTag && !matchesDesc && !matchesLoc) return false;
       }
       return true;
@@ -544,9 +610,12 @@ export function ProductManager({
                     </div>
 
                     <div className="admin-card-specs-row">
-                      {product.type === "server" && product.location && (
+                      {product.type === "server" && (product.locations?.length || product.location) && (
                         <span className="admin-card-location">
-                          <MapPin size={11} /> {product.location}
+                          <MapPin size={11} />
+                          {product.locations && product.locations.length > 1
+                            ? `${product.locations.length} Locations`
+                            : product.locations?.[0] || product.location}
                         </span>
                       )}
                       {product.meta && <span className="admin-card-meta">{product.meta}</span>}
@@ -660,49 +729,96 @@ export function ProductManager({
               </label>
 
               {draft.type === "server" && (
-                <label>
-                  Server Location *
-                  <select
-                    value={
-                      isCustomLocation
-                        ? "custom"
-                        : SERVER_LOCATIONS.some((loc) => loc.label === (draft.location ?? ""))
-                          ? draft.location
-                          : draft.location
-                            ? "custom"
-                            : ""
-                    }
-                    onChange={(event) => {
-                      const val = event.target.value;
-                      if (val === "custom") {
-                        setIsCustomLocation(true);
-                      } else {
-                        setIsCustomLocation(false);
-                        changeDraft("location", val);
-                      }
-                    }}
-                    required
-                  >
-                    <option value="">Select server location...</option>
-                    {SERVER_LOCATIONS.map((loc) => (
-                      <option key={loc.id} value={loc.label}>
-                        {loc.flag} {loc.label}
-                      </option>
-                    ))}
-                    <option value="custom">Other / Custom location...</option>
-                  </select>
-                  {(isCustomLocation ||
-                    (draft.location &&
-                      !SERVER_LOCATIONS.some((loc) => loc.label === draft.location))) && (
+                <div className="admin-location-box">
+                  <div className="admin-location-header">
+                    <span>Available Datacenter Locations *</span>
+                    <div className="admin-location-actions">
+                      <button
+                        type="button"
+                        className="admin-location-btn"
+                        onClick={selectAllLocations}
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-location-btn"
+                        onClick={clearAllLocations}
+                      >
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                  <div className="admin-location-grid">
+                    {SERVER_LOCATIONS.map((loc) => {
+                      const isSelected = (draft.locations || []).includes(loc.label);
+                      return (
+                        <label
+                          key={loc.id}
+                          className={`admin-location-chip ${isSelected ? "selected" : ""}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            toggleLocation(loc.label);
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            readOnly
+                            tabIndex={-1}
+                          />
+                          <span>{loc.flag}</span>
+                          <span>{loc.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="admin-custom-loc-row">
                     <Input
-                      style={{ marginTop: 8 }}
-                      placeholder="Enter custom location (e.g. Dallas, USA)"
-                      value={draft.location ?? ""}
-                      onChange={(event) => changeDraft("location", event.target.value)}
-                      required
+                      placeholder="Add custom location (e.g. Dallas, USA)"
+                      value={customLocInput}
+                      onChange={(e) => setCustomLocInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addCustomLocation();
+                        }
+                      }}
                     />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={addCustomLocation}
+                      disabled={!customLocInput.trim()}
+                    >
+                      Add Location
+                    </Button>
+                  </div>
+                  {customSelectedLocations.length > 0 && (
+                    <div className="admin-custom-tags">
+                      {customSelectedLocations.map((loc) => (
+                        <span key={loc} className="admin-custom-tag">
+                          📍 {loc}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = (draft.locations || []).filter((l) => l !== loc);
+                              changeDraft("locations", next);
+                            }}
+                            aria-label={`Remove ${loc}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
                   )}
-                </label>
+                  {(!draft.locations || draft.locations.length === 0) && (
+                    <span className="admin-field-error">
+                      At least one datacenter location must be selected.
+                    </span>
+                  )}
+                </div>
               )}
 
               <label>

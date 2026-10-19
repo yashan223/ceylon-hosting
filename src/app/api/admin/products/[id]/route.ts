@@ -15,6 +15,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     "description",
     "meta",
     "location",
+    "locations",
     "price",
     "type",
     "accent",
@@ -42,6 +43,20 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   if ("location" in update) {
     update.location = typeof update.location === "string" ? update.location.trim() : "";
+  }
+  if ("locations" in update) {
+    if (Array.isArray(update.locations)) {
+      const sanitizedLocations = update.locations
+        .filter((item): item is string => typeof item === "string")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      update.locations = sanitizedLocations;
+      if (!update.location && sanitizedLocations.length > 0) {
+        update.location = sanitizedLocations[0];
+      }
+    } else {
+      delete update.locations;
+    }
   }
   if (update.type !== undefined && !productTypes.includes(update.type as ProductType))
     return NextResponse.json({ error: "Enter a valid product type." }, { status: 400 });

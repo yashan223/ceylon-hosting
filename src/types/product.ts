@@ -17,6 +17,7 @@ export type Product = {
   description: string;
   price: number;
   location?: string;
+  locations?: string[];
   meta?: string;
   tag?: string;
   accent: string;
