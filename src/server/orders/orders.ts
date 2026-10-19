@@ -191,6 +191,24 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     }
   }
 
+  try {
+    const { findUserById } = await import("@/server/auth/users");
+    const user = await findUserById(order.userId);
+    const { sendOrderPaidAdminNotificationEmail } = await import("@/server/auth/mail");
+    await sendOrderPaidAdminNotificationEmail({
+      orderId,
+      customerEmail: order.email,
+      customerName: user?.firstName,
+      customerCountry: user?.country,
+      paymentId,
+      amountCents,
+      items: order.items,
+      paidAt: now,
+    });
+  } catch (emailErr) {
+    console.error("Failed to send admin order notification email", emailErr);
+  }
+
   return true;
 }
 
