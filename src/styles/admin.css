@@ -2334,6 +2334,20 @@
   font-weight: 600;
 }
 
+.admin-server-pass-chip.slots {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.admin-server-pass-chip.rcon {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+  color: #be185d;
+  font-weight: 600;
+}
+
 .admin-payment-cell {
   align-items: flex-start;
   display: flex;
@@ -2617,5 +2631,175 @@
     flex: 1;
     width: auto;
   }
+}
+
+.admin-settings-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 760px;
+}
+
+.admin-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.admin-settings-row {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  gap: 16px;
+}
+
+.admin-settings-row-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-settings-row-text p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 4px;
+  max-width: 520px;
+}
+
+.admin-switch {
+  cursor: pointer;
+  display: inline-block;
+  height: 24px;
+  position: relative;
+  width: 44px;
+  flex-shrink: 0;
+}
+
+.admin-switch input {
+  height: 0;
+  opacity: 0;
+  width: 0;
+}
+
+.admin-switch-slider {
+  background-color: #cbd5e1;
+  border-radius: 24px;
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-switch-slider:before {
+  background-color: white;
+  border-radius: 50%;
+  bottom: 3px;
+  content: "";
+  height: 18px;
+  left: 3px;
+  position: absolute;
+  transition: 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.admin-switch input:checked + .admin-switch-slider {
+  background-color: #0f172a;
+}
+
+.admin-switch input:checked + .admin-switch-slider:before {
+  transform: translateX(20px);
+}
+
+.admin-settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-settings-label {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-input-with-adornment {
+  align-items: center;
+  display: flex;
+  position: relative;
+  max-width: 200px;
+}
+
+.admin-settings-input {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 36px 8px 12px;
+  width: 100%;
+}
+
+.admin-settings-input:disabled {
+  background: #f8fafc;
+  color: var(--muted-foreground);
+  cursor: not-allowed;
+}
+
+.admin-input-adornment {
+  color: var(--muted-foreground);
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+}
+
+.admin-settings-hint {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.admin-settings-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 16px;
+}
+
+.admin-settings-preview-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-settings-preview-row {
+  display: flex;
+  font-size: 13px;
+  justify-content: space-between;
+}
+
+.admin-settings-preview-row.total {
+  border-top: 1px dashed #cbd5e1;
+  font-weight: 700;
+  font-size: 14px;
+  padding-top: 8px;
+  margin-top: 4px;
+}
+
+.admin-settings-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 12px;
 }
 

@@ -34,6 +34,7 @@ type OrderItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
+  extraSlots?: boolean;
 };
 
 type OrderMessage = {
@@ -49,6 +50,10 @@ type Order = {
   status: string;
   paymentStatus: string;
   paymentId?: string;
+  subtotal?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total?: number;
   createdAt?: string | Date;
   updatedAt?: string | Date;
   items: OrderItem[];
@@ -300,7 +305,10 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
     },
   ];
 
-  const totalAmount = order.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const subtotalAmount =
+    order.subtotal ?? order.items.reduce((sum, it) => sum + it.quantity * it.unitPrice, 0);
+  const taxAmount = order.taxAmount ?? 0;
+  const totalAmount = order.total ?? (subtotalAmount + taxAmount);
   const serverItems = order.items.filter(
     (it) => it.type === "server" || it.serverName || it.serverLocation
   );
@@ -568,6 +576,15 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                       )}
                     </div>
                   </div>
+                  {item.extraSlots && (
+                    <div className="order-cred-tile">
+                      <span className="order-cred-label">Player Capacity</span>
+                      <div className="order-cred-value-wrap">
+                        <strong className="order-cred-value">+4 Extra Slots (Expanded)</strong>
+                      </div>
+                      <span className="order-cred-meta">Custom slot expansion active</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="order-connect-box">
@@ -678,6 +695,11 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                     <strong className="order-item-name">{item.name}</strong>
                     <div className="order-item-meta">
                       <span className="order-type-badge">{item.type}</span>
+                      {item.extraSlots && (
+                        <span className="order-type-badge" style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb", borderColor: "rgba(37,99,235,0.2)" }}>
+                          +4 Extra Slots
+                        </span>
+                      )}
                       <span>
                         {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
                       </span>
@@ -694,8 +716,14 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
             <div className="order-summary-breakdown">
               <div className="order-summary-line">
                 <span>Subtotal</span>
-                <span>Rs. {totalAmount.toLocaleString("en-LK")}</span>
+                <span>Rs. {subtotalAmount.toLocaleString("en-LK")}</span>
               </div>
+              {taxAmount > 0 && (
+                <div className="order-summary-line">
+                  <span>Tax {order.taxRate ? `(${order.taxRate}%)` : ""}</span>
+                  <span>Rs. {taxAmount.toLocaleString("en-LK")}</span>
+                </div>
+              )}
               <div className="order-summary-line">
                 <span>DDoS Shield & Deployment</span>
                 <span className="free-tag">Included (Free)</span>

@@ -13,6 +13,7 @@ type OrderRequest = {
     serverLocation?: unknown;
     serverPassword?: unknown;
     rconPassword?: unknown;
+    extraSlots?: unknown;
   }[];
 };
 
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     serverLocation: typeof item.serverLocation === "string" ? item.serverLocation.trim().slice(0, 100) : undefined,
     serverPassword: typeof item.serverPassword === "string" ? item.serverPassword.trim().slice(0, 100) : undefined,
     rconPassword: typeof item.rconPassword === "string" ? item.rconPassword.trim().slice(0, 100) : undefined,
+    extraSlots: Boolean(item.extraSlots),
   }));
   if (
     items.some(

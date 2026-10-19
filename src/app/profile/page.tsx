@@ -83,6 +83,7 @@ export default async function ProfilePage() {
                   email: profileUser.email,
                   firstName: profileUser.firstName,
                   country: profileUser.country,
+                  whatsapp: profileUser.whatsapp,
                 }}
               />
             </section>

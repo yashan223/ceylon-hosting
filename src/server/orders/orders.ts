@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { getDatabase } from "@/server/db/mongodb";
 import { getActiveProductsByIds } from "@/server/catalog/products";
+import { getStoreSettings } from "@/server/settings/settings";
 import type { AuthUser } from "@/server/auth/users";
 
 type OrderStatus = "requested" | "accepted" | "in_progress" | "completed" | "cancelled";
@@ -15,6 +16,7 @@ type OrderItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
+  extraSlots?: boolean;
 };
 
 type OrderRecord = {
@@ -22,6 +24,10 @@ type OrderRecord = {
   userId: string;
   email: string;
   items: OrderItem[];
+  subtotal?: number;
+  taxRate?: number;
+  taxAmount?: number;
+  total?: number;
   status: OrderStatus;
   paymentStatus: "pending" | "paid" | "failed";
   paymentId?: string;
@@ -112,39 +118,52 @@ export async function createOrder(
       serverLocation?: string;
       serverPassword?: string;
       rconPassword?: string;
+      extraSlots?: boolean;
     }[];
   },
 ) {
+  const settings = await getStoreSettings();
   const products = await getActiveProductsByIds([
     ...new Set(input.items.map((item) => item.productId)),
   ]);
   const productsById = new Map(products.map((product) => [product.id, product]));
   const items: OrderItem[] = input.items.map(
-    ({ productId, quantity, serverName, serverLocation, serverPassword, rconPassword }) => {
+    ({ productId, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => {
       const product = productsById.get(productId);
       if (!product) throw new Error("One or more products are unavailable.");
       if (product.type === "server" && product.available === false)
         throw new Error("One or more products are not available to order.");
+      const unitPrice = product.price + (extraSlots ? 100 : 0);
       return {
         productId,
-        name: product.name,
+        name: extraSlots ? `${product.name} (+4 Slots)` : product.name,
         type: product.type,
         quantity,
-        unitPrice: product.price,
+        unitPrice,
         ...(serverName ? { serverName } : {}),
         ...(serverLocation ? { serverLocation } : {}),
         ...(serverPassword ? { serverPassword } : {}),
         ...(rconPassword ? { rconPassword } : {}),
+        ...(extraSlots ? { extraSlots: true } : {}),
       };
     },
   );
   const now = new Date();
   const { orders, events } = await collections();
+  const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  const taxRate = settings.taxEnabled ? settings.taxRate : 0;
+  const taxAmount = settings.taxEnabled ? Math.round(subtotal * (settings.taxRate / 100) * 100) / 100 : 0;
+  const total = Math.round((subtotal + taxAmount) * 100) / 100;
+
   const order: OrderRecord = {
     id: input.orderId,
     userId: user.id,
     email: user.email,
     items,
+    subtotal,
+    taxRate,
+    taxAmount,
+    total,
     status: "requested",
     paymentStatus: "pending",
     createdAt: now,
@@ -170,10 +189,15 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     paymentStatus: { $ne: "paid" },
   });
   if (!order) return false;
-  const expectedAmountCents = order.items.reduce(
+  const settings = await getStoreSettings();
+  const subtotalCents = order.items.reduce(
     (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
     0,
   );
+  const taxCents = order.taxAmount !== undefined
+    ? Math.round(order.taxAmount * 100)
+    : (settings.taxEnabled ? Math.round(subtotalCents * (settings.taxRate / 100)) : 0);
+  const expectedAmountCents = subtotalCents + taxCents;
   if (amountCents !== expectedAmountCents) return false;
   const result = await orders.updateOne(
     { id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } },

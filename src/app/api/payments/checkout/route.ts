@@ -4,6 +4,7 @@ import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/pay
 import { getCurrentUser } from "@/server/auth/session";
 import { isUserAdmin } from "@/server/auth/admin";
 import { getOrderForUser } from "@/server/orders/orders";
+import { getStoreSettings } from "@/server/settings/settings";
 import { enforceRateLimit } from "@/server/rate-limit";
 
 export const runtime = "nodejs";
@@ -49,10 +50,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "This order has already been paid." }, { status: 409 });
 
   try {
-    const totalCents = order.items.reduce(
+    const settings = await getStoreSettings();
+    const subtotalCents = order.items.reduce(
       (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
       0,
     );
+    const taxCents = order.taxAmount !== undefined
+      ? Math.round(order.taxAmount * 100)
+      : (settings.taxEnabled ? Math.round(subtotalCents * (settings.taxRate / 100)) : 0);
+    const totalCents = subtotalCents + taxCents;
 
     if (totalCents < 1000) {
       return NextResponse.json(
@@ -76,25 +82,36 @@ export async function POST(request: Request) {
       cancelUrl: getPaymentsReturnUrl(process.env.PAYMENTS_LK_CANCEL_PATH ?? "/"),
     };
 
+    const lineItems = order.items.map(({ name, quantity, unitPrice }) => ({
+      name: name.slice(0, 80),
+      unitAmountCents: Math.round(unitPrice * 100),
+      quantity,
+    }));
+
+    if (taxCents > 0) {
+      const rateText = order.taxRate ?? settings.taxRate;
+      lineItems.push({
+        name: `Tax (${rateText}%)`,
+        unitAmountCents: taxCents,
+        quantity: 1,
+      });
+    }
+
     const canUseLineItems =
-      order.items.length >= 1 &&
-      order.items.length <= 10 &&
-      order.items.every(
-        ({ name, quantity, unitPrice }) =>
+      lineItems.length >= 1 &&
+      lineItems.length <= 10 &&
+      lineItems.every(
+        ({ name, quantity, unitAmountCents }) =>
           name.trim().length > 0 &&
           quantity >= 1 &&
           quantity <= 99 &&
-          Math.round(unitPrice * 100) >= 100,
+          unitAmountCents >= 100,
       );
 
     const checkoutParams: CreateCheckoutParams = canUseLineItems
       ? {
           ...baseParams,
-          lineItems: order.items.map(({ name, quantity, unitPrice }) => ({
-            name: name.slice(0, 80),
-            unitAmountCents: Math.round(unitPrice * 100),
-            quantity,
-          })),
+          lineItems,
         }
       : {
           ...baseParams,

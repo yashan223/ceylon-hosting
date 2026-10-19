@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CountrySelect } from "@/components/ui/country-select";
 
-type ProfileFormProps = { user: { email: string; firstName?: string; country?: string } };
+type ProfileFormProps = { user: { email: string; firstName?: string; country?: string; whatsapp?: string } };
 
 export function ProfileForm({ user: initialUser }: ProfileFormProps) {
   const [user, setUser] = useState(initialUser);
@@ -23,6 +23,7 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
       body: JSON.stringify({
         firstName: formData.get("firstName"),
         country: formData.get("country"),
+        whatsapp: formData.get("whatsapp"),
       }),
     });
     const result = (await response.json()) as { user?: ProfileFormProps["user"]; error?: string };
@@ -44,6 +45,16 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
       <label>
         Email address
         <Input value={user.email} readOnly />
+      </label>
+      <label>
+        WhatsApp number
+        <Input
+          name="whatsapp"
+          type="tel"
+          defaultValue={user.whatsapp ?? ""}
+          autoComplete="tel"
+          placeholder="+94 7X XXX XXXX"
+        />
       </label>
       <div className="profile-field-group">
         <span>Country</span>

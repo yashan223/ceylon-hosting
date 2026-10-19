@@ -14,6 +14,7 @@ export type ServerConfig = {
   serverLocation: string;
   serverPassword: string;
   rconPassword: string;
+  extraSlots?: boolean;
 };
 
 type CartItem = {
@@ -23,6 +24,7 @@ type CartItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
+  extraSlots?: boolean;
 };
 
 type ServerConfigModalProps = {
@@ -58,7 +60,10 @@ function getCartServerSnapshot(): string {
 }
 
 function formatPrice(price: number) {
-  return `Rs. ${price.toLocaleString("en-LK")}`;
+  return `Rs. ${price.toLocaleString("en-LK", {
+    minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function createOrderReference() {
@@ -216,11 +221,27 @@ function ServerConfigDialog({
   });
   const [serverPassword, setServerPassword] = useState("");
   const [rconPassword, setRconPassword] = useState("");
+  const [extraSlots, setExtraSlots] = useState(false);
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
   const [mobileTab, setMobileTab] = useState<"config" | "cart">("config");
+  const [taxSettings, setTaxSettings] = useState<{ taxEnabled: boolean; taxRate: number }>({
+    taxEnabled: true,
+    taxRate: 2.27,
+  });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.taxEnabled === "boolean") {
+          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.27 });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const points = useMemo(() => parseServerPoints(product), [product]);
 
@@ -295,14 +316,19 @@ function ServerConfigDialog({
     [cartItems, product.id],
   );
 
+  const currentServerPrice = product.price + (extraSlots ? 100 : 0);
+
   const otherItemsTotal = useMemo(() => {
     return otherCartItems.reduce((acc, item) => {
       const found = catalogProducts.find((p) => p.id === item.productId);
-      return acc + (found ? found.price : 0);
+      const itemUnitPrice = (found ? found.price : 0) + (item.extraSlots ? 100 : 0);
+      return acc + itemUnitPrice;
     }, 0);
   }, [otherCartItems, catalogProducts]);
 
-  const cartTotal = otherItemsTotal + product.price;
+  const cartSubtotal = otherItemsTotal + currentServerPrice;
+  const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
+  const cartTotal = cartSubtotal + taxAmount;
 
   function validateConfig(): ServerConfig | null {
     const cleanName = serverName.trim();
@@ -340,6 +366,7 @@ function ServerConfigDialog({
       serverLocation: cleanLocation,
       serverPassword: cleanPass,
       rconPassword: cleanRcon,
+      extraSlots,
     };
   }
 
@@ -396,6 +423,7 @@ function ServerConfigDialog({
         ...(item.serverLocation ? { serverLocation: item.serverLocation } : {}),
         ...(item.serverPassword ? { serverPassword: item.serverPassword } : {}),
         ...(item.rconPassword ? { rconPassword: item.rconPassword } : {}),
+        ...(item.extraSlots ? { extraSlots: true } : {}),
       }));
 
       const response = await fetch("/api/orders", {
@@ -594,6 +622,23 @@ function ServerConfigDialog({
                 />
               </div>
 
+              <div className="server-split-field">
+                <label className="server-split-label">Server Customization</label>
+                <label className="server-customization-option">
+                  <input
+                    type="checkbox"
+                    checked={extraSlots}
+                    onChange={(e) => setExtraSlots(e.target.checked)}
+                    className="server-customization-checkbox"
+                  />
+                  <div className="server-customization-info">
+                    <strong>Extra 4 slots</strong>
+                    <small>Increase maximum server capacity by 4 player slots</small>
+                  </div>
+                  <span className="server-customization-price">+Rs. 100</span>
+                </label>
+              </div>
+
             </form>
           </div>
         </div>
@@ -622,14 +667,20 @@ function ServerConfigDialog({
                   <span className="server-split-item-server">
                     RCON: <code>{rconPassword.trim() ? "••••••••" : "Required"}</code>
                   </span>
+                  {extraSlots && (
+                    <span className="server-split-item-server">
+                      Slots: <strong style={{ color: "#16a34a" }}>+4 Extra Slots (+Rs. 100)</strong>
+                    </span>
+                  )}
                 </div>
                 <div className="server-split-item-actions">
-                  <b>{formatPrice(product.price)}</b>
+                  <b>{formatPrice(currentServerPrice)}</b>
                 </div>
               </div>
 
               {otherCartItems.map((item) => {
                 const itemProduct = catalogProducts.find((p) => p.id === item.productId);
+                const itemPrice = (itemProduct ? itemProduct.price : 0) + (item.extraSlots ? 100 : 0);
                 return (
                   <div className="server-split-cart-item" key={item.productId}>
                     <div className="server-split-item-details">
@@ -647,9 +698,14 @@ function ServerConfigDialog({
                           Location: <strong>{item.serverLocation}</strong>
                         </span>
                       ) : null}
+                      {item.extraSlots ? (
+                        <span className="server-split-item-server">
+                          Slots: <strong style={{ color: "#16a34a" }}>+4 Extra Slots (+Rs. 100)</strong>
+                        </span>
+                      ) : null}
                     </div>
                     <div className="server-split-item-actions">
-                      <b>{itemProduct ? formatPrice(itemProduct.price) : "—"}</b>
+                      <b>{itemProduct ? formatPrice(itemPrice) : "—"}</b>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -667,7 +723,20 @@ function ServerConfigDialog({
             <div className="server-split-cart-footer desktop-only">
               <div className="server-split-total-row">
                 <span>Subtotal</span>
-                <strong>{formatPrice(cartTotal)}</strong>
+                <strong>{formatPrice(cartSubtotal)}</strong>
+              </div>
+              {taxSettings.taxEnabled && (
+                <div className="server-split-total-row">
+                  <span>Tax ({taxSettings.taxRate}%)</span>
+                  <strong>{formatPrice(taxAmount)}</strong>
+                </div>
+              )}
+              <div
+                className="server-split-total-row"
+                style={{ borderTop: "1px dashed #cbd5e1", paddingTop: 8, marginTop: 4 }}
+              >
+                <span>Total</span>
+                <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
               </div>
               <div className="server-split-cart-actions">
                 <Button
@@ -699,7 +768,20 @@ function ServerConfigDialog({
       <div className="server-split-mobile-footer mobile-only">
         <div className="server-split-total-row">
           <span>Subtotal</span>
-          <strong>{formatPrice(cartTotal)}</strong>
+          <strong>{formatPrice(cartSubtotal)}</strong>
+        </div>
+        {taxSettings.taxEnabled && (
+          <div className="server-split-total-row">
+            <span>Tax ({taxSettings.taxRate}%)</span>
+            <strong>{formatPrice(taxAmount)}</strong>
+          </div>
+        )}
+        <div
+          className="server-split-total-row"
+          style={{ borderTop: "1px dashed #cbd5e1", paddingTop: 8, marginTop: 4 }}
+        >
+          <span>Total</span>
+          <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
         </div>
         <div className="server-split-cart-actions">
           <Button

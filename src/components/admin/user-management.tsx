@@ -10,6 +10,7 @@ export type AdminUserView = {
   email: string;
   firstName?: string;
   country?: string;
+  whatsapp?: string;
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
@@ -73,7 +74,8 @@ export function UserManagement({
         const matchesEmail = user.email.toLowerCase().includes(query);
         const matchesName = user.firstName?.toLowerCase().includes(query) ?? false;
         const matchesCountry = user.country?.toLowerCase().includes(query) ?? false;
-        if (!matchesEmail && !matchesName && !matchesCountry) return false;
+        const matchesWhatsapp = user.whatsapp?.toLowerCase().includes(query) ?? false;
+        if (!matchesEmail && !matchesName && !matchesCountry && !matchesWhatsapp) return false;
       }
       return true;
     });
@@ -151,6 +153,11 @@ export function UserManagement({
                   <div className="admin-cell-main">
                     <strong>{user.firstName || "Customer"}</strong>
                     <small>{user.email}</small>
+                    {user.whatsapp && (
+                      <small className="admin-user-whatsapp" style={{ color: "#2563eb", marginTop: 2 }}>
+                        WhatsApp: {user.whatsapp}
+                      </small>
+                    )}
                   </div>
                 </td>
                 <td data-label="Country">{user.country || "LK"}</td>

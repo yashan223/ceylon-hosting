@@ -10,6 +10,7 @@ type UserRecord = {
   email: string;
   firstName?: string;
   country?: string;
+  whatsapp?: string;
   passwordHash: string;
   emailVerified: boolean;
   verificationTokenHash?: string;
@@ -24,7 +25,7 @@ export type AuthUser = Pick<UserRecord, "id" | "email" | "firstName" | "emailVer
 
 export type AdminUser = Pick<
   UserRecord,
-  "id" | "email" | "firstName" | "country" | "emailVerified" | "createdAt" | "updatedAt"
+  "id" | "email" | "firstName" | "country" | "whatsapp" | "emailVerified" | "createdAt" | "updatedAt"
 >;
 
 let indexesPromise: Promise<void> | undefined;
@@ -87,12 +88,16 @@ export async function findUserById(id: string) {
 
 export async function updateUserProfile(
   id: string,
-  input: { firstName?: string; country?: string },
+  input: { firstName?: string; country?: string; whatsapp?: string },
 ) {
   const collection = await usersCollection();
   const firstName = input.firstName?.trim().slice(0, 80) || undefined;
   const country = input.country?.trim().slice(0, 80) || undefined;
-  await collection.updateOne({ id }, { $set: { firstName, country, updatedAt: new Date() } });
+  const whatsapp = input.whatsapp?.trim().slice(0, 30) || undefined;
+  await collection.updateOne(
+    { id },
+    { $set: { firstName, country, whatsapp, updatedAt: new Date() } },
+  );
   return findUserById(id);
 }
 
@@ -164,15 +169,18 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
     )
     .sort({ createdAt: -1 })
     .toArray();
-  return users.map(({ id, email, firstName, country, emailVerified, createdAt, updatedAt }) => ({
-    id,
-    email,
-    firstName,
-    country,
-    emailVerified,
-    createdAt,
-    updatedAt,
-  }));
+  return users.map(
+    ({ id, email, firstName, country, whatsapp, emailVerified, createdAt, updatedAt }) => ({
+      id,
+      email,
+      firstName,
+      country,
+      whatsapp,
+      emailVerified,
+      createdAt,
+      updatedAt,
+    }),
+  );
 }
 
 export async function deleteUser(id: string) {
@@ -187,6 +195,7 @@ export async function createUser(input: {
   password: string;
   firstName?: string;
   country?: string;
+  whatsapp?: string;
 }) {
   const collection = await usersCollection();
 
@@ -197,6 +206,7 @@ export async function createUser(input: {
     email: normalizeEmail(input.email),
     firstName: input.firstName?.trim() || undefined,
     country: input.country?.trim() || undefined,
+    whatsapp: input.whatsapp?.trim().slice(0, 30) || undefined,
     passwordHash: await hashPassword(input.password),
     emailVerified: false,
     verificationTokenHash: hashToken(verificationToken),

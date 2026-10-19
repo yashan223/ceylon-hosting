@@ -11,6 +11,7 @@ const links = [
   { href: "/admin/files", label: "Files & Storage" },
   { href: "/admin/messages", label: "Messages" },
   { href: "/admin/users", label: "Users" },
+  { href: "/admin/settings", label: "Settings" },
   { href: "/admin/audit", label: "Audit log" },
 ];
 

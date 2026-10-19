@@ -14,6 +14,7 @@ type CartItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
+  extraSlots?: boolean;
 };
 
 const cartStorageKey = "ceylonhosting-cart";
@@ -42,7 +43,10 @@ function getCartServerSnapshot(): string {
 }
 
 function formatPrice(price: number) {
-  return `Rs. ${price.toLocaleString("en-LK")}`;
+  return `Rs. ${price.toLocaleString("en-LK", {
+    minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 function createOrderReference() {
@@ -122,6 +126,22 @@ export function CartButton({
     };
   }, [initialProducts.length]);
 
+  const [taxSettings, setTaxSettings] = useState<{ taxEnabled: boolean; taxRate: number }>({
+    taxEnabled: true,
+    taxRate: 2.27,
+  });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.taxEnabled === "boolean") {
+          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.27 });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
     const originalOverflow = document.body.style.overflow;
@@ -153,6 +173,7 @@ export function CartButton({
     serverLocation?: string;
     serverPassword?: string;
     rconPassword?: string;
+    extraSlots?: boolean;
   };
 
   const cartProducts = cart.flatMap((item): CartProductEntry[] => {
@@ -166,14 +187,17 @@ export function CartButton({
         serverLocation: item.serverLocation,
         serverPassword: item.serverPassword,
         rconPassword: item.rconPassword,
+        extraSlots: item.extraSlots,
       },
     ];
   });
 
-  const cartTotal = cartProducts.reduce(
-    (total, item) => total + item.product.price * item.quantity,
+  const cartSubtotal = cartProducts.reduce(
+    (total, item) => total + (item.product.price + (item.extraSlots ? 100 : 0)) * item.quantity,
     0,
   );
+  const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
+  const cartTotal = cartSubtotal + taxAmount;
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -187,13 +211,14 @@ export function CartButton({
         body: JSON.stringify({
           orderId: createOrderReference(),
           items: cartProducts.map(
-            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword }) => ({
+            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => ({
               productId: product.id,
               quantity,
               ...(serverName ? { serverName } : {}),
               ...(serverLocation ? { serverLocation } : {}),
               ...(serverPassword ? { serverPassword } : {}),
               ...(rconPassword ? { rconPassword } : {}),
+              ...(extraSlots ? { extraSlots: true } : {}),
             }),
           ),
         }),
@@ -273,7 +298,7 @@ export function CartButton({
                 </div>
               ) : (
                 <div className="drawer-items">
-                  {cartProducts.map(({ product, serverName, serverLocation }) => (
+                  {cartProducts.map(({ product, serverName, serverLocation, extraSlots }) => (
                     <div className="drawer-item" key={product.id}>
                       <div>
                         <strong>{product.name}</strong>
@@ -286,9 +311,14 @@ export function CartButton({
                                 ? "Setup service"
                                 : "Mod or tool"}
                         </span>
+                        {extraSlots && (
+                          <span style={{ display: "inline-block", fontSize: "11px", color: "#2563eb", fontWeight: 600, marginTop: "2px" }}>
+                            +4 Extra Slots (+Rs. 100)
+                          </span>
+                        )}
                       </div>
                       <div className="drawer-item-actions">
-                        <b>{formatPrice(product.price)}</b>
+                        <b>{formatPrice(product.price + (extraSlots ? 100 : 0))}</b>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -303,10 +333,27 @@ export function CartButton({
                 </div>
               )}
               <div className="drawer-footer">
-                <div>
-                  <span>Subtotal</span>
-                  <strong>{formatPrice(cartTotal)}</strong>
-                </div>
+                {taxSettings.taxEnabled ? (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", width: "100%" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--muted-foreground)" }}>
+                      <span>Subtotal</span>
+                      <span>{formatPrice(cartSubtotal)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--muted-foreground)" }}>
+                      <span>Tax ({taxSettings.taxRate}%)</span>
+                      <span>{formatPrice(taxAmount)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+                      <span style={{ fontWeight: 600, color: "var(--foreground)" }}>Total</span>
+                      <strong style={{ fontSize: "20px" }}>{formatPrice(cartTotal)}</strong>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <span>Subtotal</span>
+                    <strong>{formatPrice(cartTotal)}</strong>
+                  </div>
+                )}
                 <Button
                   className="checkout-button"
                   disabled={cartProducts.length === 0 || checkoutState === "loading"}

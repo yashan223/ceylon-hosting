@@ -129,7 +129,7 @@ export default async function AdminDashboardPage() {
                         {order.items.map((item) => (
                           <span key={item.productId} className="admin-order-item-line">
                             <span className="admin-order-item-title">{item.name} ×{item.quantity}</span>
-                            {(item.serverName || item.serverLocation) && (
+                            {(item.serverName || item.serverLocation || item.extraSlots) && (
                               <span className="admin-order-server-badge">
                                 {item.serverLocation && (
                                   <span className="admin-server-loc-chip">
@@ -156,6 +156,9 @@ export default async function AdminDashboardPage() {
                                   <span className="admin-server-pass-chip rcon">
                                     RCON: <code>{item.rconPassword}</code>
                                   </span>
+                                ) : null}
+                                {item.extraSlots ? (
+                                  <span className="admin-server-pass-chip slots">+4 Slots</span>
                                 ) : null}
                               </span>
                             )}

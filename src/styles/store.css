@@ -2772,3 +2772,62 @@
   }
 }
 
+.server-customization-option {
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  padding: 12px 14px;
+  transition: all 0.15s ease;
+}
+
+.server-customization-option:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.server-customization-option:has(input:checked) {
+  border-color: #0f172a;
+  background: #f8fafc;
+}
+
+.server-customization-checkbox {
+  accent-color: #0f172a;
+  cursor: pointer;
+  height: 18px;
+  width: 18px;
+}
+
+.server-customization-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.server-customization-info strong {
+  color: var(--foreground);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.server-customization-info small {
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+
+.server-customization-price {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  color: #0f172a;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+

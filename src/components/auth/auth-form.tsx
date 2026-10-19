@@ -21,6 +21,7 @@ export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === "sign-up";
   const [firstName, setFirstName] = useState("");
   const [country, setCountry] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -69,6 +70,10 @@ export function AuthForm({ mode }: AuthFormProps) {
       setError("Please select your country.");
       return;
     }
+    if (isSignUp && (!whatsapp.trim() || whatsapp.trim().length < 6)) {
+      setError("Please enter your WhatsApp number.");
+      return;
+    }
     setIsLoading(true);
     try {
       const response = await fetch(`/api/auth/${mode}`, {
@@ -77,6 +82,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         body: JSON.stringify({
           firstName,
           country,
+          whatsapp,
           acceptedTerms,
           email,
           password,
@@ -167,6 +173,19 @@ export function AuthForm({ mode }: AuthFormProps) {
               required
             />
           </div>
+        )}
+        {isSignUp && (
+          <label>
+            WhatsApp number
+            <Input
+              type="tel"
+              autoComplete="tel"
+              placeholder="+94 7X XXX XXXX"
+              required
+              value={whatsapp}
+              onChange={(event) => setWhatsapp(event.target.value)}
+            />
+          </label>
         )}
         <label>
           Email address

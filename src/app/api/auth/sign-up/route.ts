@@ -12,13 +12,22 @@ export async function POST(request: Request) {
     password?: string;
     firstName?: string;
     country?: string;
+    whatsapp?: string;
     acceptedTerms?: boolean;
   };
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
+  const whatsapp = body.whatsapp?.trim();
   if (!email || !email.includes("@") || password.length < 8 || body.acceptedTerms !== true) {
     return NextResponse.json(
       { error: "Use a valid email and a password of at least 8 characters." },
+      { status: 400 },
+    );
+  }
+
+  if (!whatsapp || whatsapp.length < 6 || whatsapp.length > 25) {
+    return NextResponse.json(
+      { error: "Please provide a valid WhatsApp number." },
       { status: 400 },
     );
   }
@@ -36,6 +45,7 @@ export async function POST(request: Request) {
       password,
       firstName: body.firstName,
       country: body.country,
+      whatsapp,
     });
     // The account already exists at this point, so a mail outage must not fail the request.
     let emailSent = true;
