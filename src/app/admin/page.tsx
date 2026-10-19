@@ -22,15 +22,8 @@ export default async function AdminDashboardPage() {
 
   return (
     <main className="admin-page">
-      <div className="admin-page-heading">
-        <div>
-          <span className="admin-kicker">Workspace</span>
-          <h1>Store overview</h1>
-          <p>Monitor real-time metrics, active server plans, and store operations.</p>
-        </div>
-        <div className="admin-heading-actions">
-          <ClearDataButton />
-        </div>
+      <div className="admin-overview-top">
+        <ClearDataButton />
       </div>
 
       <section className="admin-stat-grid admin-stat-grid-8">

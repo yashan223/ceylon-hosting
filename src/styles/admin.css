@@ -203,6 +203,12 @@
   padding: 22px 46px 70px;
 }
 
+.admin-overview-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: -16px;
+}
+
 .admin-page-heading {
   align-items: end;
   display: flex;
