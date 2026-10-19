@@ -9,12 +9,26 @@ import { SERVER_LOCATIONS } from "@/lib/datacenters";
 import { parseProductFeatures } from "@/lib/products";
 import type { Product } from "@/types/product";
 
+function getExtraSlotsCost(slots?: number | boolean): number {
+  if (typeof slots === "number") {
+    return Math.max(0, Math.round((slots / 4) * 100));
+  }
+  return slots ? 100 : 0;
+}
+
+function getExtraSlotsCount(slots?: number | boolean): number {
+  if (typeof slots === "number") {
+    return Math.max(0, Math.floor(slots));
+  }
+  return slots ? 4 : 0;
+}
+
 export type ServerConfig = {
   serverName: string;
   serverLocation: string;
   serverPassword: string;
   rconPassword: string;
-  extraSlots?: boolean;
+  extraSlots?: number;
 };
 
 type CartItem = {
@@ -24,7 +38,7 @@ type CartItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
-  extraSlots?: boolean;
+  extraSlots?: number | boolean;
 };
 
 type ServerConfigModalProps = {
@@ -221,7 +235,7 @@ function ServerConfigDialog({
   });
   const [serverPassword, setServerPassword] = useState("");
   const [rconPassword, setRconPassword] = useState("");
-  const [extraSlots, setExtraSlots] = useState(false);
+  const [extraSlots, setExtraSlots] = useState<number>(0);
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
@@ -316,12 +330,13 @@ function ServerConfigDialog({
     [cartItems, product.id],
   );
 
-  const currentServerPrice = product.price + (extraSlots ? 100 : 0);
+  const extraSlotsCost = getExtraSlotsCost(extraSlots);
+  const currentServerPrice = product.price + extraSlotsCost;
 
   const otherItemsTotal = useMemo(() => {
     return otherCartItems.reduce((acc, item) => {
       const found = catalogProducts.find((p) => p.id === item.productId);
-      const itemUnitPrice = (found ? found.price : 0) + (item.extraSlots ? 100 : 0);
+      const itemUnitPrice = (found ? found.price : 0) + getExtraSlotsCost(item.extraSlots);
       return acc + itemUnitPrice;
     }, 0);
   }, [otherCartItems, catalogProducts]);
@@ -366,7 +381,7 @@ function ServerConfigDialog({
       serverLocation: cleanLocation,
       serverPassword: cleanPass,
       rconPassword: cleanRcon,
-      extraSlots,
+      ...(extraSlots > 0 ? { extraSlots } : {}),
     };
   }
 
@@ -416,15 +431,18 @@ function ServerConfigDialog({
     setCheckoutError("");
 
     try {
-      const itemsToOrder = currentCart.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        ...(item.serverName ? { serverName: item.serverName } : {}),
-        ...(item.serverLocation ? { serverLocation: item.serverLocation } : {}),
-        ...(item.serverPassword ? { serverPassword: item.serverPassword } : {}),
-        ...(item.rconPassword ? { rconPassword: item.rconPassword } : {}),
-        ...(item.extraSlots ? { extraSlots: true } : {}),
-      }));
+      const itemsToOrder = currentCart.map((item) => {
+        const slotsCount = getExtraSlotsCount(item.extraSlots);
+        return {
+          productId: item.productId,
+          quantity: item.quantity,
+          ...(item.serverName ? { serverName: item.serverName } : {}),
+          ...(item.serverLocation ? { serverLocation: item.serverLocation } : {}),
+          ...(item.serverPassword ? { serverPassword: item.serverPassword } : {}),
+          ...(item.rconPassword ? { rconPassword: item.rconPassword } : {}),
+          ...(slotsCount > 0 ? { extraSlots: slotsCount } : {}),
+        };
+      });
 
       const response = await fetch("/api/orders", {
         method: "POST",
@@ -624,19 +642,62 @@ function ServerConfigDialog({
 
               <div className="server-split-field">
                 <label className="server-split-label">Server Customization</label>
-                <label className="server-customization-option">
-                  <input
-                    type="checkbox"
-                    checked={extraSlots}
-                    onChange={(e) => setExtraSlots(e.target.checked)}
-                    className="server-customization-checkbox"
-                  />
-                  <div className="server-customization-info">
-                    <strong>Extra 4 slots</strong>
-                    <small>Increase maximum server capacity by 4 player slots</small>
+                <div className="server-slots-picker">
+                  <div className="server-slots-header">
+                    <div>
+                      <strong>Extra Player Slots</strong>
+                      <small>Every 4 slots adds Rs. 100 to server capacity</small>
+                    </div>
+                    <span className="server-customization-price">
+                      {extraSlots > 0 ? `+Rs. ${extraSlotsCost.toLocaleString("en-LK")}` : "+Rs. 0"}
+                    </span>
                   </div>
-                  <span className="server-customization-price">+Rs. 100</span>
-                </label>
+                  <div className="server-slots-control">
+                    <button
+                      type="button"
+                      className="server-slots-btn"
+                      onClick={() => setExtraSlots((prev) => Math.max(0, prev - 4))}
+                      disabled={extraSlots <= 0}
+                      aria-label="Decrease 4 slots"
+                    >
+                      -4
+                    </button>
+                    <input
+                      type="number"
+                      min={0}
+                      max={64}
+                      step={4}
+                      value={extraSlots}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        setExtraSlots(isNaN(val) ? 0 : Math.max(0, Math.min(64, val)));
+                      }}
+                      className="server-slots-input"
+                      aria-label="Extra player slots"
+                    />
+                    <button
+                      type="button"
+                      className="server-slots-btn"
+                      onClick={() => setExtraSlots((prev) => Math.min(64, prev + 4))}
+                      disabled={extraSlots >= 64}
+                      aria-label="Increase 4 slots"
+                    >
+                      +4
+                    </button>
+                  </div>
+                  <div className="server-slots-presets">
+                    {[0, 4, 8, 12, 16, 20].map((preset) => (
+                      <button
+                        type="button"
+                        key={preset}
+                        className={`server-slots-preset ${extraSlots === preset ? "active" : ""}`}
+                        onClick={() => setExtraSlots(preset)}
+                      >
+                        {preset === 0 ? "Standard (0)" : `+${preset} slots`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
             </form>
@@ -667,9 +728,9 @@ function ServerConfigDialog({
                   <span className="server-split-item-server">
                     RCON: <code>{rconPassword.trim() ? "••••••••" : "Required"}</code>
                   </span>
-                  {extraSlots && (
+                  {extraSlots > 0 && (
                     <span className="server-split-item-server">
-                      Slots: <strong style={{ color: "#16a34a" }}>+4 Extra Slots (+Rs. 100)</strong>
+                      Slots: <strong style={{ color: "#16a34a" }}>+{extraSlots} Extra Slots (+Rs. {extraSlotsCost.toLocaleString("en-LK")})</strong>
                     </span>
                   )}
                 </div>
@@ -680,7 +741,7 @@ function ServerConfigDialog({
 
               {otherCartItems.map((item) => {
                 const itemProduct = catalogProducts.find((p) => p.id === item.productId);
-                const itemPrice = (itemProduct ? itemProduct.price : 0) + (item.extraSlots ? 100 : 0);
+                const itemPrice = (itemProduct ? itemProduct.price : 0) + getExtraSlotsCost(item.extraSlots);
                 return (
                   <div className="server-split-cart-item" key={item.productId}>
                     <div className="server-split-item-details">
@@ -698,9 +759,9 @@ function ServerConfigDialog({
                           Location: <strong>{item.serverLocation}</strong>
                         </span>
                       ) : null}
-                      {item.extraSlots ? (
+                      {getExtraSlotsCount(item.extraSlots) > 0 ? (
                         <span className="server-split-item-server">
-                          Slots: <strong style={{ color: "#16a34a" }}>+4 Extra Slots (+Rs. 100)</strong>
+                          Slots: <strong style={{ color: "#16a34a" }}>+{getExtraSlotsCount(item.extraSlots)} Extra Slots (+Rs. {getExtraSlotsCost(item.extraSlots).toLocaleString("en-LK")})</strong>
                         </span>
                       ) : null}
                     </div>

@@ -7,6 +7,20 @@ import { ShoppingBag, X, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/types/product";
 
+function getExtraSlotsCost(slots?: number | boolean): number {
+  if (typeof slots === "number") {
+    return Math.max(0, Math.round((slots / 4) * 100));
+  }
+  return slots ? 100 : 0;
+}
+
+function getExtraSlotsCount(slots?: number | boolean): number {
+  if (typeof slots === "number") {
+    return Math.max(0, Math.floor(slots));
+  }
+  return slots ? 4 : 0;
+}
+
 type CartItem = {
   productId: string;
   quantity: number;
@@ -14,7 +28,7 @@ type CartItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
-  extraSlots?: boolean;
+  extraSlots?: number | boolean;
 };
 
 const cartStorageKey = "ceylonhosting-cart";
@@ -173,7 +187,7 @@ export function CartButton({
     serverLocation?: string;
     serverPassword?: string;
     rconPassword?: string;
-    extraSlots?: boolean;
+    extraSlots?: number | boolean;
   };
 
   const cartProducts = cart.flatMap((item): CartProductEntry[] => {
@@ -193,7 +207,7 @@ export function CartButton({
   });
 
   const cartSubtotal = cartProducts.reduce(
-    (total, item) => total + (item.product.price + (item.extraSlots ? 100 : 0)) * item.quantity,
+    (total, item) => total + (item.product.price + getExtraSlotsCost(item.extraSlots)) * item.quantity,
     0,
   );
   const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
@@ -211,15 +225,18 @@ export function CartButton({
         body: JSON.stringify({
           orderId: createOrderReference(),
           items: cartProducts.map(
-            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => ({
-              productId: product.id,
-              quantity,
-              ...(serverName ? { serverName } : {}),
-              ...(serverLocation ? { serverLocation } : {}),
-              ...(serverPassword ? { serverPassword } : {}),
-              ...(rconPassword ? { rconPassword } : {}),
-              ...(extraSlots ? { extraSlots: true } : {}),
-            }),
+            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => {
+              const slotsCount = getExtraSlotsCount(extraSlots);
+              return {
+                productId: product.id,
+                quantity,
+                ...(serverName ? { serverName } : {}),
+                ...(serverLocation ? { serverLocation } : {}),
+                ...(serverPassword ? { serverPassword } : {}),
+                ...(rconPassword ? { rconPassword } : {}),
+                ...(slotsCount > 0 ? { extraSlots: slotsCount } : {}),
+              };
+            },
           ),
         }),
       });
@@ -311,14 +328,14 @@ export function CartButton({
                                 ? "Setup service"
                                 : "Mod or tool"}
                         </span>
-                        {extraSlots && (
+                        {getExtraSlotsCount(extraSlots) > 0 && (
                           <span style={{ display: "inline-block", fontSize: "11px", color: "#2563eb", fontWeight: 600, marginTop: "2px" }}>
-                            +4 Extra Slots (+Rs. 100)
+                            +{getExtraSlotsCount(extraSlots)} Extra Slots (+{formatPrice(getExtraSlotsCost(extraSlots))})
                           </span>
                         )}
                       </div>
                       <div className="drawer-item-actions">
-                        <b>{formatPrice(product.price + (extraSlots ? 100 : 0))}</b>
+                        <b>{formatPrice(product.price + getExtraSlotsCost(extraSlots))}</b>
                         <Button
                           variant="ghost"
                           size="icon"

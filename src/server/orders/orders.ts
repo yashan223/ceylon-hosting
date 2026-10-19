@@ -16,7 +16,7 @@ type OrderItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
-  extraSlots?: boolean;
+  extraSlots?: number | boolean;
 };
 
 type OrderRecord = {
@@ -118,7 +118,7 @@ export async function createOrder(
       serverLocation?: string;
       serverPassword?: string;
       rconPassword?: string;
-      extraSlots?: boolean;
+      extraSlots?: number | boolean;
     }[];
   },
 ) {
@@ -133,10 +133,17 @@ export async function createOrder(
       if (!product) throw new Error("One or more products are unavailable.");
       if (product.type === "server" && product.available === false)
         throw new Error("One or more products are not available to order.");
-      const unitPrice = product.price + (extraSlots ? 100 : 0);
+      const slotsCount =
+        typeof extraSlots === "number"
+          ? Math.max(0, Math.floor(extraSlots))
+          : extraSlots
+          ? 4
+          : 0;
+      const slotsCost = Math.round((slotsCount / 4) * 100);
+      const unitPrice = product.price + slotsCost;
       return {
         productId,
-        name: extraSlots ? `${product.name} (+4 Slots)` : product.name,
+        name: slotsCount > 0 ? `${product.name} (+${slotsCount} Slots)` : product.name,
         type: product.type,
         quantity,
         unitPrice,
@@ -144,7 +151,7 @@ export async function createOrder(
         ...(serverLocation ? { serverLocation } : {}),
         ...(serverPassword ? { serverPassword } : {}),
         ...(rconPassword ? { rconPassword } : {}),
-        ...(extraSlots ? { extraSlots: true } : {}),
+        ...(slotsCount > 0 ? { extraSlots: slotsCount } : {}),
       };
     },
   );

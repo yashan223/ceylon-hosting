@@ -71,7 +71,9 @@ export default async function AdminOrdersPage() {
                                   </span>
                                 ) : null}
                                 {item.extraSlots ? (
-                                  <span className="admin-server-pass-chip slots">+4 Slots</span>
+                                  <span className="admin-server-pass-chip slots">
+                                    +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Slots
+                                  </span>
                                 ) : null}
                               </span>
                             )}

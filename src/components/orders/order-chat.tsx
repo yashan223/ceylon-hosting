@@ -34,7 +34,7 @@ type OrderItem = {
   serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
-  extraSlots?: boolean;
+  extraSlots?: number | boolean;
 };
 
 type OrderMessage = {
@@ -576,15 +576,17 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                       )}
                     </div>
                   </div>
-                  {item.extraSlots && (
+                  {item.extraSlots ? (
                     <div className="order-cred-tile">
                       <span className="order-cred-label">Player Capacity</span>
                       <div className="order-cred-value-wrap">
-                        <strong className="order-cred-value">+4 Extra Slots (Expanded)</strong>
+                        <strong className="order-cred-value">
+                          +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Extra Slots (Expanded)
+                        </strong>
                       </div>
                       <span className="order-cred-meta">Custom slot expansion active</span>
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="order-connect-box">
@@ -695,11 +697,11 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                     <strong className="order-item-name">{item.name}</strong>
                     <div className="order-item-meta">
                       <span className="order-type-badge">{item.type}</span>
-                      {item.extraSlots && (
+                      {item.extraSlots ? (
                         <span className="order-type-badge" style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb", borderColor: "rgba(37,99,235,0.2)" }}>
-                          +4 Extra Slots
+                          +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Extra Slots
                         </span>
-                      )}
+                      ) : null}
                       <span>
                         {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
                       </span>
