@@ -191,6 +191,7 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
     quantity: number;
     unitPrice: number;
     serverName?: string;
+    serverLocation?: string;
     serverPassword?: string;
     rconPassword?: string;
   }>;
@@ -230,12 +231,14 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
             : "Mod / Tool",
       );
       const safeServerName = item.serverName ? escapeHtml(item.serverName) : "";
+      const safeLocation = item.serverLocation ? escapeHtml(item.serverLocation) : "";
       const safeServerPass = item.serverPassword ? escapeHtml(item.serverPassword) : "(None)";
       const safeRconPass = item.rconPassword ? escapeHtml(item.rconPassword) : "(None)";
-      const serverDetailsHtml = item.serverName
+      const serverDetailsHtml = item.serverName || item.serverLocation
         ? `
           <div style="margin-top: 6px; padding: 6px 8px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 11px; font-family: monospace; line-height: 1.4;">
-            <div><strong>Server Name:</strong> ${safeServerName}</div>
+            ${safeServerName ? `<div><strong>Server Name:</strong> ${safeServerName}</div>` : ""}
+            ${safeLocation ? `<div><strong>Location:</strong> ${safeLocation}</div>` : ""}
             <div><strong>Password:</strong> ${safeServerPass}</div>
             <div><strong>RCON:</strong> ${safeRconPass}</div>
           </div>

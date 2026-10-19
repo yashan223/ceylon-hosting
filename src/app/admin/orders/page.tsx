@@ -41,9 +41,10 @@ export default async function AdminOrdersPage() {
                         {order.items.map((item) => (
                           <span key={item.productId} className="admin-order-item-line">
                             <span>{item.name} x{item.quantity}</span>
-                            {item.serverName && (
+                            {(item.serverName || item.serverLocation) && (
                               <span className="admin-order-server-badge">
-                                Server: <strong>{item.serverName}</strong>
+                                {item.serverName ? <>Server: <strong>{item.serverName}</strong></> : null}
+                                {item.serverLocation ? ` • Loc: ${item.serverLocation}` : ""}
                                 {item.serverPassword ? ` • Pass: ${item.serverPassword}` : " • No pass"}
                                 {item.rconPassword ? ` • Rcon: ${item.rconPassword}` : ""}
                               </span>

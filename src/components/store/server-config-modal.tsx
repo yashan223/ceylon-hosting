@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Server, Trash2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Server, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SERVER_LOCATIONS } from "@/lib/datacenters";
+import { parseProductFeatures } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 export type ServerConfig = {
   serverName: string;
+  serverLocation: string;
   serverPassword: string;
   rconPassword: string;
 };
@@ -17,6 +20,7 @@ type CartItem = {
   productId: string;
   quantity: number;
   serverName?: string;
+  serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
 };
@@ -77,6 +81,67 @@ function getServerSnapshot() {
   return false;
 }
 
+function parseServerPoints(product: Product): string[] {
+  const parsed = parseProductFeatures(product);
+  if (parsed.length > 0) return parsed;
+
+  const raw = (product.description || "").trim();
+  if (!raw) return [];
+
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.replace(/^(?:[-*•+✓✔]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+  if (lines.length > 1) return lines;
+
+  const delimited = raw
+    .split(/[·•|;]|\s+[/]\s+|\s{2,}/)
+    .map((p) => p.replace(/^(?:[-*•+✓✔]|\d+[.)])\s*/, "").trim())
+    .filter(Boolean);
+  if (delimited.length > 1) return delimited;
+
+  if (raw.includes(",")) {
+    const commaParts = raw
+      .split(",")
+      .map((p) => p.replace(/^(?:[-*•+✓✔]|\d+[.)])\s*/, "").trim())
+      .filter(Boolean);
+    if (commaParts.length > 1) return commaParts;
+  }
+
+  const spaceTokens = raw.split(/\s+/).filter(Boolean);
+  if (spaceTokens.length >= 4 && spaceTokens.length <= 8) {
+    const candidateChunks: string[] = [];
+    let cur = "";
+    for (const tok of spaceTokens) {
+      if (!cur) {
+        cur = tok;
+      } else if (tok.match(/^[0-9]+$/) || (cur.match(/^[0-9]+$/) && !tok.match(/^[0-9]+$/))) {
+        cur += ` ${tok}`;
+        candidateChunks.push(cur);
+        cur = "";
+      } else if (tok === "SS" || tok === "Site" || tok === "Rcon" || tok === "Slots") {
+        if (cur.match(/^[0-9]+\s+Slots$/i)) {
+          candidateChunks.push(cur);
+          cur = tok;
+        } else if (cur === "SS" && tok === "Site") {
+          cur = "SS Site";
+          candidateChunks.push(cur);
+          cur = "";
+        } else {
+          candidateChunks.push(cur);
+          cur = tok;
+        }
+      } else {
+        cur += ` ${tok}`;
+      }
+    }
+    if (cur) candidateChunks.push(cur);
+    if (candidateChunks.length > 1) return candidateChunks;
+  }
+
+  return [raw];
+}
+
 function ServerConfigDialog({
   onClose,
   product,
@@ -90,12 +155,35 @@ function ServerConfigDialog({
 }) {
   const router = useRouter();
   const [serverName, setServerName] = useState("");
+  const [serverLocation, setServerLocation] = useState(
+    product.location && product.location.trim() ? product.location.trim() : "",
+  );
   const [serverPassword, setServerPassword] = useState("");
   const [rconPassword, setRconPassword] = useState("");
   const [error, setError] = useState("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
+
+  const availableLocations = useMemo(() => {
+    const list = [...SERVER_LOCATIONS];
+    if (
+      product.location &&
+      product.location.trim() &&
+      !list.some((loc) => loc.label.toLowerCase() === product.location?.toLowerCase().trim())
+    ) {
+      list.unshift({
+        id: "product-loc",
+        city: product.location.trim(),
+        country: "",
+        label: product.location.trim(),
+        flag: "📍",
+      });
+    }
+    return list;
+  }, [product.location]);
+
+  const points = useMemo(() => parseServerPoints(product), [product]);
 
   const cartRaw = useSyncExternalStore(subscribeToCart, getCartSnapshot, getCartServerSnapshot);
 
@@ -179,12 +267,18 @@ function ServerConfigDialog({
 
   function validateConfig(): ServerConfig | null {
     const cleanName = serverName.trim();
+    const cleanLocation = serverLocation.trim();
     const cleanPass = serverPassword.trim();
     const cleanRcon = rconPassword.trim();
 
     if (!cleanName) {
       setError("Please enter a server name.");
       document.getElementById("server-config-name")?.focus();
+      return null;
+    }
+    if (!cleanLocation) {
+      setError("Please select a server location.");
+      document.getElementById("server-config-location")?.focus();
       return null;
     }
     if (!cleanPass) {
@@ -200,6 +294,7 @@ function ServerConfigDialog({
 
     return {
       serverName: cleanName,
+      serverLocation: cleanLocation,
       serverPassword: cleanPass,
       rconPassword: cleanRcon,
     };
@@ -254,6 +349,7 @@ function ServerConfigDialog({
         productId: item.productId,
         quantity: item.quantity,
         ...(item.serverName ? { serverName: item.serverName } : {}),
+        ...(item.serverLocation ? { serverLocation: item.serverLocation } : {}),
         ...(item.serverPassword ? { serverPassword: item.serverPassword } : {}),
         ...(item.rconPassword ? { rconPassword: item.rconPassword } : {}),
       }));
@@ -338,7 +434,18 @@ function ServerConfigDialog({
             <div className="server-split-product-card">
               <div className="server-split-product-info">
                 <strong>{product.name}</strong>
-                <span>{product.description || "High-performance game server hosting"}</span>
+                {points.length > 0 ? (
+                  <ul className="server-split-points">
+                    {points.map((point, index) => (
+                      <li key={index} className="server-split-point">
+                        <Check size={14} className="server-split-point-check" />
+                        <span>{point}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span>{product.description || "High-performance game server hosting"}</span>
+                )}
               </div>
               <div className="server-split-product-price">
                 {formatPrice(product.price)}
@@ -364,6 +471,29 @@ function ServerConfigDialog({
                   autoFocus
                   required
                 />
+              </div>
+
+              <div className="server-split-field">
+                <label className="server-split-label" htmlFor="server-config-location">
+                  Server Location <span className="server-split-req">*</span>
+                </label>
+                <select
+                  id="server-config-location"
+                  className="server-split-input server-split-select"
+                  value={serverLocation}
+                  onChange={(e) => {
+                    setServerLocation(e.target.value);
+                    if (error) setError("");
+                  }}
+                  required
+                >
+                  <option value="">Select server location...</option>
+                  {availableLocations.map((loc) => (
+                    <option key={loc.id} value={loc.label}>
+                      {loc.flag} {loc.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="server-split-field">
@@ -420,6 +550,9 @@ function ServerConfigDialog({
                     Server: <strong>{serverName.trim() || "Configuring..."}</strong>
                   </span>
                   <span className="server-split-item-server">
+                    Location: <strong>{serverLocation.trim() || "Select location..."}</strong>
+                  </span>
+                  <span className="server-split-item-server">
                     Password: <code>{serverPassword.trim() ? "••••••••" : "Required"}</code>
                   </span>
                   <span className="server-split-item-server">
@@ -443,6 +576,11 @@ function ServerConfigDialog({
                       {item.serverName ? (
                         <span className="server-split-item-server">
                           Server: <strong>{item.serverName}</strong>
+                        </span>
+                      ) : null}
+                      {item.serverLocation ? (
+                        <span className="server-split-item-server">
+                          Location: <strong>{item.serverLocation}</strong>
                         </span>
                       ) : null}
                     </div>

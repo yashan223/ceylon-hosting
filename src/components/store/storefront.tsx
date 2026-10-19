@@ -65,6 +65,7 @@ type CartItem = {
   productId: string;
   quantity: number;
   serverName?: string;
+  serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
 };
@@ -248,6 +249,7 @@ export function Storefront({
           product,
           quantity: item.quantity,
           serverName: item.serverName,
+          serverLocation: item.serverLocation,
           serverPassword: item.serverPassword,
           rconPassword: item.rconPassword,
         }]
@@ -309,10 +311,11 @@ export function Storefront({
         body: JSON.stringify({
           orderId: createOrderReference(),
           items: cartProducts.map(
-            ({ product, quantity, serverName, serverPassword, rconPassword }) => ({
+            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword }) => ({
               productId: product.id,
               quantity,
               ...(serverName ? { serverName } : {}),
+              ...(serverLocation ? { serverLocation } : {}),
               ...(serverPassword ? { serverPassword } : {}),
               ...(rconPassword ? { rconPassword } : {}),
             }),
@@ -877,15 +880,15 @@ export function Storefront({
               </div>
             ) : (
               <div className="drawer-items">
-                {cartProducts.map(({ product, serverName }) => (
+                {cartProducts.map(({ product, serverName, serverLocation }) => (
                   <div className="drawer-item" key={product.id}>
                     <div>
                       <strong>{product.name}</strong>
                       <span>
                         {serverName
-                          ? `Server: ${serverName}`
+                          ? `Server: ${serverName}${serverLocation ? ` (${serverLocation})` : ""}`
                           : product.type === "server"
-                            ? "Game server"
+                            ? (serverLocation ? `Game server • ${serverLocation}` : "Game server")
                             : product.type === "service"
                               ? "Setup service"
                               : "Mod or tool"}

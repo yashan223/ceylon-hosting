@@ -12,6 +12,7 @@ type OrderItem = {
   quantity: number;
   unitPrice: number;
   serverName?: string;
+  serverLocation?: string;
   serverPassword?: string;
   rconPassword?: string;
 };
@@ -107,6 +108,7 @@ export async function createOrder(
       productId: string;
       quantity: number;
       serverName?: string;
+      serverLocation?: string;
       serverPassword?: string;
       rconPassword?: string;
     }[];
@@ -117,7 +119,7 @@ export async function createOrder(
   ]);
   const productsById = new Map(products.map((product) => [product.id, product]));
   const items: OrderItem[] = input.items.map(
-    ({ productId, quantity, serverName, serverPassword, rconPassword }) => {
+    ({ productId, quantity, serverName, serverLocation, serverPassword, rconPassword }) => {
       const product = productsById.get(productId);
       if (!product) throw new Error("One or more products are unavailable.");
       if (product.type === "server" && product.available === false)
@@ -129,6 +131,7 @@ export async function createOrder(
         quantity,
         unitPrice: product.price,
         ...(serverName ? { serverName } : {}),
+        ...(serverLocation ? { serverLocation } : {}),
         ...(serverPassword ? { serverPassword } : {}),
         ...(rconPassword ? { rconPassword } : {}),
       };
