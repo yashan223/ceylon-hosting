@@ -362,6 +362,12 @@
   width: 6px;
 }
 
+.node-callout-isp {
+  color: #94a3b8;
+  font-size: 10px;
+  font-weight: 500;
+}
+
 .globe-node-label {
   align-items: center;
   background: rgba(255, 255, 255, 0.96);

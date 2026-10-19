@@ -19,6 +19,7 @@ export interface UserLocation {
   lng: number;
   city?: string;
   country?: string;
+  isp?: string;
 }
 
 export const DATACENTERS: Datacenter[] = [
@@ -199,7 +200,6 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
 }
 
 type SceneControls = {
-  updateArc: (origin: UserLocation | null, destination: Datacenter | null) => void;
   updateUserMarker: (loc: UserLocation | null) => void;
   setTargetRotation: (dc: Datacenter | null) => void;
   updateNodeHighlights: (selectedId: string | null) => void;
@@ -264,6 +264,7 @@ export function LatencyGlobe() {
     (dc: Datacenter) => {
       selectedDcRef.current = dc;
       setSelectedDc(dc);
+      setPing(null);
       measurePing(dc);
     },
     [measurePing],
@@ -282,6 +283,26 @@ export function LatencyGlobe() {
             lng: Number(pingData.geo.lng),
             city: pingData.geo.city,
             country: pingData.geo.country,
+            isp: pingData.geo.isp,
+          };
+          setUserLocation(loc);
+          if (selectedDcRef.current) {
+            measurePing(selectedDcRef.current, loc);
+          }
+          return;
+        }
+      } catch {}
+
+      try {
+        const res = await fetch("https://ipwho.is/");
+        const data = await res.json();
+        if (isMounted && data?.latitude && data?.longitude) {
+          const loc: UserLocation = {
+            lat: Number(data.latitude),
+            lng: Number(data.longitude),
+            city: data.city,
+            country: data.country,
+            isp: data.connection?.isp || data.connection?.org,
           };
           setUserLocation(loc);
           if (selectedDcRef.current) {
@@ -300,6 +321,7 @@ export function LatencyGlobe() {
             lng: Number(data.longitude),
             city: data.cityName || data.city,
             country: data.countryName || data.country,
+            isp: data.asnOrganization,
           };
           setUserLocation(loc);
           if (selectedDcRef.current) {
@@ -522,58 +544,6 @@ export function LatencyGlobe() {
       });
     };
 
-    let arcLine: THREE.Line | null = null;
-    let tracerMesh: THREE.Mesh | null = null;
-    let tracerCurve: THREE.QuadraticBezierCurve3 | null = null;
-    let tracerT = 0;
-
-    const updateArc = (origin: UserLocation | null, destination: Datacenter | null) => {
-      if (arcLine) {
-        globeGroup.remove(arcLine);
-        arcLine.geometry.dispose();
-        (arcLine.material as THREE.Material).dispose();
-        arcLine = null;
-      }
-      if (tracerMesh) {
-        globeGroup.remove(tracerMesh);
-        tracerMesh.geometry.dispose();
-        (tracerMesh.material as THREE.Material).dispose();
-        tracerMesh = null;
-      }
-      tracerCurve = null;
-      tracerT = 0;
-
-      if (!destination) return;
-
-      const effOrigin = origin ?? { lat: 6.9271, lng: 79.8612 };
-      const p1 = latLngToVector3(effOrigin.lat, effOrigin.lng, globeRadius + 1.5);
-      const p2 = latLngToVector3(destination.lat, destination.lng, globeRadius + 1.5);
-      const distance = p1.distanceTo(p2);
-
-      if (distance > 3) {
-        const mid = p1.clone().add(p2).multiplyScalar(0.5);
-        mid.normalize().multiplyScalar(globeRadius + Math.max(14, distance * 0.32));
-
-        const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
-        tracerCurve = curve;
-        const points = curve.getPoints(50);
-        const arcGeo = new THREE.BufferGeometry().setFromPoints(points);
-        const arcMat = new THREE.LineBasicMaterial({
-          color: 0x10b981,
-          transparent: true,
-          opacity: 0.95,
-        });
-        arcLine = new THREE.Line(arcGeo, arcMat);
-        globeGroup.add(arcLine);
-
-        const tracerGeo = new THREE.SphereGeometry(2.4, 12, 12);
-        const tracerMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
-        tracerMesh = new THREE.Mesh(tracerGeo, tracerMat);
-        tracerMesh.position.copy(p1);
-        globeGroup.add(tracerMesh);
-      }
-    };
-
     let isTargeting = false;
     let targetRotX = 0;
     let targetRotY = 0;
@@ -596,7 +566,6 @@ export function LatencyGlobe() {
     };
 
     sceneControlsRef.current = {
-      updateArc,
       updateUserMarker,
       setTargetRotation,
       updateNodeHighlights,
@@ -768,11 +737,6 @@ export function LatencyGlobe() {
 
       const delta = Math.min(clock.getDelta(), 0.05);
 
-      if (tracerMesh && tracerCurve) {
-        tracerT = (tracerT + delta * 0.85) % 1.0;
-        tracerMesh.position.copy(tracerCurve.getPoint(tracerT));
-      }
-
       atmoMesh.lookAt(camera.position);
 
       if (isDragging) {
@@ -853,14 +817,6 @@ export function LatencyGlobe() {
       if (userMarkerMat) userMarkerMat.dispose();
       if (userRingGeo) userRingGeo.dispose();
       if (userRingMat) userRingMat.dispose();
-      if (arcLine) {
-        arcLine.geometry.dispose();
-        (arcLine.material as THREE.Material).dispose();
-      }
-      if (tracerMesh) {
-        tracerMesh.geometry.dispose();
-        (tracerMesh.material as THREE.Material).dispose();
-      }
       sceneControlsRef.current = null;
     };
   }, [selectDatacenter]);
@@ -870,7 +826,6 @@ export function LatencyGlobe() {
     currentUserLocationRef.current = userLocation;
 
     if (sceneControlsRef.current) {
-      sceneControlsRef.current.updateArc(userLocation, selectedDc);
       sceneControlsRef.current.updateUserMarker(userLocation);
       sceneControlsRef.current.setTargetRotation(selectedDc);
       sceneControlsRef.current.updateNodeHighlights(selectedDc?.id ?? null);
@@ -905,7 +860,13 @@ export function LatencyGlobe() {
             style={{ opacity: 0, transform: "translate3d(-9999px, -9999px, 0)" }}
           >
             <span className="node-label-flag">📍</span>
-            <span>{userLocation.city ? `You (${userLocation.city})` : "You"}</span>
+            <span>
+              {userLocation.isp
+                ? `You (${userLocation.isp})`
+                : userLocation.city
+                  ? `You (${userLocation.city})`
+                  : "You"}
+            </span>
           </div>
         )}
 
@@ -922,6 +883,14 @@ export function LatencyGlobe() {
               <span className="node-callout-ping">
                 <span className="node-ping-indicator" />
                 {isPinging ? "pinging..." : `${ping ?? selectedDc.fallbackPing} ms`}
+              </span>
+              <span className="node-callout-dot">•</span>
+              <span className="node-callout-isp">
+                {userLocation?.isp
+                  ? `from ${userLocation.isp}`
+                  : userLocation?.city
+                    ? `from ${userLocation.city}`
+                    : "from your ISP"}
               </span>
             </>
           )}

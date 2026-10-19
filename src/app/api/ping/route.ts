@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
   const cfLng = request.headers.get("cf-iplongitude");
   const cfCity = request.headers.get("cf-ipcity");
   const cfCountry = request.headers.get("cf-ipcountry");
+  const cfIsp =
+    request.headers.get("cf-asorganization") ||
+    request.headers.get("x-isp");
 
   return NextResponse.json(
     {
@@ -20,6 +23,7 @@ export async function GET(request: NextRequest) {
               lng: parseFloat(cfLng),
               city: cfCity || undefined,
               country: cfCountry || undefined,
+              isp: cfIsp || undefined,
             }
           : null,
     },
