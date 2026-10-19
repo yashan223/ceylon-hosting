@@ -560,27 +560,47 @@
 }
 
 .product-modal {
-  background: rgba(246, 246, 246, 0.98);
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
   inset: 0;
   overflow-y: auto;
-  padding: 34px max(24px, calc((100vw - 980px) / 2));
+  padding: 0;
   position: fixed;
-  z-index: 30;
+  width: 100vw;
+  z-index: 1000;
+}
+
+.product-modal-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0;
+  max-width: 100%;
+  min-height: 100%;
+  width: 100%;
 }
 
 .product-modal-header {
   align-items: center;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
-  margin-bottom: 28px;
-  padding-bottom: 22px;
+  margin-bottom: 0;
+  padding: 20px 48px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
 }
 
 .product-modal-header h2 {
-  font-size: clamp(28px, 4vw, 44px);
-  letter-spacing: -0.06em;
-  margin: 8px 0 0;
+  font-size: clamp(24px, 3vw, 36px);
+  letter-spacing: -0.05em;
+  margin: 6px 0 0;
 }
 
 .product-modal-close {
@@ -591,17 +611,27 @@
   color: var(--foreground);
   cursor: pointer;
   display: inline-flex;
-  height: 40px;
+  height: 42px;
   justify-content: center;
-  width: 40px;
+  transition: all 0.15s;
+  width: 42px;
+}
+
+.product-modal-close:hover {
+  background: #f4f4f5;
+  border-color: #171717;
 }
 
 .product-modal .product-editor-form {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+  display: grid;
+  gap: 24px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 28px;
+  margin: 32px 48px 60px;
+  padding: 36px 44px;
 }
 
 .product-modal-actions {
@@ -618,29 +648,35 @@
 }
 
 @media (max-width: 900px) {
+  .product-modal-header {
+    padding: 16px 20px;
+  }
   .product-modal .product-editor-form {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 20px 20px 40px;
+    padding: 24px;
+  }
 }
 
 @media (max-width: 520px) {
   .product-panel-actions {
-      gap: 8px;
-    }
-  .product-modal {
-      padding: 22px 16px;
-    }
+    gap: 8px;
+  }
+  .product-modal-header {
+    padding: 14px 16px;
+  }
   .product-modal .product-editor-form {
-      display: flex;
-      flex-direction: column;
-      padding: 20px;
-    }
+    display: flex;
+    flex-direction: column;
+    margin: 14px 12px 30px;
+    padding: 18px 14px;
+  }
   .product-modal-actions {
-      justify-content: stretch;
-    }
+    justify-content: stretch;
+  }
   .product-modal-actions .ui-button {
-      flex: 1;
-    }
+    flex: 1;
+  }
 }
 
 .product-manager {
@@ -2202,11 +2238,13 @@
 .admin-location-box {
   background: #fbfbfb;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 14px;
+  gap: 12px;
+  grid-column: 1 / -1;
+  padding: 18px 20px;
+  width: 100%;
 }
 
 .admin-location-header {
@@ -2245,26 +2283,27 @@
 
 .admin-location-grid {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
 }
 
 .admin-location-chip {
   align-items: center;
   background: #ffffff;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
-  font-size: 12px;
-  gap: 8px;
-  padding: 6px 10px;
-  transition: border-color 0.15s, background-color 0.15s;
+  font-size: 13px;
+  gap: 10px;
+  padding: 12px 16px;
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
   user-select: none;
 }
 
 .admin-location-chip:hover {
   border-color: #a3a3a3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .admin-location-chip.selected {
@@ -2277,13 +2316,13 @@
 .admin-location-chip input[type="checkbox"] {
   accent-color: #16a34a;
   cursor: pointer;
-  height: 14px;
+  height: 16px;
   margin: 0;
-  width: 14px;
+  width: 16px;
 }
 
 .admin-location-chip span {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
 }
 

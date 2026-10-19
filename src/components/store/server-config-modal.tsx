@@ -156,12 +156,21 @@ function ServerConfigDialog({
   const router = useRouter();
   const [serverName, setServerName] = useState("");
   const availableLocations = useMemo(() => {
+    const matchLocation = (name: string) => {
+      const clean = name.trim().toLowerCase();
+      return SERVER_LOCATIONS.find(
+        (sl) =>
+          sl.label.toLowerCase() === clean ||
+          sl.city.toLowerCase() === clean ||
+          sl.country.toLowerCase() === clean ||
+          `${sl.city}, ${sl.country}`.toLowerCase() === clean,
+      );
+    };
+
     if (product.locations && product.locations.length > 0) {
       return product.locations.map((locName) => {
         const clean = locName.trim();
-        const found = SERVER_LOCATIONS.find(
-          (sl) => sl.label.toLowerCase() === clean.toLowerCase(),
-        );
+        const found = matchLocation(clean);
         return (
           found ?? {
             id: clean.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
@@ -176,9 +185,7 @@ function ServerConfigDialog({
 
     if (product.location && product.location.trim()) {
       const clean = product.location.trim();
-      const found = SERVER_LOCATIONS.find(
-        (sl) => sl.label.toLowerCase() === clean.toLowerCase(),
-      );
+      const found = matchLocation(clean);
       if (found) return [found];
       return [
         {
@@ -196,13 +203,14 @@ function ServerConfigDialog({
 
   const [serverLocation, setServerLocation] = useState(() => {
     if (product.locations && product.locations.length === 1) {
-      return product.locations[0].trim();
-    }
-    if (product.location && product.location.trim()) {
-      const clean = product.location.trim();
-      if (!product.locations || product.locations.length === 0 || product.locations.includes(clean)) {
-        return clean;
-      }
+      const clean = product.locations[0].trim().toLowerCase();
+      const found = SERVER_LOCATIONS.find(
+        (sl) =>
+          sl.label.toLowerCase() === clean ||
+          sl.country.toLowerCase() === clean ||
+          `${sl.city}, ${sl.country}`.toLowerCase() === clean,
+      );
+      return found ? found.label : product.locations[0].trim();
     }
     return "";
   });

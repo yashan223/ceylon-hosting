@@ -18,7 +18,7 @@ import {
   UploadCloud,
   Check,
 } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmationModal } from "@/components/ui/confirmation-modal";
@@ -94,32 +94,65 @@ export function ProductManager({
   const [isDeletingFile, setIsDeletingFile] = useState(false);
   const [customLocInput, setCustomLocInput] = useState("");
 
+  function isLocationMatch(candidate: string, loc: (typeof SERVER_LOCATIONS)[number]) {
+    const norm = candidate.trim().toLowerCase();
+    return (
+      norm === loc.label.toLowerCase() ||
+      norm === loc.city.toLowerCase() ||
+      norm === loc.country.toLowerCase() ||
+      norm === `${loc.city}, ${loc.country}`.toLowerCase()
+    );
+  }
+
   const customSelectedLocations = useMemo(() => {
     return (draft.locations || []).filter(
-      (loc) => !SERVER_LOCATIONS.some((sl) => sl.label.toLowerCase() === loc.toLowerCase()),
+      (loc) => !SERVER_LOCATIONS.some((sl) => isLocationMatch(loc, sl)),
     );
   }, [draft.locations]);
+
+  useEffect(() => {
+    if (!isEditorOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeEditor();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isEditorOpen]);
 
   function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
 
-  function toggleLocation(label: string) {
+  function toggleLocation(loc: (typeof SERVER_LOCATIONS)[number]) {
     const current = draft.locations || [];
-    const exists = current.includes(label);
-    const next = exists ? current.filter((l) => l !== label) : [...current, label];
+    const isSelected = current.some((l) => isLocationMatch(l, loc));
+    let next: string[];
+    if (isSelected) {
+      next = current.filter((l) => !isLocationMatch(l, loc));
+    } else {
+      next = [...current.filter((l) => !isLocationMatch(l, loc)), loc.label];
+    }
     changeDraft("locations", next);
-    if (draft.location === label && exists) {
-      changeDraft("location", next[0] || "");
-    } else if (!draft.location && !exists) {
-      changeDraft("location", label);
+    if (draft.location && isLocationMatch(draft.location, loc)) {
+      changeDraft("location", isSelected ? next[0] || "" : loc.label);
+    } else if (!draft.location && next.length > 0) {
+      changeDraft("location", next[0]);
     }
   }
 
   function selectAllLocations() {
     const allLabels = SERVER_LOCATIONS.map((l) => l.label);
-    const current = draft.locations || [];
-    const merged = Array.from(new Set([...current, ...allLabels]));
+    const custom = (draft.locations || []).filter(
+      (loc) => !SERVER_LOCATIONS.some((sl) => isLocationMatch(loc, sl)),
+    );
+    const merged = Array.from(new Set([...allLabels, ...custom]));
     changeDraft("locations", merged);
     if (!draft.location && merged.length > 0) {
       changeDraft("location", merged[0]);
@@ -728,6 +761,18 @@ export function ProductManager({
                 </select>
               </label>
 
+              <label>
+                Price (Rs.) *
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={draft.price}
+                  onChange={(event) => changeDraft("price", event.target.value)}
+                  required
+                />
+              </label>
+
               {draft.type === "server" && (
                 <div className="admin-location-box">
                   <div className="admin-location-header">
@@ -751,14 +796,14 @@ export function ProductManager({
                   </div>
                   <div className="admin-location-grid">
                     {SERVER_LOCATIONS.map((loc) => {
-                      const isSelected = (draft.locations || []).includes(loc.label);
+                      const isSelected = (draft.locations || []).some((l) => isLocationMatch(l, loc));
                       return (
                         <label
                           key={loc.id}
                           className={`admin-location-chip ${isSelected ? "selected" : ""}`}
                           onClick={(e) => {
                             e.preventDefault();
-                            toggleLocation(loc.label);
+                            toggleLocation(loc);
                           }}
                         >
                           <input
@@ -820,18 +865,6 @@ export function ProductManager({
                   )}
                 </div>
               )}
-
-              <label>
-                Price (Rs.) *
-                <Input
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={draft.price}
-                  onChange={(event) => changeDraft("price", event.target.value)}
-                  required
-                />
-              </label>
 
               <label>
                 Promotional Tag / Badge
