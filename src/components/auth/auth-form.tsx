@@ -159,14 +159,14 @@ export function AuthForm({ mode }: AuthFormProps) {
           </label>
         )}
         {isSignUp && (
-          <label>
-            Country
+          <div className="auth-field-group">
+            <span>Country</span>
             <CountrySelect
               value={country}
               onChange={setCountry}
               required
             />
-          </label>
+          </div>
         )}
         <label>
           Email address

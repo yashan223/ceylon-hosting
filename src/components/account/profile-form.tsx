@@ -45,10 +45,10 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
         Email address
         <Input value={user.email} readOnly />
       </label>
-      <label>
-        Country
+      <div className="profile-field-group">
+        <span>Country</span>
         <CountrySelect name="country" defaultValue={user.country ?? ""} />
-      </label>
+      </div>
       <Button type="submit" disabled={isSaving}>
         {isSaving ? "Saving..." : "Save profile"}
       </Button>

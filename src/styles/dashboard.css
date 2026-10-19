@@ -286,7 +286,8 @@
   padding: 24px;
 }
 
-.profile-form label {
+.profile-form label,
+.profile-form .profile-field-group {
   color: var(--muted-foreground);
   display: flex;
   flex-direction: column;

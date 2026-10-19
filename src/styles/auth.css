@@ -171,7 +171,8 @@
   gap: 15px;
 }
 
-.auth-fields label {
+.auth-fields label,
+.auth-field-group {
   color: var(--muted-foreground);
   display: flex;
   flex-direction: column;

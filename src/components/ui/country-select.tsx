@@ -81,6 +81,8 @@ export function CountrySelect({
     return [...POPULAR_COUNTRIES, ...otherCountries];
   }, [showSections, filteredCountries]);
 
+  const justSelectedRef = useRef(false);
+
   const openDropdown = useCallback(() => {
     setIsOpen(true);
     setFocusedIndex(0);
@@ -94,11 +96,15 @@ export function CountrySelect({
 
   const handleSelect = useCallback(
     (country: Country) => {
+      justSelectedRef.current = true;
       if (!isControlled) {
         setInternalValue(country.name);
       }
       onChange?.(country.name);
       closeDropdown();
+      setTimeout(() => {
+        justSelectedRef.current = false;
+      }, 250);
     },
     [isControlled, onChange, closeDropdown]
   );
@@ -190,7 +196,16 @@ export function CountrySelect({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`country-select-trigger ${isOpen ? "is-open" : ""}`}
-        onClick={() => !disabled && (isOpen ? closeDropdown() : openDropdown())}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (disabled || justSelectedRef.current) return;
+          if (isOpen) {
+            closeDropdown();
+          } else {
+            openDropdown();
+          }
+        }}
       >
         <div className="country-select-value">
           {selectedCountry ? (
@@ -218,7 +233,12 @@ export function CountrySelect({
       />
 
       {isOpen && (
-        <div className="country-select-dropdown" role="dialog" aria-modal="false">
+        <div
+          className="country-select-dropdown"
+          role="dialog"
+          aria-modal="false"
+          onClick={(event) => event.stopPropagation()}
+        >
           <div className="country-select-search-wrap">
             <Search size={14} className="country-select-search-icon" />
             <input
@@ -229,6 +249,7 @@ export function CountrySelect({
                 setQuery(e.target.value);
                 setFocusedIndex(0);
               }}
+              onClick={(e) => e.stopPropagation()}
               placeholder="Search country or code..."
               className="country-select-search-input"
             />
@@ -236,7 +257,9 @@ export function CountrySelect({
               <button
                 type="button"
                 className="country-select-clear-btn"
-                onClick={() => {
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                   setQuery("");
                   setFocusedIndex(0);
                   searchInputRef.current?.focus();
@@ -293,7 +316,11 @@ export function CountrySelect({
                       className={`country-select-option ${
                         isSelected ? "is-selected" : ""
                       } ${isFocused ? "is-focused" : ""}`}
-                      onClick={() => handleSelect(country)}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleSelect(country);
+                      }}
                       onMouseEnter={() => setFocusedIndex(index)}
                     >
                       <span className="country-select-flag">
