@@ -20,9 +20,10 @@ export default async function OrderDownloadsPage({ params }: PageProps) {
   });
 
   return (
-    <main className="downloads-page">
+    <div className="downloads-page">
       <StorePageHeader backHref={`/orders/${order.id}`} backLabel="Back to order chat" />
-      <div className="downloads-heading">
+      <main className="downloads-page-main">
+        <div className="downloads-heading">
         <span className="section-kicker">Paid downloads</span>
         <h1>Your tools, ready when you are.</h1>
         <p>
@@ -65,6 +66,7 @@ export default async function OrderDownloadsPage({ params }: PageProps) {
           })
         )}
       </section>
-    </main>
+      </main>
+    </div>
   );
 }

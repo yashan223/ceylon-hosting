@@ -1987,6 +1987,7 @@
   background: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid var(--border);
   display: flex;
+  gap: 16px;
   justify-content: space-between;
   min-height: 56px;
   padding: 8px max(24px, calc((100vw - 1180px) / 2));

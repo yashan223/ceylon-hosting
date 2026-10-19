@@ -12,9 +12,11 @@ export default async function OrderPage({ params }: PageProps) {
   const order = await getOrderForUser(id, user.id);
   if (!order) notFound();
   return (
-    <main className="order-page">
+    <div className="order-page">
       <StorePageHeader backHref="/" />
-      <OrderChat order={JSON.parse(JSON.stringify(order))} />
-    </main>
+      <main className="order-page-main">
+        <OrderChat order={JSON.parse(JSON.stringify(order))} />
+      </main>
+    </div>
   );
 }
