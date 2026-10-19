@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, X, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,18 @@ function createOrderReference() {
   return `loadout-${unique}`;
 }
 
+function emptySubscribe() {
+  return () => {};
+}
+
+function getClientSnapshot() {
+  return true;
+}
+
+function getServerSnapshot() {
+  return false;
+}
+
 export function CartButton({
   products: initialProducts = [],
 }: {
@@ -52,6 +65,7 @@ export function CartButton({
 }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const isMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
   const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
   const [checkoutError, setCheckoutError] = useState("");
@@ -103,11 +117,16 @@ export function CartButton({
 
   useEffect(() => {
     if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") setIsOpen(false);
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen]);
 
   const products = initialProducts.length > 0 ? initialProducts : fetchedProducts;
@@ -192,84 +211,87 @@ export function CartButton({
         <ShoppingBag size={17} /> Cart <span>{cartCount}</span>
       </button>
 
-      {isOpen && (
-        <div className="cart-overlay" role="presentation" onClick={() => setIsOpen(false)}>
-          <aside
-            className="cart-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Shopping cart"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="drawer-header">
-              <div>
-                <p className="section-kicker">Your selection</p>
-                <h2>Shopping cart</h2>
+      {isOpen &&
+        isMounted &&
+        createPortal(
+          <div className="cart-overlay" role="presentation" onClick={() => setIsOpen(false)}>
+            <aside
+              className="cart-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Shopping cart"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="drawer-header">
+                <div>
+                  <p className="section-kicker">Your selection</p>
+                  <h2>Shopping cart</h2>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close shopping cart"
+                >
+                  <X size={20} />
+                </Button>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(false)}
-                aria-label="Close shopping cart"
-              >
-                <X size={20} />
-              </Button>
-            </div>
-            {cartProducts.length === 0 ? (
-              <div className="drawer-empty">
-                <ShoppingBag size={30} />
-                <p>Your cart is empty.</p>
-                <span>Add a server, tool, or service to get started.</span>
-              </div>
-            ) : (
-              <div className="drawer-items">
-                {cartProducts.map(({ product }) => (
-                  <div className="drawer-item" key={product.id}>
-                    <div>
-                      <strong>{product.name}</strong>
-                      <span>
-                        {product.type === "server"
-                          ? "Game server"
-                          : product.type === "service"
-                            ? "Setup service"
-                            : "Mod or tool"}
-                      </span>
+              {cartProducts.length === 0 ? (
+                <div className="drawer-empty">
+                  <ShoppingBag size={30} />
+                  <p>Your cart is empty.</p>
+                  <span>Add a server, tool, or service to get started.</span>
+                </div>
+              ) : (
+                <div className="drawer-items">
+                  {cartProducts.map(({ product }) => (
+                    <div className="drawer-item" key={product.id}>
+                      <div>
+                        <strong>{product.name}</strong>
+                        <span>
+                          {product.type === "server"
+                            ? "Game server"
+                            : product.type === "service"
+                              ? "Setup service"
+                              : "Mod or tool"}
+                        </span>
+                      </div>
+                      <div className="drawer-item-actions">
+                        <b>{formatPrice(product.price)}</b>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFromCart(product.id)}
+                          aria-label={`Remove ${product.name}`}
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="drawer-item-actions">
-                      <b>{formatPrice(product.price)}</b>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFromCart(product.id)}
-                        aria-label={`Remove ${product.name}`}
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+              <div className="drawer-footer">
+                <div>
+                  <span>Subtotal</span>
+                  <strong>{formatPrice(cartTotal)}</strong>
+                </div>
+                <Button
+                  className="checkout-button"
+                  disabled={cartProducts.length === 0 || checkoutState === "loading"}
+                  onClick={startCheckout}
+                >
+                  {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
+                  <ArrowRight size={16} />
+                </Button>
+                <small>
+                  {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
+                </small>
               </div>
-            )}
-            <div className="drawer-footer">
-              <div>
-                <span>Subtotal</span>
-                <strong>{formatPrice(cartTotal)}</strong>
-              </div>
-              <Button
-                className="checkout-button"
-                disabled={cartProducts.length === 0 || checkoutState === "loading"}
-                onClick={startCheckout}
-              >
-                {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
-                <ArrowRight size={16} />
-              </Button>
-              <small>
-                {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
-              </small>
-            </div>
-          </aside>
-        </div>
-      )}
+            </aside>
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
