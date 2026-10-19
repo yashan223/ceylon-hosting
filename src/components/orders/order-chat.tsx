@@ -22,6 +22,7 @@ import {
   Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatOrderReference } from "@/lib/utils";
 
 type OrderItem = {
   productId: string;
@@ -47,6 +48,7 @@ type Order = {
   email: string;
   status: string;
   paymentStatus: string;
+  paymentId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
   items: OrderItem[];
@@ -311,12 +313,12 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
           <div className="order-hero-topline">
             <div className="order-id-pill">
               <span className="order-id-label">ORDER</span>
-              <strong className="order-id-value">{order.id}</strong>
+              <strong className="order-id-value">{formatOrderReference(order.id)}</strong>
               <button
                 type="button"
                 className="order-copy-btn"
-                onClick={() => handleCopy(order.id, "order_id")}
-                title="Copy Order ID"
+                onClick={() => handleCopy(formatOrderReference(order.id), "order_id")}
+                title="Copy Order Reference"
               >
                 {copiedKey === "order_id" ? (
                   <Check size={12} className="copied" />
@@ -706,6 +708,16 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                 <span>Customer Email</span>
                 <span className="customer-email">{order.email}</span>
               </div>
+              <div className="order-summary-line customer">
+                <span>Order Reference</span>
+                <span className="customer-email">{formatOrderReference(order.id)}</span>
+              </div>
+              {order.paymentId && (
+                <div className="order-summary-line customer">
+                  <span>Payment Gateway ID</span>
+                  <span className="customer-email">{order.paymentId}</span>
+                </div>
+              )}
             </div>
           </div>
 

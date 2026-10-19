@@ -24,6 +24,7 @@ type OrderRecord = {
   items: OrderItem[];
   status: OrderStatus;
   paymentStatus: "pending" | "paid" | "failed";
+  paymentId?: string;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -176,7 +177,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
   if (amountCents !== expectedAmountCents) return false;
   const result = await orders.updateOne(
     { id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } },
-    { $set: { paymentStatus: "paid", updatedAt: now } },
+    { $set: { paymentStatus: "paid", paymentId, updatedAt: now } },
   );
   if (result.matchedCount === 0) return false;
   await events.insertOne({
@@ -187,7 +188,6 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     createdAt: now,
   });
 
-  // Activate or extend monthly server subscriptions for any server items
   const serverItems = order.items.filter((item) => item.type === "server");
   if (serverItems.length > 0) {
     try {
@@ -233,10 +233,28 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
 }
 
 export async function getOrderForUser(orderId: string, userId: string) {
-  const { orders, messages } = await collections();
-  const order = await orders.findOne({ id: orderId, userId });
+  const { orders, messages, events } = await collections();
+  const rawId = orderId.trim();
+  const cleanId = rawId.replace(/^(loadout|ord)[-_]/i, "");
+  const order = await orders.findOne({
+    $or: [
+      { id: rawId },
+      { id: `loadout-${cleanId}` },
+      { id: `loadout-${cleanId.toLowerCase()}` },
+      { id: `ORD-${cleanId.toUpperCase()}` },
+      { id: cleanId },
+    ],
+    userId,
+  });
   if (!order) return null;
-  const orderMessages = await messages.find({ orderId }).sort({ createdAt: 1 }).toArray();
+  if (order.paymentStatus === "paid" && !order.paymentId) {
+    const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
+    if (ev?.details) order.paymentId = ev.details;
+  }
+  const orderMessages = await messages
+    .find({ orderId: { $in: [order.id, rawId] } })
+    .sort({ createdAt: 1 })
+    .toArray();
   return { ...order, messages: orderMessages };
 }
 
@@ -264,10 +282,27 @@ export async function listOrdersForUser(userId: string) {
 }
 
 export async function getOrderForAdmin(orderId: string) {
-  const { orders, messages } = await collections();
-  const order = await orders.findOne({ id: orderId });
+  const { orders, messages, events } = await collections();
+  const rawId = orderId.trim();
+  const cleanId = rawId.replace(/^(loadout|ord)[-_]/i, "");
+  const order = await orders.findOne({
+    $or: [
+      { id: rawId },
+      { id: `loadout-${cleanId}` },
+      { id: `loadout-${cleanId.toLowerCase()}` },
+      { id: `ORD-${cleanId.toUpperCase()}` },
+      { id: cleanId },
+    ],
+  });
   if (!order) return null;
-  const orderMessages = await messages.find({ orderId }).sort({ createdAt: 1 }).toArray();
+  if (order.paymentStatus === "paid" && !order.paymentId) {
+    const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
+    if (ev?.details) order.paymentId = ev.details;
+  }
+  const orderMessages = await messages
+    .find({ orderId: { $in: [order.id, rawId] } })
+    .sort({ createdAt: 1 })
+    .toArray();
   return { ...order, messages: orderMessages };
 }
 
@@ -292,8 +327,17 @@ export async function getPaidOrderForProduct(userId: string, productId: string) 
 }
 
 export async function listOrders() {
-  const { orders } = await collections();
-  return orders.find({}).sort({ updatedAt: -1 }).toArray();
+  const { orders, events } = await collections();
+  const list = await orders.find({}).sort({ updatedAt: -1 }).toArray();
+  return Promise.all(
+    list.map(async (order) => {
+      if (order.paymentStatus === "paid" && !order.paymentId) {
+        const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
+        if (ev?.details) order.paymentId = ev.details;
+      }
+      return order;
+    }),
+  );
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus, actorId: string) {

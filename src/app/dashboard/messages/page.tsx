@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, LayoutDashboard, MessageCircle, ShoppingBag, UserRound } from "lucide-react";
 import { requireUser } from "@/server/auth/session";
 import { listOrdersForUser } from "@/server/orders/orders";
+import { formatOrderReference } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,7 @@ export default async function DashboardMessagesPage() {
                 {messageOrders.map((order) => (
                   <article className="dashboard-message" key={order.id}>
                     <div>
-                      <span className="profile-order-id">{order.id}</span>
+                      <span className="profile-order-id">{formatOrderReference(order.id)}</span>
                       <p>{order.latestMessage?.body}</p>
                       <small>
                         {new Date(order.latestMessage!.createdAt).toLocaleDateString("en-LK")}

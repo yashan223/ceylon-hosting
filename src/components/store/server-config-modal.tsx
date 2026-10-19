@@ -64,9 +64,9 @@ function formatPrice(price: number) {
 function createOrderReference() {
   const unique =
     typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
-  return `loadout-${unique}`;
+      ? crypto.randomUUID().replace(/-/g, "").slice(0, 10).toUpperCase()
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`.toUpperCase();
+  return `ORD-${unique}`;
 }
 
 function emptySubscribe() {

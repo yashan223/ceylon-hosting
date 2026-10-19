@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, formatOrderReference } from "@/lib/utils";
 import { ClearDataButton } from "@/components/admin/clear-data-button";
 
 export const dynamic = "force-dynamic";
@@ -131,7 +131,7 @@ export default async function AdminDashboardPage() {
                   <td data-label="Order">
                     <div className="admin-cell-main">
                       <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
-                        {order.id}
+                        {formatOrderReference(order.id)}
                       </Link>
                       <small>
                         {order.items.map((item) => (
@@ -139,10 +139,32 @@ export default async function AdminDashboardPage() {
                             <span>{item.name} x{item.quantity}</span>
                             {(item.serverName || item.serverLocation) && (
                               <span className="admin-order-server-badge">
-                                {item.serverName ? <>Server: <strong>{item.serverName}</strong></> : null}
-                                {item.serverLocation ? ` • Loc: ${item.serverLocation}` : ""}
-                                {item.serverPassword ? ` • Pass: ${item.serverPassword}` : " • No pass"}
-                                {item.rconPassword ? ` • Rcon: ${item.rconPassword}` : ""}
+                                {item.serverLocation && (
+                                  <span className="admin-server-loc-chip">
+                                    {item.serverLocation.toLowerCase().includes("singapore")
+                                      ? "🇸🇬 Singapore"
+                                      : item.serverLocation.toLowerCase().includes("germany")
+                                      ? "🇩🇪 Germany"
+                                      : `🌐 ${item.serverLocation}`}
+                                  </span>
+                                )}
+                                {item.serverName ? (
+                                  <span className="admin-server-name-chip">
+                                    Host: <strong>{item.serverName}</strong>
+                                  </span>
+                                ) : null}
+                                {item.serverPassword ? (
+                                  <span className="admin-server-pass-chip">
+                                    Pass: <code>{item.serverPassword}</code>
+                                  </span>
+                                ) : (
+                                  <span className="admin-server-pass-chip public">Public</span>
+                                )}
+                                {item.rconPassword ? (
+                                  <span className="admin-server-pass-chip rcon">
+                                    RCON: <code>{item.rconPassword}</code>
+                                  </span>
+                                ) : null}
                               </span>
                             )}
                           </span>
@@ -151,7 +173,18 @@ export default async function AdminDashboardPage() {
                     </div>
                   </td>
                   <td data-label="Customer">{order.email}</td>
-                  <td data-label="Payment">{order.paymentStatus}</td>
+                  <td data-label="Payment">
+                    <div className="admin-payment-cell">
+                      <span className={`admin-status ${order.paymentStatus === "paid" ? "active" : ""}`}>
+                        {order.paymentStatus}
+                      </span>
+                      {order.paymentId && (
+                        <small className="admin-payment-id" title={order.paymentId}>
+                          ID: {order.paymentId}
+                        </small>
+                      )}
+                    </div>
+                  </td>
                   <td data-label="Status">
                     <span className="admin-status active">{order.status.replace("_", " ")}</span>
                   </td>

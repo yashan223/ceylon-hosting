@@ -205,9 +205,10 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
   }
 
   const to = process.env.ORDER_NOTIFICATION_EMAIL || "ceylonhosting@proton.me";
+  const cleanOrderId = input.orderId.replace(/^loadout[-_]?/i, "ORD-").toUpperCase();
+  const safeCleanOrderId = escapeHtml(cleanOrderId);
   const orderUrl = `${appUrl}/admin/orders/${encodeURIComponent(input.orderId)}`;
   const totalFormatted = `Rs. ${(input.amountCents / 100).toLocaleString("en-LK")}`;
-  const safeOrderId = escapeHtml(input.orderId);
   const safeCustomerEmail = escapeHtml(input.customerEmail);
   const safePaymentId = escapeHtml(input.paymentId);
   const customerDisplay = input.customerName
@@ -296,16 +297,16 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
       
       <div class="details-box">
         <div class="details-row">
-          <span class="details-label">Order ID:</span>
-          <span class="details-val">${safeOrderId}</span>
+          <span class="details-label">Order Reference:</span>
+          <span class="details-val">${safeCleanOrderId}</span>
+        </div>
+        <div class="details-row">
+          <span class="details-label">Gateway Payment ID:</span>
+          <span class="details-val" style="font-family: monospace;">${safePaymentId}</span>
         </div>
         <div class="details-row">
           <span class="details-label">Customer:</span>
           <span class="details-val">${customerDisplay}</span>
-        </div>
-        <div class="details-row">
-          <span class="details-label">Payment ID:</span>
-          <span class="details-val">${safePaymentId}</span>
         </div>
         <div class="details-row">
           <span class="details-label">Total Amount:</span>
@@ -315,6 +316,10 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
           <span class="details-label">Date:</span>
           <span class="details-val">${formattedDate}</span>
         </div>
+      </div>
+
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 14px; font-size: 12px; color: #1e40af; margin-bottom: 20px;">
+        <strong>Reference Cross-Check:</strong> The <em>Order Reference</em> (<strong>${safeCleanOrderId}</strong>) tracks this deployment in CeylonHosting. The <em>Payment ID</em> (<strong>${safePaymentId}</strong>) matches your Payments.lk transaction notice.
       </div>
 
       <h3 style="font-size: 14px; margin: 20px 0 6px 0; color: #171717;">Purchased Items</h3>
@@ -349,7 +354,7 @@ export async function sendOrderPaidAdminNotificationEmail(input: {
     body: JSON.stringify({
       from,
       to: [to],
-      subject: `New Paid Order: ${input.orderId} (${totalFormatted})`,
+      subject: `New Paid Order: ${cleanOrderId} (Payment ID: ${input.paymentId}) • ${totalFormatted}`,
       html,
     }),
     cache: "no-store",

@@ -11,7 +11,7 @@ import {
 import { requireUser } from "@/server/auth/session";
 import { getProductsByIds } from "@/server/catalog/products";
 import { listOrdersForUser } from "@/server/orders/orders";
-import { formatBytes } from "@/lib/utils";
+import { formatBytes, formatOrderReference } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +119,7 @@ export default async function DashboardItemsPage() {
                   <article className="dashboard-item" key={`${item.orderId}-${item.productId}`}>
                     <div>
                       <span className="profile-order-id">
-                        {item.type.toUpperCase()} / {item.orderId}
+                        {item.type.toUpperCase()} / {formatOrderReference(item.orderId)}
                       </span>
                       <h3>{item.name}</h3>
                       <p>
@@ -192,7 +192,7 @@ export default async function DashboardItemsPage() {
                   <div className="dashboard-library-card-body">
                     <div>
                       <span className="profile-order-id">
-                        Order #{item.orderId} •{" "}
+                        Order #{formatOrderReference(item.orderId)} •{" "}
                         {new Date(item.orderCreatedAt).toLocaleDateString("en-LK", {
                           year: "numeric",
                           month: "short",
