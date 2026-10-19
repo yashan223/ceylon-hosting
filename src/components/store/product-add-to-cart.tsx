@@ -41,6 +41,7 @@ export function ProductAddToCart({
       );
       window.dispatchEvent(new Event("ceylonhosting-cart-updated"));
     }
+    window.dispatchEvent(new Event("ceylonhosting-open-cart"));
     setAdded(true);
   }
 

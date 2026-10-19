@@ -7,7 +7,7 @@ import { ArrowLeft, Check, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { isAdminUser } from "@/server/auth/admin";
-import { getActiveProductById } from "@/server/catalog/products";
+import { getActiveProductById, getActiveProducts } from "@/server/catalog/products";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { ProductGallery } from "@/components/store/product-gallery";
@@ -50,7 +50,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const product = await getProduct(id);
+  const [product, allProducts] = await Promise.all([
+    getProduct(id),
+    getActiveProducts(),
+  ]);
   if (!product) notFound();
 
   const isService = product.type === "service";
@@ -124,7 +127,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               Sign in
             </Link>
           )}
-          {!isAdmin && <CartButton />}
+          {!isAdmin && <CartButton products={allProducts} />}
           <Link className="back-link" href="/">
             <ArrowLeft size={15} /> Back to store
           </Link>

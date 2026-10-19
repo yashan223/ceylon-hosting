@@ -768,7 +768,7 @@
   background: rgba(15, 23, 42, 0.28);
   inset: 0;
   position: fixed;
-  z-index: 20;
+  z-index: 1000;
 }
 
 .cart-drawer {

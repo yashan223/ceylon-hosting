@@ -1,43 +1,275 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ShoppingBag } from "lucide-react";
+import { useEffect, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ShoppingBag, X, Trash2, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { Product } from "@/types/product";
+
+type CartItem = { productId: string; quantity: number };
 
 const cartStorageKey = "ceylonhosting-cart";
 const cartUpdatedEvent = "ceylonhosting-cart-updated";
+const cartOpenEvent = "ceylonhosting-open-cart";
 
-function readCartCount() {
+function subscribeToCart(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(cartUpdatedEvent, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(cartUpdatedEvent, callback);
+  };
+}
+
+function getCartSnapshot(): string {
   try {
-    const stored = JSON.parse(window.localStorage.getItem(cartStorageKey) ?? "[]") as unknown;
-    if (!Array.isArray(stored)) return 0;
-    return stored.reduce((total, item) => {
-      if (typeof item !== "object" || item === null) return total;
-      const quantity = (item as { quantity?: unknown }).quantity;
-      return total + (typeof quantity === "number" && quantity > 0 ? quantity : 0);
-    }, 0);
+    return window.localStorage.getItem(cartStorageKey) ?? "[]";
   } catch {
-    return 0;
+    return "[]";
   }
 }
 
-export function CartButton({ href = "/?cart=1#catalog" }: { href?: string }) {
-  const [count, setCount] = useState(0);
+function getCartServerSnapshot(): string {
+  return "[]";
+}
+
+function formatPrice(price: number) {
+  return `Rs. ${price.toLocaleString("en-LK")}`;
+}
+
+function createOrderReference() {
+  const unique =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  return `loadout-${unique}`;
+}
+
+export function CartButton({
+  products: initialProducts = [],
+}: {
+  products?: Product[];
+}) {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
+  const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [, startTransition] = useTransition();
+
+  const cartRaw = useSyncExternalStore(subscribeToCart, getCartSnapshot, getCartServerSnapshot);
+
+  const cart = useMemo(() => {
+    try {
+      const parsed = JSON.parse(cartRaw) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed.filter(
+        (item): item is CartItem =>
+          typeof item === "object" &&
+          item !== null &&
+          typeof item.productId === "string" &&
+          item.quantity === 1,
+      );
+    } catch {
+      return [];
+    }
+  }, [cartRaw]);
 
   useEffect(() => {
-    const sync = () => setCount(readCartCount());
-    sync();
-    window.addEventListener("storage", sync);
-    window.addEventListener(cartUpdatedEvent, sync);
+    const handleOpen = () => setIsOpen(true);
+    window.addEventListener(cartOpenEvent, handleOpen);
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener(cartUpdatedEvent, sync);
+      window.removeEventListener(cartOpenEvent, handleOpen);
     };
   }, []);
 
+  useEffect(() => {
+    if (initialProducts.length > 0) return;
+
+    let active = true;
+    fetch("/api/products")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { products?: Product[] } | null) => {
+        if (active && data?.products) {
+          setFetchedProducts(data.products);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [initialProducts.length]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen]);
+
+  const products = initialProducts.length > 0 ? initialProducts : fetchedProducts;
+
+  function removeFromCart(productId: string) {
+    const updated = cart.filter((item) => item.productId !== productId);
+    try {
+      window.localStorage.setItem(cartStorageKey, JSON.stringify(updated));
+    } catch {}
+    window.dispatchEvent(new Event(cartUpdatedEvent));
+  }
+
+  const cartProducts = cart
+    .map((item) => {
+      const product = products.find((candidate) => candidate.id === item.productId);
+      if (!product) return null;
+      return { product, quantity: item.quantity };
+    })
+    .filter((entry): entry is { product: Product; quantity: number } => Boolean(entry));
+
+  const cartTotal = cartProducts.reduce(
+    (total, item) => total + item.product.price * item.quantity,
+    0,
+  );
+
+  const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  async function startCheckout() {
+    setCheckoutState("loading");
+    setCheckoutError("");
+    try {
+      const response = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: createOrderReference(),
+          items: cartProducts.map(({ product, quantity }) => ({
+            productId: product.id,
+            quantity,
+          })),
+        }),
+      });
+      if (response.status === 401) {
+        const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/";
+        startTransition(() => {
+          router.push(`/sign-in?redirect_url=${encodeURIComponent(returnUrl)}`);
+        });
+        return;
+      }
+      const result = (await response.json()) as { orderId?: string; error?: string };
+      if (!response.ok || !result.orderId) {
+        throw new Error(result.error ?? "Request unavailable");
+      }
+      const paymentResponse = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId }),
+      });
+      const paymentResult = (await paymentResponse.json()) as { url?: string; error?: string };
+      if (!paymentResponse.ok || !paymentResult.url) {
+        throw new Error(paymentResult.error ?? "Unable to open payment.");
+      }
+      try {
+        window.localStorage.removeItem(cartStorageKey);
+      } catch {}
+      window.dispatchEvent(new Event(cartUpdatedEvent));
+      window.location.assign(paymentResult.url);
+    } catch (error) {
+      setCheckoutState("error");
+      setCheckoutError(error instanceof Error ? error.message : "Unable to open payment.");
+    }
+  }
+
   return (
-    <Link className="ui-button ui-button-outline cart-button" href={href}>
-      <ShoppingBag size={17} /> Cart <span>{count}</span>
-    </Link>
+    <>
+      <button
+        type="button"
+        className="ui-button ui-button-outline cart-button"
+        onClick={() => setIsOpen(true)}
+        aria-label={`Open shopping cart with ${cartCount} items`}
+      >
+        <ShoppingBag size={17} /> Cart <span>{cartCount}</span>
+      </button>
+
+      {isOpen && (
+        <div className="cart-overlay" role="presentation" onClick={() => setIsOpen(false)}>
+          <aside
+            className="cart-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shopping cart"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="drawer-header">
+              <div>
+                <p className="section-kicker">Your selection</p>
+                <h2>Shopping cart</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsOpen(false)}
+                aria-label="Close shopping cart"
+              >
+                <X size={20} />
+              </Button>
+            </div>
+            {cartProducts.length === 0 ? (
+              <div className="drawer-empty">
+                <ShoppingBag size={30} />
+                <p>Your cart is empty.</p>
+                <span>Add a server, tool, or service to get started.</span>
+              </div>
+            ) : (
+              <div className="drawer-items">
+                {cartProducts.map(({ product }) => (
+                  <div className="drawer-item" key={product.id}>
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>
+                        {product.type === "server"
+                          ? "Game server"
+                          : product.type === "service"
+                            ? "Setup service"
+                            : "Mod or tool"}
+                      </span>
+                    </div>
+                    <div className="drawer-item-actions">
+                      <b>{formatPrice(product.price)}</b>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFromCart(product.id)}
+                        aria-label={`Remove ${product.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="drawer-footer">
+              <div>
+                <span>Subtotal</span>
+                <strong>{formatPrice(cartTotal)}</strong>
+              </div>
+              <Button
+                className="checkout-button"
+                disabled={cartProducts.length === 0 || checkoutState === "loading"}
+                onClick={startCheckout}
+              >
+                {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
+                <ArrowRight size={16} />
+              </Button>
+              <small>
+                {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
+              </small>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
