@@ -358,10 +358,10 @@
 
 .product-detail-location {
   align-items: center;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: #171717;
+  border: 1px solid #171717;
   border-radius: 8px;
-  color: #166534;
+  color: #ffffff;
   display: inline-flex;
   font-size: 13px;
   font-weight: 500;
@@ -372,6 +372,7 @@
 }
 
 .product-detail-location strong {
+  color: #ffffff;
   font-weight: 700;
 }
 

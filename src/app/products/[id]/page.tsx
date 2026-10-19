@@ -3,7 +3,7 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Check, MapPin } from "lucide-react";
+import { ArrowLeft, Check, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { isAdminUser } from "@/server/auth/admin";
@@ -147,7 +147,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <h1>{product.name}</h1>
           {product.type === "server" && product.location && (
             <div className="product-detail-location">
-              <MapPin size={15} />
+              <Globe size={15} />
               <span>Server Location: <strong>{product.location}</strong></span>
             </div>
           )}

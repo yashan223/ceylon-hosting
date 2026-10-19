@@ -9,7 +9,7 @@ import {
   Check,
   LogIn,
   LogOut,
-  MapPin,
+  Globe,
   Menu,
   PackageCheck,
   Search,
@@ -664,7 +664,7 @@ export function Storefront({
                       <h3>{product.name}</h3>
                       {product.type === "server" && product.location && (
                         <div className="product-location-badge">
-                          <MapPin size={11} />
+                          <Globe size={11} />
                           <span>{product.location}</span>
                         </div>
                       )}
