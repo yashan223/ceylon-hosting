@@ -200,7 +200,6 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
 }
 
 type SceneControls = {
-  updateUserMarker: (loc: UserLocation | null) => void;
   setTargetRotation: (dc: Datacenter | null) => void;
   updateNodeHighlights: (selectedId: string | null) => void;
 };
@@ -209,7 +208,6 @@ export function LatencyGlobe() {
   const mountRef = useRef<HTMLDivElement>(null);
   const calloutRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef<Record<string, HTMLDivElement | null>>({});
-  const userLabelRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedDc, setSelectedDc] = useState<Datacenter | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -445,45 +443,6 @@ export function LatencyGlobe() {
     const dotsMesh = new THREE.Points(dotGeo, dotMat);
     globeGroup.add(dotsMesh);
 
-    let userNodeMesh: THREE.Mesh | null = null;
-    let userRingMesh: THREE.Mesh | null = null;
-    let userMarkerGeo: THREE.SphereGeometry | null = null;
-    let userMarkerMat: THREE.MeshBasicMaterial | null = null;
-    let userRingGeo: THREE.RingGeometry | null = null;
-    let userRingMat: THREE.MeshBasicMaterial | null = null;
-
-    const updateUserMarker = (loc: UserLocation | null) => {
-      if (!loc) {
-        if (userNodeMesh) userNodeMesh.visible = false;
-        if (userRingMesh) userRingMesh.visible = false;
-        return;
-      }
-      const uPos = latLngToVector3(loc.lat, loc.lng, globeRadius + 1.2);
-      if (!userNodeMesh) {
-        userMarkerGeo = new THREE.SphereGeometry(3.6, 16, 16);
-        userMarkerMat = new THREE.MeshBasicMaterial({ color: 0x0284c7 });
-        userNodeMesh = new THREE.Mesh(userMarkerGeo, userMarkerMat);
-        globeGroup.add(userNodeMesh);
-      }
-      userNodeMesh.position.copy(uPos);
-      userNodeMesh.visible = true;
-
-      if (!userRingMesh) {
-        userRingGeo = new THREE.RingGeometry(4.2, 6.2, 24);
-        userRingMat = new THREE.MeshBasicMaterial({
-          color: 0x38bdf8,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.85,
-        });
-        userRingMesh = new THREE.Mesh(userRingGeo, userRingMat);
-        globeGroup.add(userRingMesh);
-      }
-      userRingMesh.position.copy(uPos);
-      userRingMesh.lookAt(new THREE.Vector3(0, 0, 0));
-      userRingMesh.visible = true;
-    };
-
     const clickTargets: THREE.Mesh[] = [];
     const nodeMeshes: {
       dc: Datacenter;
@@ -558,7 +517,6 @@ export function LatencyGlobe() {
     };
 
     sceneControlsRef.current = {
-      updateUserMarker,
       setTargetRotation,
       updateNodeHighlights,
     };
@@ -676,7 +634,6 @@ export function LatencyGlobe() {
     };
 
     const _labelPos = new THREE.Vector3();
-    const _userPos = new THREE.Vector3();
 
     const updateLabels = () => {
       const halfW = containerW * 0.5;
@@ -700,23 +657,6 @@ export function LatencyGlobe() {
         } else {
           el.style.opacity = "0";
           el.style.pointerEvents = "none";
-        }
-      }
-
-      const curUserLoc = currentUserLocationRef.current;
-      if (curUserLoc && userLabelRef.current) {
-        _userPos.copy(latLngToVector3(curUserLoc.lat, curUserLoc.lng, globeRadius + 1.2));
-        _userPos.applyMatrix4(globeGroup.matrixWorld);
-        if (_userPos.z > -2) {
-          _userPos.project(camera);
-          const screenX = _userPos.x * halfW + halfW;
-          const screenY = -_userPos.y * halfH + halfH;
-          const depthAlpha = _userPos.z > 8 ? 1 : Math.max(0, (_userPos.z + 2) / 10);
-
-          userLabelRef.current.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, 9px)`;
-          userLabelRef.current.style.opacity = depthAlpha.toFixed(2);
-        } else {
-          userLabelRef.current.style.opacity = "0";
         }
       }
     };
@@ -805,24 +745,18 @@ export function LatencyGlobe() {
       equatorMat.dispose();
       dotGeo.dispose();
       dotMat.dispose();
-      if (userMarkerGeo) userMarkerGeo.dispose();
-      if (userMarkerMat) userMarkerMat.dispose();
-      if (userRingGeo) userRingGeo.dispose();
-      if (userRingMat) userRingMat.dispose();
       sceneControlsRef.current = null;
     };
   }, [selectDatacenter]);
 
   useEffect(() => {
     currentSelectedDcRef.current = selectedDc;
-    currentUserLocationRef.current = userLocation;
 
     if (sceneControlsRef.current) {
-      sceneControlsRef.current.updateUserMarker(userLocation);
       sceneControlsRef.current.setTargetRotation(selectedDc);
       sceneControlsRef.current.updateNodeHighlights(selectedDc?.id ?? null);
     }
-  }, [selectedDc, userLocation]);
+  }, [selectedDc]);
 
   return (
     <div className="pure-globe-container">
@@ -845,23 +779,6 @@ export function LatencyGlobe() {
           </div>
         ))}
 
-        {userLocation && (
-          <div
-            ref={userLabelRef}
-            className="globe-node-label user-location-badge"
-            style={{ opacity: 0, transform: "translate3d(-9999px, -9999px, 0)" }}
-          >
-            <span className="node-label-flag">📍</span>
-            <span>
-              {userLocation.isp
-                ? `You (${userLocation.isp})`
-                : userLocation.city
-                  ? `You (${userLocation.city})`
-                  : "You"}
-            </span>
-          </div>
-        )}
-
         <div
           ref={calloutRef}
           className="globe-node-callout"
@@ -880,9 +797,7 @@ export function LatencyGlobe() {
               <span className="node-callout-isp">
                 {userLocation?.isp
                   ? `from ${userLocation.isp}`
-                  : userLocation?.city
-                    ? `from ${userLocation.city}`
-                    : "from your ISP"}
+                  : "from your ISP"}
               </span>
             </>
           )}
