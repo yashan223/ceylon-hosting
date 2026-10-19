@@ -41,7 +41,7 @@ export default async function AdminOrdersPage() {
                       <small>
                         {order.items.map((item) => (
                           <span key={item.productId} className="admin-order-item-line">
-                            <span>{item.name} x{item.quantity}</span>
+                            <span className="admin-order-item-title">{item.name} ×{item.quantity}</span>
                             {(item.serverName || item.serverLocation) && (
                               <span className="admin-order-server-badge">
                                 {item.serverLocation && (
