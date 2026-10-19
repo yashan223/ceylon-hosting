@@ -866,14 +866,6 @@ export function ProductManager({
                 </div>
               )}
 
-              <label>
-                Promotional Tag / Badge
-                <Input
-                  value={draft.tag}
-                  onChange={(event) => changeDraft("tag", event.target.value)}
-                />
-              </label>
-
               <div className="product-editor-toggle-row">
                 <div className="admin-toggle-card">
                   <label className="admin-checkbox-label">
