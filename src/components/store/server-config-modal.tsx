@@ -7,8 +7,8 @@ import type { Product } from "@/types/product";
 
 export type ServerConfig = {
   serverName: string;
-  serverPassword?: string;
-  rconPassword?: string;
+  serverPassword: string;
+  rconPassword: string;
 };
 
 type ServerConfigModalProps = {
@@ -46,11 +46,15 @@ function ServerConfigDialog({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const cleanName = serverName.trim();
-    const cleanRcon = rconPassword.trim();
     const cleanPass = serverPassword.trim();
+    const cleanRcon = rconPassword.trim();
 
     if (!cleanName) {
       setError("Please enter a server name.");
+      return;
+    }
+    if (!cleanPass) {
+      setError("Please enter a server password.");
       return;
     }
     if (!cleanRcon) {
@@ -60,8 +64,8 @@ function ServerConfigDialog({
 
     onConfirm({
       serverName: cleanName,
-      serverPassword: cleanPass || undefined,
-      rconPassword: cleanRcon || undefined,
+      serverPassword: cleanPass,
+      rconPassword: cleanRcon,
     });
   }
 
@@ -108,31 +112,27 @@ function ServerConfigDialog({
                 setServerName(e.target.value);
                 if (error) setError("");
               }}
-              placeholder="e.g. Ceylon Pro Scrim #1"
               maxLength={80}
               autoFocus
               required
             />
-            <span className="server-modal-hint">
-              The public name that will display for your server.
-            </span>
           </div>
 
           <div className="server-modal-field">
             <label className="server-modal-label" htmlFor="server-config-pass">
-              Server Password <span className="server-modal-opt">(Optional)</span>
+              Server Password <span className="server-modal-req">*</span>
             </label>
             <input
               id="server-config-pass"
               className="server-modal-input"
               value={serverPassword}
-              onChange={(e) => setServerPassword(e.target.value)}
-              placeholder="Leave blank for public server"
+              onChange={(e) => {
+                setServerPassword(e.target.value);
+                if (error) setError("");
+              }}
               maxLength={50}
+              required
             />
-            <span className="server-modal-hint">
-              Leave empty if you want anyone to join without a password.
-            </span>
           </div>
 
           <div className="server-modal-field">
@@ -147,13 +147,9 @@ function ServerConfigDialog({
                 setRconPassword(e.target.value);
                 if (error) setError("");
               }}
-              placeholder="e.g. AdminPass123!"
               maxLength={50}
               required
             />
-            <span className="server-modal-hint">
-              Required for remote console administrator access.
-            </span>
           </div>
 
           <div className="server-modal-actions">
