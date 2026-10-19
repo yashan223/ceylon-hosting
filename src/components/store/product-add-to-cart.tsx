@@ -97,6 +97,7 @@ export function ProductAddToCart({
             saveToCart(config);
             setIsConfigOpen(false);
           }}
+          products={[product]}
         />
       )}
     </>

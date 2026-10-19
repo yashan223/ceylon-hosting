@@ -932,6 +932,7 @@ export function Storefront({
         onClose={() => setServerConfigProduct(null)}
         product={serverConfigProduct}
         onConfirm={handleConfirmServerConfig}
+        products={products}
       />
     </main>
   );
