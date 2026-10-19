@@ -794,50 +794,50 @@ export function ProductManager({
                       </button>
                     </div>
                   </div>
-                  <div className="admin-location-grid">
-                    {SERVER_LOCATIONS.map((loc) => {
-                      const isSelected = (draft.locations || []).some((l) => isLocationMatch(l, loc));
-                      return (
-                        <label
-                          key={loc.id}
-                          className={`admin-location-chip ${isSelected ? "selected" : ""}`}
-                          onClick={(e) => {
+                  <div className="admin-location-row">
+                    <div className="admin-location-chips">
+                      {SERVER_LOCATIONS.map((loc) => {
+                        const isSelected = (draft.locations || []).some((l) => isLocationMatch(l, loc));
+                        return (
+                          <button
+                            key={loc.id}
+                            type="button"
+                            className={`admin-location-chip ${isSelected ? "selected" : ""}`}
+                            onClick={() => toggleLocation(loc)}
+                          >
+                            <span className="admin-location-check">
+                              {isSelected ? <Check size={12} strokeWidth={3} /> : null}
+                            </span>
+                            <span className="admin-location-flag">{loc.flag}</span>
+                            <span className="admin-location-name">{loc.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="admin-custom-loc-inline">
+                      <Input
+                        placeholder="Add other location..."
+                        value={customLocInput}
+                        onChange={(e) => setCustomLocInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
                             e.preventDefault();
-                            toggleLocation(loc);
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            readOnly
-                            tabIndex={-1}
-                          />
-                          <span>{loc.flag}</span>
-                          <span>{loc.label}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div className="admin-custom-loc-row">
-                    <Input
-                      placeholder="Add custom location (e.g. Dallas, USA)"
-                      value={customLocInput}
-                      onChange={(e) => setCustomLocInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addCustomLocation();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addCustomLocation}
-                      disabled={!customLocInput.trim()}
-                    >
-                      Add Location
-                    </Button>
+                            addCustomLocation();
+                          }
+                        }}
+                        className="admin-custom-loc-input"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={addCustomLocation}
+                        disabled={!customLocInput.trim()}
+                        className="admin-custom-loc-add"
+                      >
+                        Add
+                      </Button>
+                    </div>
                   </div>
                   {customSelectedLocations.length > 0 && (
                     <div className="admin-custom-tags">
