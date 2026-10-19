@@ -205,11 +205,15 @@ function ServerConfigDialog({
     };
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function handleAddToCartOnly() {
     const config = validateConfig();
     if (!config) return;
     onConfirm(config);
+  }
+
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void handlePayNow();
   }
 
   async function handlePayNow() {
@@ -396,14 +400,6 @@ function ServerConfigDialog({
                 />
               </div>
 
-              <div className="server-split-actions">
-                <Button type="button" variant="outline" onClick={onClose}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  Add to cart
-                </Button>
-              </div>
             </form>
           </div>
         </div>
@@ -471,14 +467,25 @@ function ServerConfigDialog({
                 <span>Subtotal</span>
                 <strong>{formatPrice(cartTotal)}</strong>
               </div>
-              <Button
-                className="checkout-button server-split-checkout-btn"
-                disabled={checkoutLoading}
-                onClick={handlePayNow}
-              >
-                {checkoutLoading ? "Opening payment..." : "Pay now"}
-                <ArrowRight size={16} />
-              </Button>
+              <div className="server-split-cart-actions">
+                <Button
+                  className="checkout-button server-split-checkout-btn"
+                  disabled={checkoutLoading}
+                  onClick={handlePayNow}
+                >
+                  {checkoutLoading ? "Opening payment..." : "Pay now"}
+                  <ArrowRight size={16} />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="server-split-add-btn"
+                  disabled={checkoutLoading}
+                  onClick={handleAddToCartOnly}
+                >
+                  Add to cart
+                </Button>
+              </div>
               <small className="server-split-note">
                 {checkoutError || "You will continue to secure payment."}
               </small>
