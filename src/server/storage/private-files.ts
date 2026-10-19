@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink, rm } from "node:fs/promises";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 
@@ -66,4 +66,15 @@ export async function deleteProductFile(key: string) {
     assertInsideRoot(filePath);
     await unlink(filePath);
   } catch {}
+}
+
+export async function clearAllPrivateProductFiles() {
+  try {
+    const root = getFilesRoot();
+    const productsDir = join(root, "products");
+    await rm(productsDir, { recursive: true, force: true });
+    await mkdir(productsDir, { recursive: true });
+  } catch (error) {
+    console.error("Failed to clear private product files:", error);
+  }
 }

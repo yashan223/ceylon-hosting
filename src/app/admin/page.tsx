@@ -9,10 +9,12 @@ import {
   ArrowUpRight,
   RefreshCw,
   HardDrive,
+  AlertTriangle,
 } from "lucide-react";
 import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
 import { formatBytes } from "@/lib/utils";
+import { ClearDataButton } from "@/components/admin/clear-data-button";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +23,17 @@ export default async function AdminDashboardPage() {
 
   return (
     <main className="admin-page">
+      <div className="admin-page-heading">
+        <div>
+          <span className="admin-kicker">Workspace</span>
+          <h1>Store overview</h1>
+          <p>Monitor real-time metrics, active server plans, and store operations.</p>
+        </div>
+        <div className="admin-heading-actions">
+          <ClearDataButton />
+        </div>
+      </div>
+
       <section className="admin-stat-grid admin-stat-grid-8">
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -146,6 +159,25 @@ export default async function AdminDashboardPage() {
             </tbody>
           </table>
           {orders.length === 0 && <p className="admin-empty">No customer activity yet.</p>}
+        </div>
+      </section>
+
+      <section className="admin-panel admin-danger-panel">
+        <div className="admin-danger-inner">
+          <div className="admin-danger-text">
+            <div className="admin-danger-tag">
+              <AlertTriangle size={14} />
+              <span>Danger zone</span>
+            </div>
+            <h3>Reset store data</h3>
+            <p>
+              Permanently clear all products, digital files, customer orders, and customer accounts.
+              Your administrator login credentials will remain preserved and active.
+            </p>
+          </div>
+          <div className="admin-danger-action">
+            <ClearDataButton variant="danger-panel" />
+          </div>
         </div>
       </section>
     </main>
