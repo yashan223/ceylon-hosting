@@ -3,7 +3,6 @@ import {
   ArrowUpRight,
   Download,
   FileText,
-  HardDrive,
   LayoutDashboard,
   MessageCircle,
   ShoppingBag,
@@ -25,6 +24,16 @@ export default async function DashboardItemsPage() {
   );
   const purchasedProducts = await getProductsByIds(purchasedItemIds);
   const productsById = new Map(purchasedProducts.map((p) => [p.id, p]));
+
+  const purchasedItems = orders.flatMap((order) =>
+    order.items.map((item) => ({
+      ...item,
+      orderId: order.id,
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+      product: productsById.get(item.productId),
+    })),
+  );
 
   const paidDownloads = orders
     .filter((order) => order.paymentStatus === "paid")
@@ -57,7 +66,7 @@ export default async function DashboardItemsPage() {
             <LayoutDashboard size={16} /> Overview
           </Link>
           <Link className="active" href="/dashboard/items">
-            <ShoppingBag size={16} /> Items & Files
+            <ShoppingBag size={16} /> Items & Mods
           </Link>
           <Link href="/dashboard/messages">
             <MessageCircle size={16} /> Messages
@@ -86,25 +95,88 @@ export default async function DashboardItemsPage() {
         <section className="dashboard-panel dashboard-items-panel">
           <div className="dashboard-panel-heading">
             <div>
-              <span className="section-kicker">Digital Downloads</span>
-              <h2>My Purchased Mods & Files</h2>
+              <span className="section-kicker">Your library</span>
+              <h2>Purchased items</h2>
             </div>
-            <span className="profile-count">{paidDownloads.length} downloads</span>
+            <span className="profile-count">{purchasedItems.length} items</span>
           </div>
 
-          {paidDownloads.length === 0 ? (
+          {purchasedItems.length === 0 ? (
             <div className="dashboard-empty">
-              <HardDrive size={24} />
-              <h3>No digital downloads unlocked yet</h3>
-              <p>
-                When you purchase mods, tools, or server files and your payment is confirmed,
-                your 1-click downloads will appear here.
-              </p>
+              <ShoppingBag size={24} />
+              <h3>No purchased items yet</h3>
+              <p>Your purchased servers, mods, and services will appear here.</p>
               <Link className="profile-order-link" href="/#catalog">
-                Browse catalog for mods
+                Browse the store
               </Link>
             </div>
           ) : (
+            <div className="dashboard-items">
+              {purchasedItems.map((item) => {
+                const isPaid = item.paymentStatus === "paid";
+                const hasDownload = Boolean(item.product?.downloadKey || item.type === "mod");
+                return (
+                  <article className="dashboard-item" key={`${item.orderId}-${item.productId}`}>
+                    <div>
+                      <span className="profile-order-id">
+                        {item.type.toUpperCase()} / {item.orderId}
+                      </span>
+                      <h3>{item.name}</h3>
+                      <p>
+                        {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
+                        {item.product?.downloadName && (
+                          <span className="dashboard-item-filename">
+                            {" "}• {item.product.downloadName}
+                            {item.product.downloadSize
+                              ? ` (${formatBytes(item.product.downloadSize)})`
+                              : ""}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="dashboard-item-side">
+                      <span className="order-status">{item.orderStatus.replace("_", " ")}</span>
+                      {hasDownload && (
+                        isPaid && item.product?.downloadKey ? (
+                          <a
+                            className="dashboard-download-btn"
+                            href={`/api/downloads/${item.productId}`}
+                            download={item.product.downloadName}
+                          >
+                            <Download size={12} />
+                            Download
+                          </a>
+                        ) : !isPaid ? (
+                          <span className="dashboard-file-badge pending">
+                            Pay to unlock
+                          </span>
+                        ) : (
+                          <span className="dashboard-file-badge info">
+                            Preparing file
+                          </span>
+                        )
+                      )}
+                      <Link className="profile-order-link" href={`/orders/${item.orderId}`}>
+                        View order
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {paidDownloads.length > 0 && (
+          <section className="dashboard-panel dashboard-items-panel">
+            <div className="dashboard-panel-heading">
+              <div>
+                <span className="section-kicker">Digital Downloads</span>
+                <h2>My Purchased Mods & Files</h2>
+              </div>
+              <span className="profile-count">{paidDownloads.length} downloads</span>
+            </div>
+
             <div className="dashboard-library-grid">
               {paidDownloads.map((item) => (
                 <article
@@ -166,8 +238,8 @@ export default async function DashboardItemsPage() {
                 </article>
               ))}
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );

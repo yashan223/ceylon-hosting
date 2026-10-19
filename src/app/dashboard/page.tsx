@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   ArrowUpRight,
   Clock3,
-  Download,
   LayoutDashboard,
   LifeBuoy,
   MessageCircle,
@@ -12,8 +11,6 @@ import {
 import { requireUser } from "@/server/auth/session";
 import { listOrdersForUser } from "@/server/orders/orders";
 import { listSubscriptionsForUser, syncExistingPaidServers } from "@/server/subscriptions/servers";
-import { getProductsByIds } from "@/server/catalog/products";
-import { formatBytes } from "@/lib/utils";
 import { ServerSubscriptionsCard } from "@/components/dashboard/server-subscriptions-card";
 
 export const dynamic = "force-dynamic";
@@ -26,26 +23,11 @@ export default async function DashboardPage() {
     listSubscriptionsForUser(user.id),
   ]);
 
-  const purchasedItemIds = Array.from(
-    new Set(orders.flatMap((order) => order.items.map((item) => item.productId))),
-  );
-  const products = await getProductsByIds(purchasedItemIds);
-  const productsById = new Map(products.map((p) => [p.id, p]));
-
   const openOrders = orders.filter(
     (order) => !["completed", "cancelled"].includes(order.status),
   ).length;
   const paidOrders = orders.filter((order) => order.paymentStatus === "paid").length;
   const chats = orders.filter((order) => order.latestMessage).length;
-  const purchasedItems = orders.flatMap((order) =>
-    order.items.map((item) => ({
-      ...item,
-      orderId: order.id,
-      orderStatus: order.status,
-      paymentStatus: order.paymentStatus,
-      product: productsById.get(item.productId),
-    })),
-  );
 
   return (
     <main className="dashboard-page">
@@ -62,7 +44,7 @@ export default async function DashboardPage() {
             <LayoutDashboard size={16} /> Overview
           </Link>
           <Link href="/dashboard/items">
-            <ShoppingBag size={16} /> Items
+            <ShoppingBag size={16} /> Items & Mods
           </Link>
           <Link href="/dashboard/messages">
             <MessageCircle size={16} /> Messages
@@ -120,79 +102,24 @@ export default async function DashboardPage() {
 
         <ServerSubscriptionsCard subscriptions={subscriptions} />
 
-        <section className="dashboard-panel dashboard-items-panel">
-          <div className="dashboard-panel-heading">
-            <div>
-              <span className="section-kicker">Your library</span>
-              <h2>Purchased items</h2>
+        {subscriptions.length === 0 && (
+          <section className="dashboard-panel dashboard-items-panel">
+            <div className="dashboard-panel-heading">
+              <div>
+                <span className="section-kicker">Workspace</span>
+                <h2>Account Overview</h2>
+              </div>
             </div>
-            <span className="profile-count">{purchasedItems.length} items</span>
-          </div>
-          {purchasedItems.length === 0 ? (
             <div className="dashboard-empty">
               <ShoppingBag size={24} />
-              <h3>No purchased items yet</h3>
-              <p>Your purchased servers, mods, and services will appear here.</p>
-              <Link className="profile-order-link" href="/#catalog">
-                Browse the store
+              <h3>Your purchased items & mods</h3>
+              <p>Manage your game servers, orders, and unlocked files in the Items & Mods section.</p>
+              <Link className="profile-order-link" href="/dashboard/items">
+                View items & mods <ArrowUpRight size={13} />
               </Link>
             </div>
-          ) : (
-            <div className="dashboard-items">
-              {purchasedItems.map((item) => {
-                const isPaid = item.paymentStatus === "paid";
-                const hasDownload = Boolean(item.product?.downloadKey || item.type === "mod");
-                return (
-                  <article className="dashboard-item" key={`${item.orderId}-${item.productId}`}>
-                    <div>
-                      <span className="profile-order-id">
-                        {item.type.toUpperCase()} / {item.orderId}
-                      </span>
-                      <h3>{item.name}</h3>
-                      <p>
-                        {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
-                        {item.product?.downloadName && (
-                          <span className="dashboard-item-filename">
-                            {" "}• {item.product.downloadName}
-                            {item.product.downloadSize
-                              ? ` (${formatBytes(item.product.downloadSize)})`
-                              : ""}
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <div className="dashboard-item-side">
-                      <span className="order-status">{item.orderStatus.replace("_", " ")}</span>
-                      {hasDownload && (
-                        isPaid && item.product?.downloadKey ? (
-                          <a
-                            className="dashboard-download-btn"
-                            href={`/api/downloads/${item.productId}`}
-                            download={item.product.downloadName}
-                          >
-                            <Download size={12} />
-                            Download
-                          </a>
-                        ) : !isPaid ? (
-                          <span className="dashboard-file-badge pending">
-                            Pay to unlock
-                          </span>
-                        ) : (
-                          <span className="dashboard-file-badge info">
-                            Preparing file
-                          </span>
-                        )
-                      )}
-                      <Link className="profile-order-link" href={`/orders/${item.orderId}`}>
-                        View order
-                      </Link>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </main>
   );

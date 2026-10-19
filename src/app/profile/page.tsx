@@ -33,7 +33,7 @@ export default async function ProfilePage() {
             <LayoutDashboard size={16} /> Overview
           </Link>
           <Link href="/dashboard/items">
-            <ShoppingBag size={16} /> Items
+            <ShoppingBag size={16} /> Items & Mods
           </Link>
           <Link href="/dashboard/messages">
             <MessageCircle size={16} /> Messages
