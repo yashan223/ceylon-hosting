@@ -543,7 +543,7 @@ export function Storefront({
               </a>
               <a
                 className="intro-discord-btn"
-                href="https://discord.gg/ceylonhosting"
+                href="https://discord.gg/rXHvDAHAw3"
                 target="_blank"
                 rel="noopener noreferrer"
               >
