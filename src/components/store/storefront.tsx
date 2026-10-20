@@ -323,7 +323,7 @@ export function Storefront({
         }),
       });
       if (response.status === 401) {
-        router.push(`/sign-in?redirect_url=${encodeURIComponent("/#catalog")}`);
+        router.push(`/sign-in?redirect_url=${encodeURIComponent("/")}`);
         return;
       }
       const result = (await response.json()) as { orderId?: string; error?: string };

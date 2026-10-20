@@ -6,7 +6,7 @@ import { enforceRateLimit } from "@/server/rate-limit";
 
 function getSafeRedirectUrl(redirectTo: unknown, fallback: string): string {
   if (typeof redirectTo !== "string") return fallback;
-  const trimmed = redirectTo.trim();
+  const trimmed = redirectTo.trim().replace(/#catalog$/, "");
   if (
     trimmed.startsWith("/") &&
     !trimmed.startsWith("//") &&
@@ -14,7 +14,7 @@ function getSafeRedirectUrl(redirectTo: unknown, fallback: string): string {
     !trimmed.includes("\r") &&
     !trimmed.includes("\n")
   ) {
-    return trimmed;
+    return trimmed || fallback;
   }
   return fallback;
 }
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     );
 
   await createSession(user.id, body.rememberMe === true);
-  const fallback = isConfiguredAdminEmail(user.email) ? "/admin" : "/#catalog";
+  const fallback = isConfiguredAdminEmail(user.email) ? "/admin" : "/";
   const redirectTo = getSafeRedirectUrl(body.redirectTo, fallback);
   return NextResponse.json({ redirectTo });
 }
