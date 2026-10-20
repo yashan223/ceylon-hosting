@@ -129,41 +129,6 @@ export default async function AdminDashboardPage() {
                         {order.items.map((item) => (
                           <span key={item.productId} className="admin-order-item-line">
                             <span className="admin-order-item-title">{item.name} ×{item.quantity}</span>
-                            {(item.serverName || item.serverLocation || item.extraSlots) && (
-                              <span className="admin-order-server-badge">
-                                {item.serverLocation && (
-                                  <span className="admin-server-loc-chip">
-                                    {item.serverLocation.toLowerCase().includes("singapore")
-                                      ? "🇸🇬 Singapore"
-                                      : item.serverLocation.toLowerCase().includes("germany")
-                                      ? "🇩🇪 Germany"
-                                      : `🌐 ${item.serverLocation}`}
-                                  </span>
-                                )}
-                                {item.serverName ? (
-                                  <span className="admin-server-name-chip">
-                                    Host: <strong>{item.serverName}</strong>
-                                  </span>
-                                ) : null}
-                                {item.serverPassword ? (
-                                  <span className="admin-server-pass-chip">
-                                    Pass: <code>{item.serverPassword}</code>
-                                  </span>
-                                ) : (
-                                  <span className="admin-server-pass-chip public">Public</span>
-                                )}
-                                {item.rconPassword ? (
-                                  <span className="admin-server-pass-chip rcon">
-                                    RCON: <code>{item.rconPassword}</code>
-                                  </span>
-                                ) : null}
-                                {item.extraSlots ? (
-                                  <span className="admin-server-pass-chip slots">
-                                    +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Slots
-                                  </span>
-                                ) : null}
-                              </span>
-                            )}
                           </span>
                         ))}
                       </small>
