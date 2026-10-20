@@ -41,7 +41,7 @@ export default function TermsPage() {
         <h2>Contact</h2>
         <p>
           Questions about these terms can be sent to{" "}
-          <a href="mailto:support@ceylonhosting.tech">support@ceylonhosting.tech</a>.
+          <a href="mailto:ceylonhosting@proton.me">ceylonhosting@proton.me</a>.
         </p>
       </article>
     </main>

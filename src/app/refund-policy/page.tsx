@@ -40,7 +40,7 @@ export default function RefundPolicyPage() {
         <h2>Contact</h2>
         <p>
           For policy questions, email{" "}
-          <a href="mailto:support@ceylonhosting.tech">support@ceylonhosting.tech</a>.
+          <a href="mailto:ceylonhosting@proton.me">ceylonhosting@proton.me</a>.
         </p>
       </article>
     </main>

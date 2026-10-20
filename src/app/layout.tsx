@@ -89,7 +89,7 @@ const structuredData = {
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "customer support",
-        email: "support@ceylonhosting.tech",
+        email: "ceylonhosting@proton.me",
         availableLanguage: ["en", "si", "ta"],
       },
     },
