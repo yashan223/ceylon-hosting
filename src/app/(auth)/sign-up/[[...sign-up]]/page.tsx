@@ -32,7 +32,7 @@ export default function SignUpPage() {
           />
         </div>
         <div>
-          <span className="auth-kicker">Create your player profile</span>
+          <span className="auth-kicker">Create your profile</span>
           <h1>
             Build your
             <br />

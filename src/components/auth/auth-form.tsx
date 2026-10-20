@@ -6,6 +6,7 @@ import { Eye, EyeOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CountrySelect } from "@/components/ui/country-select";
+import { getCountryDialCode, formatPhoneWithCountryCode } from "@/lib/countries";
 
 type AuthFormProps = { mode: "sign-in" | "sign-up" };
 
@@ -35,6 +36,29 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [verificationPopupOpen, setVerificationPopupOpen] = useState(false);
   const [verificationFeedback, setVerificationFeedback] = useState("");
   const [verificationSendFailed, setVerificationSendFailed] = useState(false);
+
+  const dialCode = getCountryDialCode(country);
+  const whatsappPlaceholder = dialCode ? `${dialCode} 7X XXX XXXX` : "+94 7X XXX XXXX";
+
+  function handleCountryChange(newCountry: string) {
+    setCountry(newCountry);
+    const newDial = getCountryDialCode(newCountry);
+    if (newDial) {
+      setWhatsapp((prev) => formatPhoneWithCountryCode(prev, newDial));
+    }
+  }
+
+  function handleWhatsappFocus() {
+    if (!whatsapp.trim() && dialCode) {
+      setWhatsapp(`${dialCode} `);
+    }
+  }
+
+  function handleWhatsappBlur() {
+    if (whatsapp.trim() && dialCode) {
+      setWhatsapp((prev) => formatPhoneWithCountryCode(prev, dialCode));
+    }
+  }
 
   useEffect(() => {
     if (isSignUp) return;
@@ -70,9 +94,14 @@ export function AuthForm({ mode }: AuthFormProps) {
       setError("Please select your country.");
       return;
     }
+    const effectiveWhatsapp =
+      isSignUp && dialCode
+        ? formatPhoneWithCountryCode(whatsapp, dialCode).trim()
+        : whatsapp.trim();
+    const digits = effectiveWhatsapp.replace(/\D/g, "");
     if (
       isSignUp &&
-      (!whatsapp.trim() || !/^[0-9+\s()-]{6,25}$/.test(whatsapp.trim()))
+      (!effectiveWhatsapp || !/^[0-9+\s()-]{6,25}$/.test(effectiveWhatsapp) || digits.length < 6)
     ) {
       setError("Please enter a valid WhatsApp number.");
       return;
@@ -85,7 +114,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         body: JSON.stringify({
           firstName,
           country,
-          whatsapp,
+          whatsapp: isSignUp ? effectiveWhatsapp : whatsapp,
           acceptedTerms,
           email,
           password,
@@ -170,11 +199,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         {isSignUp && (
           <div className="auth-field-group">
             <span>Country</span>
-            <CountrySelect
-              value={country}
-              onChange={setCountry}
-              required
-            />
+            <CountrySelect value={country} onChange={handleCountryChange} required />
           </div>
         )}
         {isSignUp && (
@@ -183,10 +208,12 @@ export function AuthForm({ mode }: AuthFormProps) {
             <Input
               type="tel"
               autoComplete="tel"
-              placeholder="+94 7X XXX XXXX"
+              placeholder={whatsappPlaceholder}
               required
               value={whatsapp}
               onChange={(event) => setWhatsapp(event.target.value)}
+              onFocus={handleWhatsappFocus}
+              onBlur={handleWhatsappBlur}
             />
           </label>
         )}

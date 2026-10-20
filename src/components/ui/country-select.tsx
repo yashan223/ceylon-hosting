@@ -1,25 +1,14 @@
 "use client";
 
-import {
-  useState,
-  useEffect,
-  useRef,
-  useMemo,
-  useCallback,
-  useId,
-  Fragment,
-} from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, useId, Fragment } from "react";
 import { ChevronDown, Search, X, Check } from "lucide-react";
-import {
-  COUNTRIES,
-  POPULAR_COUNTRIES,
-  type Country,
-} from "@/lib/countries";
+import { COUNTRIES, POPULAR_COUNTRIES, type Country } from "@/lib/countries";
 
 export type CountrySelectProps = {
   value?: string;
   defaultValue?: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, country?: Country) => void;
+  onCountrySelect?: (country: Country) => void;
   name?: string;
   required?: boolean;
   disabled?: boolean;
@@ -31,6 +20,7 @@ export function CountrySelect({
   value: controlledValue,
   defaultValue = "",
   onChange,
+  onCountrySelect,
   name,
   disabled = false,
   placeholder = "Select your country",
@@ -54,10 +44,12 @@ export function CountrySelect({
     if (!selectedValue) return null;
     const lower = selectedValue.trim().toLowerCase();
     return (
-      COUNTRIES.find(
-        (c) =>
-          c.name.toLowerCase() === lower || c.code.toLowerCase() === lower
-      ) || { name: selectedValue, code: "", flag: "🌐" }
+      COUNTRIES.find((c) => c.name.toLowerCase() === lower || c.code.toLowerCase() === lower) || {
+        name: selectedValue,
+        code: "",
+        flag: "🌐",
+        dialCode: "",
+      }
     );
   }, [selectedValue]);
 
@@ -65,10 +57,13 @@ export function CountrySelect({
 
   const filteredCountries = useMemo(() => {
     if (!normalizedQuery) return COUNTRIES;
+    const cleanQuery = normalizedQuery.replace(/^\+/, "");
     return COUNTRIES.filter(
       (c) =>
         c.name.toLowerCase().includes(normalizedQuery) ||
-        c.code.toLowerCase().includes(normalizedQuery)
+        c.code.toLowerCase().includes(normalizedQuery) ||
+        c.dialCode.toLowerCase().includes(normalizedQuery) ||
+        (cleanQuery && c.dialCode.replace("+", "").includes(cleanQuery)),
     );
   }, [normalizedQuery]);
 
@@ -100,13 +95,14 @@ export function CountrySelect({
       if (!isControlled) {
         setInternalValue(country.name);
       }
-      onChange?.(country.name);
+      onChange?.(country.name, country);
+      onCountrySelect?.(country);
       closeDropdown();
       setTimeout(() => {
         justSelectedRef.current = false;
       }, 250);
     },
-    [isControlled, onChange, closeDropdown]
+    [isControlled, onChange, onCountrySelect, closeDropdown],
   );
 
   useEffect(() => {
@@ -117,10 +113,7 @@ export function CountrySelect({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         closeDropdown();
       }
     }
@@ -138,9 +131,7 @@ export function CountrySelect({
 
   useEffect(() => {
     if (focusedIndex >= 0 && listRef.current) {
-      const activeEl = listRef.current.querySelector<HTMLElement>(
-        `[data-index="${focusedIndex}"]`
-      );
+      const activeEl = listRef.current.querySelector<HTMLElement>(`[data-index="${focusedIndex}"]`);
       activeEl?.scrollIntoView({ block: "nearest" });
     }
   }, [focusedIndex]);
@@ -149,11 +140,7 @@ export function CountrySelect({
     if (disabled) return;
 
     if (!isOpen) {
-      if (
-        event.key === "Enter" ||
-        event.key === " " ||
-        event.key === "ArrowDown"
-      ) {
+      if (event.key === "Enter" || event.key === " " || event.key === "ArrowDown") {
         event.preventDefault();
         openDropdown();
       }
@@ -165,14 +152,10 @@ export function CountrySelect({
       closeDropdown();
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
-      setFocusedIndex((prev) =>
-        prev < selectableList.length - 1 ? prev + 1 : 0
-      );
+      setFocusedIndex((prev) => (prev < selectableList.length - 1 ? prev + 1 : 0));
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
-      setFocusedIndex((prev) =>
-        prev > 0 ? prev - 1 : selectableList.length - 1
-      );
+      setFocusedIndex((prev) => (prev > 0 ? prev - 1 : selectableList.length - 1));
     } else if (event.key === "Enter") {
       event.preventDefault();
       if (focusedIndex >= 0 && focusedIndex < selectableList.length) {
@@ -210,27 +193,17 @@ export function CountrySelect({
         <div className="country-select-value">
           {selectedCountry ? (
             <>
-              <span className="country-select-flag">
-                {selectedCountry.flag}
-              </span>
-              <span className="country-select-name">
-                {selectedCountry.name}
-              </span>
+              <span className="country-select-flag">{selectedCountry.flag}</span>
+              <span className="country-select-name">{selectedCountry.name}</span>
             </>
           ) : (
-            <span className="country-select-placeholder">
-              {placeholder}
-            </span>
+            <span className="country-select-placeholder">{placeholder}</span>
           )}
         </div>
         <ChevronDown size={16} className="country-select-chevron" />
       </button>
 
-      <input
-        type="hidden"
-        name={name}
-        value={selectedValue}
-      />
+      <input type="hidden" name={name} value={selectedValue} />
 
       {isOpen && (
         <div
@@ -271,12 +244,7 @@ export function CountrySelect({
             )}
           </div>
 
-          <ul
-            ref={listRef}
-            className="country-select-list"
-            role="listbox"
-            aria-label="Countries"
-          >
+          <ul ref={listRef} className="country-select-list" role="listbox" aria-label="Countries">
             {selectableList.length === 0 ? (
               <li className="country-select-empty">
                 No countries found matching &ldquo;{query}&rdquo;
@@ -284,28 +252,20 @@ export function CountrySelect({
             ) : (
               selectableList.map((country, index) => {
                 const isSelected =
-                  selectedCountry?.name.toLowerCase() ===
-                  country.name.toLowerCase();
+                  selectedCountry?.name.toLowerCase() === country.name.toLowerCase();
                 const isFocused = index === focusedIndex;
                 const isPopularHeader = showSections && index === 0;
-                const isAllHeader =
-                  showSections && index === POPULAR_COUNTRIES.length;
+                const isAllHeader = showSections && index === POPULAR_COUNTRIES.length;
 
                 return (
                   <Fragment key={country.code + country.name}>
                     {isPopularHeader && (
-                      <li
-                        className="country-select-section-header"
-                        role="presentation"
-                      >
+                      <li className="country-select-section-header" role="presentation">
                         Suggested
                       </li>
                     )}
                     {isAllHeader && (
-                      <li
-                        className="country-select-section-header"
-                        role="presentation"
-                      >
+                      <li className="country-select-section-header" role="presentation">
                         All Countries
                       </li>
                     )}
@@ -323,18 +283,13 @@ export function CountrySelect({
                       }}
                       onMouseEnter={() => setFocusedIndex(index)}
                     >
-                      <span className="country-select-flag">
-                        {country.flag}
-                      </span>
-                      <span className="country-select-option-name">
-                        {country.name}
-                      </span>
-                      <span className="country-select-code-badge">
-                        {country.code}
-                      </span>
-                      {isSelected && (
-                        <Check size={14} className="country-select-check" />
+                      <span className="country-select-flag">{country.flag}</span>
+                      <span className="country-select-option-name">{country.name}</span>
+                      {country.dialCode && (
+                        <span className="country-select-dial-code">{country.dialCode}</span>
                       )}
+                      <span className="country-select-code-badge">{country.code}</span>
+                      {isSelected && <Check size={14} className="country-select-check" />}
                     </li>
                   </Fragment>
                 );
