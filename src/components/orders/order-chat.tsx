@@ -671,10 +671,6 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                   <span>Rs. {taxAmount.toLocaleString("en-LK")}</span>
                 </div>
               )}
-              <div className="order-summary-line">
-                <span>DDoS Shield & Deployment</span>
-                <span className="free-tag">Included (Free)</span>
-              </div>
               <div className="order-summary-line total">
                 <strong>Total Amount</strong>
                 <strong className="total-val">Rs. {totalAmount.toLocaleString("en-LK")}</strong>
