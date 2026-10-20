@@ -118,7 +118,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                 </span>
               </div>
               <small className="admin-settings-hint">
-                Default rate is 2.27%. This tax applies to all products and server customizations in the cart.
+                Default rate is 2.29%. This tax applies to all products and server customizations in the cart.
               </small>
             </div>
 

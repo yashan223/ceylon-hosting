@@ -244,7 +244,7 @@ function ServerConfigDialog({
   const [mobileTab, setMobileTab] = useState<"config" | "cart">("config");
   const [taxSettings, setTaxSettings] = useState<{ taxEnabled: boolean; taxRate: number }>({
     taxEnabled: true,
-    taxRate: 2.27,
+    taxRate: 2.29,
   });
 
   useEffect(() => {
@@ -252,7 +252,7 @@ function ServerConfigDialog({
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data && typeof data.taxEnabled === "boolean") {
-          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.27 });
+          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.29 });
         }
       })
       .catch(() => {});

@@ -8,7 +8,7 @@ export type StoreSettings = {
 
 const DEFAULT_SETTINGS: StoreSettings = {
   taxEnabled: true,
-  taxRate: 2.27,
+  taxRate: 2.29,
   updatedAt: new Date(),
 };
 
@@ -19,7 +19,7 @@ export async function getStoreSettings(): Promise<StoreSettings> {
     if (!doc) return DEFAULT_SETTINGS;
     return {
       taxEnabled: doc.taxEnabled !== false,
-      taxRate: typeof doc.taxRate === "number" && !isNaN(doc.taxRate) ? doc.taxRate : 2.27,
+      taxRate: typeof doc.taxRate === "number" && !isNaN(doc.taxRate) ? doc.taxRate : 2.29,
       updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt : new Date(),
     };
   } catch {
