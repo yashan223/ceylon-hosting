@@ -142,6 +142,7 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
   const [isSending, setIsSending] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -225,6 +226,25 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
         const form = event.currentTarget.form;
         if (form) form.requestSubmit();
       }
+    }
+  }
+
+  async function toggleDelivered() {
+    if (!admin || isUpdatingStatus) return;
+    const nextStatus = status === "completed" ? "in_progress" : "completed";
+    setIsUpdatingStatus(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      if (response.ok) {
+        setStatus(nextStatus);
+        setOrder((curr) => ({ ...curr, status: nextStatus }));
+      }
+    } finally {
+      setIsUpdatingStatus(false);
     }
   }
 
@@ -371,15 +391,46 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
             )}
           </div>
 
-          <button
-            type="button"
-            className={`order-refresh-btn ${isRefreshing ? "refreshing" : ""}`}
-            onClick={refreshOrder}
-            title="Refresh order status"
-          >
-            <RefreshCw size={13} className={isRefreshing ? "spinning" : ""} />
-            <span>{isRefreshing ? "Syncing..." : "Live"}</span>
-          </button>
+          {admin ? (
+            <button
+              type="button"
+              className={`order-delivered-btn ${status === "completed" ? "completed" : ""} ${isUpdatingStatus ? "updating" : ""}`}
+              onClick={toggleDelivered}
+              title={
+                status === "completed"
+                  ? "Delivered (click to revert to In Progress)"
+                  : "Click to mark as Delivered"
+              }
+              disabled={isUpdatingStatus}
+            >
+              {isUpdatingStatus ? (
+                <>
+                  <RefreshCw size={13} className="spinning" />
+                  <span>Updating...</span>
+                </>
+              ) : status === "completed" ? (
+                <>
+                  <CheckCircle2 size={13} />
+                  <span>Delivered</span>
+                </>
+              ) : (
+                <>
+                  <Check size={13} />
+                  <span>Delivered</span>
+                </>
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`order-refresh-btn ${isRefreshing ? "refreshing" : ""}`}
+              onClick={refreshOrder}
+              title="Refresh order status"
+            >
+              <RefreshCw size={13} className={isRefreshing ? "spinning" : ""} />
+              <span>{isRefreshing ? "Syncing..." : "Live"}</span>
+            </button>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { OrderChat } from "@/components/orders/order-chat";
 import { requireUser } from "@/server/auth/session";
+import { isUserAdmin } from "@/server/auth/admin";
 import { getOrderForUser } from "@/server/orders/orders";
 import { StorePageHeader } from "@/components/store/store-page-header";
 
@@ -15,7 +16,7 @@ export default async function OrderPage({ params }: PageProps) {
     <div className="order-page">
       <StorePageHeader backHref="/" />
       <main className="order-page-main">
-        <OrderChat order={JSON.parse(JSON.stringify(order))} />
+        <OrderChat admin={isUserAdmin(user)} order={JSON.parse(JSON.stringify(order))} />
       </main>
     </div>
   );
