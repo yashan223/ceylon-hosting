@@ -18,7 +18,6 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const dialCode = getCountryDialCode(country);
-  const whatsappPlaceholder = dialCode ? `${dialCode} 7X XXX XXXX` : "+94 7X XXX XXXX";
 
   function handleCountryChange(newCountry: string) {
     setCountry(newCountry);
@@ -93,7 +92,6 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
           onFocus={handleWhatsappFocus}
           onBlur={handleWhatsappBlur}
           autoComplete="tel"
-          placeholder={whatsappPlaceholder}
         />
       </label>
       <Button type="submit" disabled={isSaving}>

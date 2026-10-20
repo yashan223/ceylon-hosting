@@ -38,7 +38,6 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [verificationSendFailed, setVerificationSendFailed] = useState(false);
 
   const dialCode = getCountryDialCode(country);
-  const whatsappPlaceholder = dialCode ? `${dialCode} 7X XXX XXXX` : "+94 7X XXX XXXX";
 
   function handleCountryChange(newCountry: string) {
     setCountry(newCountry);
@@ -208,7 +207,6 @@ export function AuthForm({ mode }: AuthFormProps) {
             <Input
               type="tel"
               autoComplete="tel"
-              placeholder={whatsappPlaceholder}
               required
               value={whatsapp}
               onChange={(event) => setWhatsapp(event.target.value)}
