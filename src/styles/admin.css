@@ -3098,3 +3098,220 @@
   padding-top: 12px;
 }
 
+.admin-orders-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.admin-order-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-order-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.admin-order-card-header {
+  align-items: center;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  padding-bottom: 14px;
+}
+
+.admin-order-card-id-wrap {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-order-card-kicker {
+  color: #94a3b8;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.admin-order-card-id {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.admin-order-card-badges {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.admin-order-card-meta-row {
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  padding: 14px 18px;
+}
+
+.admin-order-card-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-order-meta-label {
+  color: #64748b;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.admin-order-meta-value {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.admin-order-meta-value.customer-email {
+  font-weight: 600;
+}
+
+.admin-order-whatsapp-chip {
+  align-items: center;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 4px;
+  color: #047857;
+  display: inline-flex;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.admin-order-whatsapp-chip:hover {
+  background: #d1fae5;
+}
+
+.admin-order-total-value {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.admin-order-card-items-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-order-card-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-order-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-order-card-item-title-bar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.admin-order-card-item-name {
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.admin-order-card-qty {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.admin-order-card-item-price {
+  color: #475569;
+  font-family: var(--font-dm-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-order-card-footer {
+  align-items: center;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 14px;
+}
+
+.admin-order-card-action-btn {
+  align-items: center;
+  background: #0f172a;
+  border-radius: 6px;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+  padding: 8px 16px;
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.admin-order-card-action-btn:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .admin-orders-cards {
+    padding: 16px;
+  }
+  .admin-order-card {
+    padding: 16px;
+  }
+  .admin-order-card-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .admin-order-card-meta-row {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .admin-order-card-footer {
+    justify-content: stretch;
+  }
+  .admin-order-card-action-btn {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
