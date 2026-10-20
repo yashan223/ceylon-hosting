@@ -437,30 +437,6 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                   )}
                 </div>
 
-                {status === "completed" ? (
-                  <div className="order-notice-banner success">
-                    <CheckCircle2 size={16} />
-                    <div>
-                      <strong>Server is Live & Operational</strong>
-                      <p>
-                        Your game server is deployed. Review the support thread on the right for
-                        your live server connection string and console setup details.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="order-notice-banner info">
-                    <Clock size={16} />
-                    <div>
-                      <strong>Deployment in Progress</strong>
-                      <p>
-                        Our engineers are provisioning your game server node. Dedicated IP, Port,
-                        and live connection keys will be delivered in the support thread.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
                 <div className="order-cred-grid">
                   <div className="order-cred-tile">
                     <span className="order-cred-label">Server Hostname</span>
