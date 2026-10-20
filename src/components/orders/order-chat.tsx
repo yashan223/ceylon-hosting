@@ -229,18 +229,6 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
     }
   }
 
-  async function changeStatus(nextStatus: string) {
-    const response = await fetch(`/api/admin/orders/${order.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: nextStatus }),
-    });
-    if (response.ok) {
-      setStatus(nextStatus);
-      setOrder((current) => ({ ...current, status: nextStatus }));
-    }
-  }
-
   async function startPayment() {
     setIsPaying(true);
     setPaymentError("");
@@ -759,40 +747,6 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
               )}
             </div>
           </div>
-
-          {admin && (
-            <div className="order-card order-admin-card">
-              <div className="order-card-header">
-                <div className="order-card-title-group">
-                  <div className="order-card-icon-badge admin">
-                    <ShieldAlert size={18} />
-                  </div>
-                  <div>
-                    <h3>Admin Fulfillment Controls</h3>
-                    <span className="order-card-subtitle">Manage order lifecycle and status</span>
-                  </div>
-                </div>
-              </div>
-              <div className="order-admin-body">
-                <label className="order-admin-label">Change Status</label>
-                <div className="order-admin-status-grid">
-                  {(["requested", "accepted", "in_progress", "completed", "cancelled"] as const).map(
-                    (option) => (
-                      <Button
-                        key={option}
-                        variant={status === option ? "default" : "outline"}
-                        size="sm"
-                        className={status === option ? "active" : ""}
-                        onClick={() => changeStatus(option)}
-                      >
-                        {option.replace("_", " ")}
-                      </Button>
-                    )
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="order-side-col">
