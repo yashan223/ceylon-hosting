@@ -1064,126 +1064,128 @@ export function ProductManager({
                 </div>
               </div>
 
-              <div className="product-editor-wide">
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: 6,
-                  }}
-                >
-                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
-                    Downloadable File (Digital Delivery)
-                  </label>
-                  <span className="admin-gallery-pill">
-                    <FileText size={12} /> Max 500 MB
-                  </span>
-                </div>
+              {draft.type !== "server" && (
+                <div className="product-editor-wide">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 6,
+                    }}
+                  >
+                    <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+                      Downloadable File (Digital Delivery)
+                    </label>
+                    <span className="admin-gallery-pill">
+                      <FileText size={12} /> Max 500 MB
+                    </span>
+                  </div>
 
-                <div className="admin-file-upload-box">
-                  {editingProduct?.downloadName && !downloadFile && (
-                    <div className="admin-attached-file-card">
-                      <div className="admin-attached-file-info">
-                        <FileText size={18} className="admin-attached-file-icon" />
-                        <div>
-                          <strong>{editingProduct.downloadName}</strong>
-                          <small>
-                            {editingProduct.downloadSize
-                              ? formatBytes(editingProduct.downloadSize)
-                              : "Stored securely on server"}
-                          </small>
+                  <div className="admin-file-upload-box">
+                    {editingProduct?.downloadName && !downloadFile && (
+                      <div className="admin-attached-file-card">
+                        <div className="admin-attached-file-info">
+                          <FileText size={18} className="admin-attached-file-icon" />
+                          <div>
+                            <strong>{editingProduct.downloadName}</strong>
+                            <small>
+                              {editingProduct.downloadSize
+                                ? formatBytes(editingProduct.downloadSize)
+                                : "Stored securely on server"}
+                            </small>
+                          </div>
+                        </div>
+                        <div className="admin-attached-file-actions">
+                          <a
+                            href={`/api/admin/products/${editingProduct.id}/file`}
+                            className="admin-file-action-btn test"
+                            download={editingProduct.downloadName}
+                            title="Test download file"
+                          >
+                            <Download size={12} />
+                            <span>Test Download</span>
+                          </a>
+                          <button
+                            type="button"
+                            className="admin-file-action-btn danger"
+                            onClick={() => void removeAttachedFile()}
+                            disabled={isDeletingFile}
+                            title="Remove file from storage"
+                          >
+                            <Trash2 size={12} />
+                            <span>{isDeletingFile ? "Removing..." : "Remove"}</span>
+                          </button>
                         </div>
                       </div>
-                      <div className="admin-attached-file-actions">
-                        <a
-                          href={`/api/admin/products/${editingProduct.id}/file`}
-                          className="admin-file-action-btn test"
-                          download={editingProduct.downloadName}
-                          title="Test download file"
-                        >
-                          <Download size={12} />
-                          <span>Test Download</span>
-                        </a>
+                    )}
+
+                    {downloadFile && (
+                      <div className="admin-pending-file-card">
+                        <div className="admin-attached-file-info">
+                          <UploadCloud size={18} className="admin-pending-file-icon" />
+                          <div>
+                            <strong>{downloadFile.name}</strong>
+                            <small>{formatBytes(downloadFile.size)} (Pending upload on save)</small>
+                          </div>
+                        </div>
                         <button
                           type="button"
                           className="admin-file-action-btn danger"
-                          onClick={() => void removeAttachedFile()}
-                          disabled={isDeletingFile}
-                          title="Remove file from storage"
+                          onClick={() => setDownloadFile(null)}
+                          title="Cancel selected file"
                         >
-                          <Trash2 size={12} />
-                          <span>{isDeletingFile ? "Removing..." : "Remove"}</span>
+                          <X size={12} />
+                          <span>Cancel</span>
                         </button>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {downloadFile && (
-                    <div className="admin-pending-file-card">
-                      <div className="admin-attached-file-info">
-                        <UploadCloud size={18} className="admin-pending-file-icon" />
-                        <div>
-                          <strong>{downloadFile.name}</strong>
-                          <small>{formatBytes(downloadFile.size)} (Pending upload on save)</small>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        className="admin-file-action-btn danger"
-                        onClick={() => setDownloadFile(null)}
-                        title="Cancel selected file"
-                      >
-                        <X size={12} />
-                        <span>Cancel</span>
-                      </button>
-                    </div>
-                  )}
-
-                  <label style={{ display: "block", cursor: "pointer", marginTop: 6 }}>
-                    <input
-                      type="file"
-                      accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
-                      style={{ display: "none" }}
-                      onChange={(event) => {
-                        setDownloadFile(event.target.files?.[0] ?? null);
-                        event.target.value = "";
-                      }}
-                    />
-                    <div
-                      style={{
-                        border: "1.5px dashed #94a3b8",
-                        borderRadius: 8,
-                        padding: "12px 16px",
-                        textAlign: "center",
-                        background: "#f8fafc",
-                        cursor: "pointer",
-                      }}
-                    >
+                    <label style={{ display: "block", cursor: "pointer", marginTop: 6 }}>
+                      <input
+                        type="file"
+                        accept=".zip,.rar,.7z,.tar,.gz,.bin,.json,.cfg,.txt"
+                        style={{ display: "none" }}
+                        onChange={(event) => {
+                          setDownloadFile(event.target.files?.[0] ?? null);
+                          event.target.value = "";
+                        }}
+                      />
                       <div
                         style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 6,
-                          color: "#2563eb",
-                          fontWeight: 600,
-                          fontSize: 13,
+                          border: "1.5px dashed #94a3b8",
+                          borderRadius: 8,
+                          padding: "12px 16px",
+                          textAlign: "center",
+                          background: "#f8fafc",
+                          cursor: "pointer",
                         }}
                       >
-                        <UploadCloud size={15} />
-                        <span>
-                          {downloadFile || editingProduct?.downloadName
-                            ? "Replace Downloadable File"
-                            : "Upload Digital File (ZIP, RAR, 7Z, CFG up to 500MB)"}
-                        </span>
+                        <div
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                            color: "#2563eb",
+                            fontWeight: 600,
+                            fontSize: 13,
+                          }}
+                        >
+                          <UploadCloud size={15} />
+                          <span>
+                            {downloadFile || editingProduct?.downloadName
+                              ? "Replace Downloadable File"
+                              : "Upload Digital File (ZIP, RAR, 7Z, CFG up to 500MB)"}
+                          </span>
+                        </div>
+                        <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
+                          Digital deliveries are securely encrypted & accessible to verified buyers only.
+                        </small>
                       </div>
-                      <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
-                        Digital deliveries are securely encrypted & accessible to verified buyers only.
-                      </small>
-                    </div>
-                  </label>
+                    </label>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <label className="product-editor-wide">
                 Description *

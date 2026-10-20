@@ -19,7 +19,6 @@ import {
   Server,
   ShieldAlert,
   ShieldCheck,
-  Terminal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatOrderReference } from "@/lib/utils";
@@ -577,37 +576,6 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
                     </div>
                   ) : null}
                 </div>
-
-                <div className="order-connect-box">
-                  <div className="order-connect-head">
-                    <Terminal size={14} />
-                    <span>Developer Console Command</span>
-                  </div>
-                  <div className="order-connect-body">
-                    <code>
-                      connect &lt;SERVER_IP&gt;:&lt;PORT&gt;
-                      {hasPass ? `; password ${item.serverPassword}` : ""}
-                    </code>
-                    <button
-                      type="button"
-                      className="order-icon-btn"
-                      onClick={() =>
-                        handleCopy(
-                          `connect <SERVER_IP>:<PORT>${hasPass ? `; password ${item.serverPassword}` : ""}`,
-                          `cmd_${idx}`
-                        )
-                      }
-                      title="Copy command format"
-                    >
-                      {copiedKey === `cmd_${idx}` ? (
-                        <Check size={13} className="copied" />
-                      ) : (
-                        <Copy size={13} />
-                      )}
-                    </button>
-                  </div>
-                  <small>Paste into Counter-Strike 2 console (~ key) once IP is posted in chat.</small>
-                </div>
               </div>
             );
           })}
@@ -680,28 +648,40 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
             </div>
 
             <div className="order-items-list">
-              {order.items.map((item) => (
-                <div key={item.productId} className="order-item-row">
-                  <div className="order-item-info">
-                    <strong className="order-item-name">{item.name}</strong>
-                    <div className="order-item-meta">
-                      <span className="order-type-badge">{item.type}</span>
-                      {item.extraSlots ? (
-                        <span className="order-type-badge" style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb", borderColor: "rgba(37,99,235,0.2)" }}>
-                          +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Extra Slots
+              {order.items.map((item) => {
+                const isServerItem =
+                  item.type === "server" ||
+                  Boolean(item.serverLocation || item.serverName);
+                return (
+                  <div key={item.productId} className="order-item-row">
+                    <div className="order-item-info">
+                      <strong className="order-item-name">{item.name}</strong>
+                      <div className="order-item-meta">
+                        <span className="order-type-badge">{item.type}</span>
+                        {item.extraSlots ? (
+                          <span
+                            className="order-type-badge"
+                            style={{
+                              background: "rgba(37,99,235,0.1)",
+                              color: "#2563eb",
+                              borderColor: "rgba(37,99,235,0.2)",
+                            }}
+                          >
+                            +{typeof item.extraSlots === "number" ? item.extraSlots : 4} Extra Slots
+                          </span>
+                        ) : null}
+                        <span>
+                          {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
                         </span>
-                      ) : null}
-                      <span>
-                        {item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}
-                      </span>
+                      </div>
+                      {admin && !isServerItem && <ProductFileUpload productId={item.productId} />}
                     </div>
-                    {admin && <ProductFileUpload productId={item.productId} />}
+                    <div className="order-item-total">
+                      Rs. {(item.quantity * item.unitPrice).toLocaleString("en-LK")}
+                    </div>
                   </div>
-                  <div className="order-item-total">
-                    Rs. {(item.quantity * item.unitPrice).toLocaleString("en-LK")}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="order-summary-breakdown">
