@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Percent, Settings2 } from "lucide-react";
+import { Check, Percent } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { Button } from "@/components/ui/button";
 import type { StoreSettings } from "@/server/settings/settings";
 
@@ -12,6 +13,10 @@ type StoreSettingsFormProps = {
 export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
   const [taxEnabled, setTaxEnabled] = useState(initialSettings.taxEnabled);
   const [taxRate, setTaxRate] = useState(initialSettings.taxRate.toString());
+  const [sandboxEnabled, setSandboxEnabled] = useState(initialSettings.sandboxEnabled !== false);
+  const [whatsappNumber, setWhatsappNumber] = useState(
+    initialSettings.whatsappNumber || "+94 78 890 1407",
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [status, setStatus] = useState<{ message: string; isError?: boolean } | null>(null);
 
@@ -32,6 +37,8 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
         body: JSON.stringify({
           taxEnabled,
           taxRate: numRate,
+          sandboxEnabled,
+          whatsappNumber: whatsappNumber.trim(),
         }),
       });
 
@@ -42,7 +49,9 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
 
       setTaxEnabled(data.settings.taxEnabled);
       setTaxRate(data.settings.taxRate.toString());
-      setStatus({ message: "Store tax settings saved successfully." });
+      setSandboxEnabled(data.settings.sandboxEnabled !== false);
+      setWhatsappNumber(data.settings.whatsappNumber || "+94 78 890 1407");
+      setStatus({ message: "Store settings saved successfully." });
     } catch (err) {
       setStatus({
         message: err instanceof Error ? err.message : "Failed to update settings.",
@@ -76,9 +85,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
 
         {status && (
           <div className="admin-settings-toast-wrap">
-            <div
-              className={`admin-status-toast ${status.isError ? "error" : "success"}`}
-            >
+            <div className={`admin-status-toast ${status.isError ? "error" : "success"}`}>
               <span>{status.message}</span>
               <button type="button" onClick={() => setStatus(null)}>
                 ✕
@@ -91,7 +98,66 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
           <div className="admin-settings-grid">
             <div className="admin-settings-main-card">
               <div className="admin-settings-group">
+                {/* Sandbox / WhatsApp Mode Toggle */}
                 <div className="admin-settings-row">
+                  <div className="admin-settings-row-text">
+                    <div className="admin-settings-title-row">
+                      <strong>Payment Sandbox Mode</strong>
+                      <span className={`admin-tax-status-pill ${sandboxEnabled ? "active" : ""}`}>
+                        {sandboxEnabled ? "Active (Online Checkout)" : "Disabled (WhatsApp Orders)"}
+                      </span>
+                    </div>
+                    <p>
+                      When enabled, customer purchases flow through standard cart checkout and
+                      Payments.lk gateway. When disabled, &quot;Add to cart&quot; buttons switch to
+                      &quot;Contact in WhatsApp&quot; and direct customers to chat with you
+                      directly.
+                    </p>
+                  </div>
+                  <label className="admin-switch">
+                    <input
+                      type="checkbox"
+                      checked={sandboxEnabled}
+                      onChange={(e) => setSandboxEnabled(e.target.checked)}
+                    />
+                    <span className="admin-switch-slider" />
+                  </label>
+                </div>
+
+                {!sandboxEnabled && (
+                  <div
+                    className="admin-settings-field"
+                    style={{
+                      marginTop: "16px",
+                      paddingBottom: "16px",
+                      borderBottom: "1px dashed var(--border)",
+                    }}
+                  >
+                    <label htmlFor="whatsappNumberInput" className="admin-settings-label">
+                      WhatsApp Order Number
+                    </label>
+                    <div className="admin-input-with-adornment">
+                      <input
+                        id="whatsappNumberInput"
+                        type="text"
+                        className="admin-settings-input"
+                        placeholder="+94 78 890 1407"
+                        value={whatsappNumber}
+                        onChange={(e) => setWhatsappNumber(e.target.value)}
+                        required
+                      />
+                      <span className="admin-input-adornment">
+                        <WhatsAppIcon size={16} />
+                      </span>
+                    </div>
+                    <small className="admin-settings-hint">
+                      Customer WhatsApp chat requests and product orders will be sent to this phone
+                      number.
+                    </small>
+                  </div>
+                )}
+
+                <div className="admin-settings-row" style={{ marginTop: "24px" }}>
                   <div className="admin-settings-row-text">
                     <div className="admin-settings-title-row">
                       <strong>Enable Payment Tax</strong>
@@ -100,8 +166,8 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                       </span>
                     </div>
                     <p>
-                      When enabled, tax is automatically calculated and added to every customer checkout
-                      and order payment.
+                      When enabled, tax is automatically calculated and added to every customer
+                      checkout and order payment.
                     </p>
                   </div>
                   <label className="admin-switch">
@@ -163,7 +229,8 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                     </button>
                   </div>
                   <small className="admin-settings-hint">
-                    Default rate is 2.29%. This tax applies to all products and server customizations in the cart.
+                    Default rate is 2.29%. This tax applies to all products and server
+                    customizations in the cart.
                   </small>
                 </div>
               </div>
@@ -180,6 +247,12 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
 
               <div className="admin-settings-preview-table">
                 <div className="admin-settings-preview-row">
+                  <span>Store Mode:</span>
+                  <strong style={{ color: sandboxEnabled ? "inherit" : "#16a34a" }}>
+                    {sandboxEnabled ? "Online Gateway" : "WhatsApp Orders"}
+                  </strong>
+                </div>
+                <div className="admin-settings-preview-row">
                   <span>Sample Subtotal:</span>
                   <span>Rs. {sampleSubtotal.toLocaleString("en-LK")}.00</span>
                 </div>
@@ -194,13 +267,18 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                 <div className="admin-settings-preview-row total">
                   <span>Customer Pays:</span>
                   <strong>
-                    Rs. {sampleTotal.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    Rs.{" "}
+                    {sampleTotal.toLocaleString("en-LK", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </strong>
                 </div>
               </div>
 
               <div className="admin-settings-preview-note">
-                Tax is automatically itemized on customer order receipts, checkout summaries, and payment requests.
+                Tax is automatically itemized on customer order receipts, checkout summaries, and
+                payment requests.
               </div>
             </aside>
           </div>

@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, X, Trash2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { openWhatsAppChat, getCartWhatsAppMessage } from "@/lib/whatsapp";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
 function getExtraSlotsCost(slots?: number | boolean): number {
@@ -84,11 +87,7 @@ function getServerSnapshot() {
   return false;
 }
 
-export function CartButton({
-  products: initialProducts = [],
-}: {
-  products?: Product[];
-}) {
+export function CartButton({ products: initialProducts = [] }: { products?: Product[] }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const isMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
@@ -141,17 +140,29 @@ export function CartButton({
     };
   }, [initialProducts.length]);
 
-  const [taxSettings, setTaxSettings] = useState<{ taxEnabled: boolean; taxRate: number }>({
+  const [taxSettings, setTaxSettings] = useState<{
+    taxEnabled: boolean;
+    taxRate: number;
+    sandboxEnabled: boolean;
+    whatsappNumber: string;
+  }>({
     taxEnabled: true,
     taxRate: 2.29,
+    sandboxEnabled: true,
+    whatsappNumber: "+94 78 890 1407",
   });
 
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && typeof data.taxEnabled === "boolean") {
-          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.29 });
+        if (data) {
+          setTaxSettings({
+            taxEnabled: data.taxEnabled ?? true,
+            taxRate: data.taxRate ?? 2.29,
+            sandboxEnabled: data.sandboxEnabled ?? true,
+            whatsappNumber: data.whatsappNumber || "+94 78 890 1407",
+          });
         }
       })
       .catch(() => {});
@@ -215,7 +226,9 @@ export function CartButton({
         item.quantity,
     0,
   );
-  const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
+  const taxAmount = taxSettings.taxEnabled
+    ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100
+    : 0;
   const cartTotal = cartSubtotal + taxAmount;
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
@@ -230,7 +243,15 @@ export function CartButton({
         body: JSON.stringify({
           orderId: createOrderReference(),
           items: cartProducts.map(
-            ({ product, quantity, serverName, serverLocation, serverPassword, rconPassword, extraSlots }) => {
+            ({
+              product,
+              quantity,
+              serverName,
+              serverLocation,
+              serverPassword,
+              rconPassword,
+              extraSlots,
+            }) => {
               const slotsCount = product.type === "server" ? getExtraSlotsCount(extraSlots) : 0;
               return {
                 productId: product.id,
@@ -329,19 +350,35 @@ export function CartButton({
                           {serverName
                             ? `Server: ${serverName}${serverLocation ? ` (${serverLocation})` : ""}`
                             : product.type === "server"
-                              ? (serverLocation ? `Game server • ${serverLocation}` : "Game server")
+                              ? serverLocation
+                                ? `Game server • ${serverLocation}`
+                                : "Game server"
                               : product.type === "service"
                                 ? "Setup service"
                                 : "Mod or tool"}
                         </span>
                         {product.type === "server" && getExtraSlotsCount(extraSlots) > 0 && (
-                          <span style={{ display: "inline-block", fontSize: "11px", color: "#2563eb", fontWeight: 600, marginTop: "2px" }}>
-                            +{getExtraSlotsCount(extraSlots)} Extra Slots (+{formatPrice(getExtraSlotsCost(extraSlots))})
+                          <span
+                            style={{
+                              display: "inline-block",
+                              fontSize: "11px",
+                              color: "#2563eb",
+                              fontWeight: 600,
+                              marginTop: "2px",
+                            }}
+                          >
+                            +{getExtraSlotsCount(extraSlots)} Extra Slots (+
+                            {formatPrice(getExtraSlotsCost(extraSlots))})
                           </span>
                         )}
                       </div>
                       <div className="drawer-item-actions">
-                        <b>{formatPrice(product.price + (product.type === "server" ? getExtraSlotsCost(extraSlots) : 0))}</b>
+                        <b>
+                          {formatPrice(
+                            product.price +
+                              (product.type === "server" ? getExtraSlotsCost(extraSlots) : 0),
+                          )}
+                        </b>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -357,16 +394,46 @@ export function CartButton({
               )}
               <div className="drawer-footer">
                 {taxSettings.taxEnabled ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", width: "100%" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--muted-foreground)" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "8px",
+                      marginBottom: "16px",
+                      width: "100%",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "13px",
+                        color: "var(--muted-foreground)",
+                      }}
+                    >
                       <span>Subtotal</span>
                       <span>{formatPrice(cartSubtotal)}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--muted-foreground)" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "13px",
+                        color: "var(--muted-foreground)",
+                      }}
+                    >
                       <span>Tax ({taxSettings.taxRate}%)</span>
                       <span>{formatPrice(taxAmount)}</span>
                     </div>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid var(--border)" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        paddingTop: "8px",
+                        borderTop: "1px solid var(--border)",
+                      }}
+                    >
                       <span style={{ fontWeight: 600, color: "var(--foreground)" }}>Total</span>
                       <strong style={{ fontSize: "20px" }}>{formatPrice(cartTotal)}</strong>
                     </div>
@@ -378,15 +445,50 @@ export function CartButton({
                   </div>
                 )}
                 <Button
-                  className="checkout-button"
+                  className={cn(
+                    "checkout-button",
+                    !taxSettings.sandboxEnabled && "whatsapp-button",
+                  )}
                   disabled={cartProducts.length === 0 || checkoutState === "loading"}
-                  onClick={startCheckout}
+                  onClick={() => {
+                    if (!taxSettings.sandboxEnabled) {
+                      const cartItems = cartProducts.map(
+                        ({ product, quantity, serverName, serverLocation }) => ({
+                          name: product.name,
+                          price: product.price,
+                          quantity,
+                          details: serverName
+                            ? `Server: ${serverName}${serverLocation ? ` (${serverLocation})` : ""}`
+                            : undefined,
+                        }),
+                      );
+                      openWhatsAppChat(
+                        taxSettings.whatsappNumber,
+                        getCartWhatsAppMessage(cartItems, cartTotal),
+                      );
+                      return;
+                    }
+                    startCheckout();
+                  }}
                 >
-                  {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
-                  <ArrowRight size={16} />
+                  {!taxSettings.sandboxEnabled ? (
+                    <>
+                      <WhatsAppIcon size={16} /> Contact in WhatsApp
+                    </>
+                  ) : checkoutState === "loading" ? (
+                    "Opening payment..."
+                  ) : (
+                    <>
+                      Pay now <ArrowRight size={16} />
+                    </>
+                  )}
                 </Button>
                 <small>
-                  {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
+                  {!taxSettings.sandboxEnabled
+                    ? "Orders are placed directly via WhatsApp chat."
+                    : checkoutState === "error"
+                      ? checkoutError
+                      : "You will continue to secure payment."}
                 </small>
               </div>
             </aside>

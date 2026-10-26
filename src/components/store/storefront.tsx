@@ -31,6 +31,13 @@ import { cn } from "@/lib/utils";
 import { parseProductDetails } from "@/lib/products";
 import type { Product } from "@/types/product";
 import { ServerConfigModal, type ServerConfig } from "@/components/store/server-config-modal";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import {
+  openWhatsAppChat,
+  getProductWhatsAppMessage,
+  getCartWhatsAppMessage,
+} from "@/lib/whatsapp";
+import type { StoreSettings } from "@/server/settings/settings";
 
 const categories = [
   { id: "all", label: "All products" },
@@ -131,12 +138,23 @@ export function Storefront({
   products,
   currentUser,
   isAdmin = false,
+  storeSettings,
 }: {
   products: Product[];
   currentUser: { email: string; firstName?: string } | null;
   isAdmin?: boolean;
+  storeSettings?: StoreSettings;
 }) {
   const router = useRouter();
+  const [settings, setSettings] = useState<StoreSettings>(
+    storeSettings ?? {
+      taxEnabled: true,
+      taxRate: 2.29,
+      sandboxEnabled: true,
+      whatsappNumber: "+94 78 890 1407",
+      updatedAt: new Date(),
+    },
+  );
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -144,6 +162,23 @@ export function Storefront({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.sandboxEnabled === "boolean") {
+          setSettings((prev) => ({
+            ...prev,
+            taxEnabled: data.taxEnabled ?? prev.taxEnabled,
+            taxRate: data.taxRate ?? prev.taxRate,
+            sandboxEnabled: data.sandboxEnabled,
+            whatsappNumber: data.whatsappNumber || prev.whatsappNumber,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [activeSection, setActiveSection] = useState(() => {
     if (typeof window !== "undefined" && window.location.hash) {
       const hash = window.location.hash.replace("#", "");
@@ -797,6 +832,20 @@ export function Storefront({
                     >
                       Admin view (disabled)
                     </Button>
+                  ) : !settings.sandboxEnabled ? (
+                    <Button
+                      variant="outline"
+                      className="add-button whatsapp-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openWhatsAppChat(
+                          settings.whatsappNumber,
+                          getProductWhatsAppMessage(product),
+                        );
+                      }}
+                    >
+                      <WhatsAppIcon size={15} /> Contact in WhatsApp
+                    </Button>
                   ) : (
                     <Button
                       variant={inCart ? "secondary" : "outline"}
@@ -1005,15 +1054,47 @@ export function Storefront({
                 <strong>{formatPrice(cartTotal)}</strong>
               </div>
               <Button
-                className="checkout-button"
+                className={cn("checkout-button", !settings.sandboxEnabled && "whatsapp-button")}
                 disabled={cartProducts.length === 0 || checkoutState === "loading"}
-                onClick={startCheckout}
+                onClick={() => {
+                  if (!settings.sandboxEnabled) {
+                    const cartItems = cartProducts.map(
+                      ({ product, quantity, serverName, serverLocation }) => ({
+                        name: product.name,
+                        price: product.price,
+                        quantity,
+                        details: serverName
+                          ? `Server: ${serverName}${serverLocation ? ` (${serverLocation})` : ""}`
+                          : undefined,
+                      }),
+                    );
+                    openWhatsAppChat(
+                      settings.whatsappNumber,
+                      getCartWhatsAppMessage(cartItems, cartTotal),
+                    );
+                    return;
+                  }
+                  startCheckout();
+                }}
               >
-                {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
-                <ArrowRight size={16} />
+                {!settings.sandboxEnabled ? (
+                  <>
+                    <WhatsAppIcon size={16} /> Contact in WhatsApp
+                  </>
+                ) : checkoutState === "loading" ? (
+                  "Opening payment..."
+                ) : (
+                  <>
+                    Pay now <ArrowRight size={16} />
+                  </>
+                )}
               </Button>
               <small>
-                {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
+                {!settings.sandboxEnabled
+                  ? "Orders are placed directly via WhatsApp chat."
+                  : checkoutState === "error"
+                    ? checkoutError
+                    : "You will continue to secure payment."}
               </small>
             </div>
           </aside>
@@ -1026,6 +1107,8 @@ export function Storefront({
         product={serverConfigProduct}
         onConfirm={handleConfirmServerConfig}
         products={products}
+        sandboxEnabled={settings.sandboxEnabled}
+        whatsappNumber={settings.whatsappNumber}
       />
     </main>
   );

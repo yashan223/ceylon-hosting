@@ -51,13 +51,25 @@ export async function POST(request: Request) {
 
   try {
     const settings = await getStoreSettings();
+    if (!settings.sandboxEnabled) {
+      return NextResponse.json(
+        {
+          error:
+            "Online checkout is currently disabled. Please contact us on WhatsApp to complete payment.",
+        },
+        { status: 403 },
+      );
+    }
     const subtotalCents = order.items.reduce(
       (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
       0,
     );
-    const taxCents = order.taxAmount !== undefined
-      ? Math.round(order.taxAmount * 100)
-      : (settings.taxEnabled ? Math.round(subtotalCents * (settings.taxRate / 100)) : 0);
+    const taxCents =
+      order.taxAmount !== undefined
+        ? Math.round(order.taxAmount * 100)
+        : settings.taxEnabled
+          ? Math.round(subtotalCents * (settings.taxRate / 100))
+          : 0;
     const totalCents = subtotalCents + taxCents;
 
     if (totalCents < 1000) {
@@ -102,10 +114,7 @@ export async function POST(request: Request) {
       lineItems.length <= 10 &&
       lineItems.every(
         ({ name, quantity, unitAmountCents }) =>
-          name.trim().length > 0 &&
-          quantity >= 1 &&
-          quantity <= 99 &&
-          unitAmountCents >= 100,
+          name.trim().length > 0 && quantity >= 1 && quantity <= 99 && unitAmountCents >= 100,
       );
 
     const checkoutParams: CreateCheckoutParams = canUseLineItems

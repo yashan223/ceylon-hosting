@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { openWhatsAppChat, getProductWhatsAppMessage } from "@/lib/whatsapp";
 import type { Product } from "@/types/product";
+import type { StoreSettings } from "@/server/settings/settings";
 import { ServerConfigModal, type ServerConfig } from "@/components/store/server-config-modal";
 
 type CartItem = {
@@ -18,13 +21,41 @@ const cartStorageKey = "ceylonhosting-cart";
 export function ProductAddToCart({
   product,
   isAdmin = false,
+  storeSettings,
 }: {
   product: Product;
   isAdmin?: boolean;
+  storeSettings?: StoreSettings;
 }) {
+  const [settings, setSettings] = useState<StoreSettings>(
+    storeSettings ?? {
+      taxEnabled: true,
+      taxRate: 2.29,
+      sandboxEnabled: true,
+      whatsappNumber: "+94 78 890 1407",
+      updatedAt: new Date(),
+    },
+  );
   const [added, setAdded] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const unavailable = product.type === "server" && product.available === false;
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.sandboxEnabled === "boolean") {
+          setSettings((prev) => ({
+            ...prev,
+            taxEnabled: data.taxEnabled ?? prev.taxEnabled,
+            taxRate: data.taxRate ?? prev.taxRate,
+            sandboxEnabled: data.sandboxEnabled,
+            whatsappNumber: data.whatsappNumber || prev.whatsappNumber,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   function saveToCart(config?: ServerConfig) {
     let cart: CartItem[] = [];
@@ -57,6 +88,10 @@ export function ProductAddToCart({
 
   function handleButtonClick() {
     if (unavailable || isAdmin) return;
+    if (!settings.sandboxEnabled) {
+      openWhatsAppChat(settings.whatsappNumber, getProductWhatsAppMessage(product));
+      return;
+    }
     if (product.type === "server") {
       setIsConfigOpen(true);
       return;
@@ -74,9 +109,17 @@ export function ProductAddToCart({
 
   return (
     <>
-      <Button disabled={unavailable} onClick={handleButtonClick}>
+      <Button
+        disabled={unavailable}
+        className={!settings.sandboxEnabled && !unavailable ? "whatsapp-button" : undefined}
+        onClick={handleButtonClick}
+      >
         {unavailable ? (
           "Unavailable"
+        ) : !settings.sandboxEnabled ? (
+          <>
+            <WhatsAppIcon size={16} /> Contact in WhatsApp
+          </>
         ) : added ? (
           <>
             <Check size={16} /> Added to cart
@@ -98,6 +141,8 @@ export function ProductAddToCart({
             setIsConfigOpen(false);
           }}
           products={[product]}
+          sandboxEnabled={settings.sandboxEnabled}
+          whatsappNumber={settings.whatsappNumber}
         />
       )}
     </>

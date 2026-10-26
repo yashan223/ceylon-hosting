@@ -8,5 +8,7 @@ export async function GET() {
   return NextResponse.json({
     taxEnabled: settings.taxEnabled,
     taxRate: settings.taxRate,
+    sandboxEnabled: settings.sandboxEnabled,
+    whatsappNumber: settings.whatsappNumber,
   });
 }

@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Check, Server, ShoppingCart, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
+import { openWhatsAppChat, getServerWhatsAppMessage } from "@/lib/whatsapp";
 import { SERVER_LOCATIONS } from "@/lib/datacenters";
 import { parseProductFeatures } from "@/lib/products";
 import type { Product } from "@/types/product";
@@ -48,6 +50,8 @@ type ServerConfigModalProps = {
   product: Product | null;
   onConfirm: (config: ServerConfig) => void;
   products?: Product[];
+  sandboxEnabled?: boolean;
+  whatsappNumber?: string;
 };
 
 const cartStorageKey = "ceylonhosting-cart";
@@ -167,11 +171,15 @@ function ServerConfigDialog({
   product,
   onConfirm,
   products = [],
+  sandboxEnabled = true,
+  whatsappNumber = "+94 78 890 1407",
 }: {
   onClose: () => void;
   product: Product;
   onConfirm: (config: ServerConfig) => void;
   products?: Product[];
+  sandboxEnabled?: boolean;
+  whatsappNumber?: string;
 }) {
   const router = useRouter();
   const [serverName, setServerName] = useState("");
@@ -242,21 +250,48 @@ function ServerConfigDialog({
   const [checkoutError, setCheckoutError] = useState("");
   const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
   const [mobileTab, setMobileTab] = useState<"config" | "cart">("config");
-  const [taxSettings, setTaxSettings] = useState<{ taxEnabled: boolean; taxRate: number }>({
+  const [taxSettings, setTaxSettings] = useState<{
+    taxEnabled: boolean;
+    taxRate: number;
+    sandboxEnabled: boolean;
+    whatsappNumber: string;
+  }>({
     taxEnabled: true,
     taxRate: 2.29,
+    sandboxEnabled,
+    whatsappNumber,
   });
 
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data && typeof data.taxEnabled === "boolean") {
-          setTaxSettings({ taxEnabled: data.taxEnabled, taxRate: data.taxRate ?? 2.29 });
+        if (data) {
+          setTaxSettings({
+            taxEnabled: data.taxEnabled ?? true,
+            taxRate: data.taxRate ?? 2.29,
+            sandboxEnabled: data.sandboxEnabled ?? true,
+            whatsappNumber: data.whatsappNumber || "+94 78 890 1407",
+          });
         }
       })
       .catch(() => {});
   }, []);
+
+  function handleWhatsAppOrder() {
+    if (!product) return;
+    const loc = serverLocation
+      ? serverLocation.trim()
+      : availableLocations[0]?.label || "Sri Lanka";
+    const msg = getServerWhatsAppMessage(product, {
+      serverName: serverName.trim() || undefined,
+      serverLocation: loc,
+      extraSlots: extraSlots > 0 ? extraSlots : undefined,
+      total: product.price + getExtraSlotsCost(extraSlots),
+    });
+    openWhatsAppChat(taxSettings.whatsappNumber, msg);
+    onClose();
+  }
 
   const points = useMemo(() => parseServerPoints(product), [product]);
 
@@ -345,7 +380,9 @@ function ServerConfigDialog({
   }, [otherCartItems, catalogProducts]);
 
   const cartSubtotal = otherItemsTotal + currentServerPrice;
-  const taxAmount = taxSettings.taxEnabled ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100 : 0;
+  const taxAmount = taxSettings.taxEnabled
+    ? Math.round(cartSubtotal * (taxSettings.taxRate / 100) * 100) / 100
+    : 0;
   const cartTotal = cartSubtotal + taxAmount;
 
   function validateConfig(): ServerConfig | null {
@@ -492,7 +529,12 @@ function ServerConfigDialog({
   }
 
   return (
-    <div className="server-split-overlay" role="dialog" aria-modal="true" aria-label="Configure Server and Cart">
+    <div
+      className="server-split-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Configure Server and Cart"
+    >
       <div className="server-split-topbar">
         <button
           type="button"
@@ -503,12 +545,7 @@ function ServerConfigDialog({
           <ArrowLeft size={16} />
           <span>Back to store</span>
         </button>
-        <button
-          type="button"
-          className="server-split-close"
-          onClick={onClose}
-          aria-label="Close"
-        >
+        <button type="button" className="server-split-close" onClick={onClose} aria-label="Close">
           <X size={20} />
         </button>
       </div>
@@ -562,9 +599,7 @@ function ServerConfigDialog({
                   <span>{product.description || "High-performance game server hosting"}</span>
                 )}
               </div>
-              <div className="server-split-product-price">
-                {formatPrice(product.price)}
-              </div>
+              <div className="server-split-product-price">{formatPrice(product.price)}</div>
             </div>
 
             <form className="server-split-form" onSubmit={handleSubmit}>
@@ -677,7 +712,9 @@ function ServerConfigDialog({
                         const val = parseInt(e.target.value, 10);
                         setExtraSlots(isNaN(val) ? 0 : Math.max(0, Math.min(12, val)));
                       }}
-                      onBlur={() => setExtraSlots((prev) => Math.min(12, Math.max(0, Math.round(prev / 4) * 4)))}
+                      onBlur={() =>
+                        setExtraSlots((prev) => Math.min(12, Math.max(0, Math.round(prev / 4) * 4)))
+                      }
                       className="server-slots-input"
                       aria-label="Extra player slots"
                     />
@@ -705,7 +742,6 @@ function ServerConfigDialog({
                   </div>
                 </div>
               </div>
-
             </form>
           </div>
         </div>
@@ -736,7 +772,10 @@ function ServerConfigDialog({
                   </span>
                   {extraSlots > 0 && (
                     <span className="server-split-item-server">
-                      Slots: <strong style={{ color: "#16a34a" }}>+{extraSlots} Extra Slots (+Rs. {extraSlotsCost.toLocaleString("en-LK")})</strong>
+                      Slots:{" "}
+                      <strong style={{ color: "#16a34a" }}>
+                        +{extraSlots} Extra Slots (+Rs. {extraSlotsCost.toLocaleString("en-LK")})
+                      </strong>
                     </span>
                   )}
                 </div>
@@ -747,13 +786,14 @@ function ServerConfigDialog({
 
               {otherCartItems.map((item) => {
                 const itemProduct = catalogProducts.find((p) => p.id === item.productId);
-                const itemPrice = (itemProduct ? itemProduct.price : 0) + getExtraSlotsCost(item.extraSlots);
+                const itemPrice =
+                  (itemProduct ? itemProduct.price : 0) + getExtraSlotsCost(item.extraSlots);
                 return (
                   <div className="server-split-cart-item" key={item.productId}>
                     <div className="server-split-item-details">
                       <strong>{itemProduct ? itemProduct.name : item.productId}</strong>
                       <span className="server-split-item-badge">
-                        {item.serverName ? "Server" : itemProduct?.type ?? "Item"}
+                        {item.serverName ? "Server" : (itemProduct?.type ?? "Item")}
                       </span>
                       {item.serverName ? (
                         <span className="server-split-item-server">
@@ -767,7 +807,11 @@ function ServerConfigDialog({
                       ) : null}
                       {getExtraSlotsCount(item.extraSlots) > 0 ? (
                         <span className="server-split-item-server">
-                          Slots: <strong style={{ color: "#16a34a" }}>+{getExtraSlotsCount(item.extraSlots)} Extra Slots (+Rs. {getExtraSlotsCost(item.extraSlots).toLocaleString("en-LK")})</strong>
+                          Slots:{" "}
+                          <strong style={{ color: "#16a34a" }}>
+                            +{getExtraSlotsCount(item.extraSlots)} Extra Slots (+Rs.{" "}
+                            {getExtraSlotsCost(item.extraSlots).toLocaleString("en-LK")})
+                          </strong>
                         </span>
                       ) : null}
                     </div>
@@ -806,26 +850,40 @@ function ServerConfigDialog({
                 <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
               </div>
               <div className="server-split-cart-actions">
-                <Button
-                  className="checkout-button server-split-checkout-btn"
-                  disabled={checkoutLoading}
-                  onClick={handlePayNow}
-                >
-                  {checkoutLoading ? "Opening payment..." : "Pay now"}
-                  <ArrowRight size={16} />
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="server-split-add-btn"
-                  disabled={checkoutLoading}
-                  onClick={handleAddToCartOnly}
-                >
-                  Add to cart
-                </Button>
+                {!taxSettings.sandboxEnabled ? (
+                  <Button
+                    type="button"
+                    className="checkout-button server-split-checkout-btn whatsapp-button"
+                    onClick={handleWhatsAppOrder}
+                  >
+                    <WhatsAppIcon size={16} /> Contact in WhatsApp
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      className="checkout-button server-split-checkout-btn"
+                      disabled={checkoutLoading}
+                      onClick={handlePayNow}
+                    >
+                      {checkoutLoading ? "Opening payment..." : "Pay now"}
+                      <ArrowRight size={16} />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="server-split-add-btn"
+                      disabled={checkoutLoading}
+                      onClick={handleAddToCartOnly}
+                    >
+                      Add to cart
+                    </Button>
+                  </>
+                )}
               </div>
               <small className="server-split-note">
-                {checkoutError || "You will continue to secure payment."}
+                {!taxSettings.sandboxEnabled
+                  ? "Orders are placed directly via WhatsApp chat."
+                  : checkoutError || "You will continue to secure payment."}
               </small>
             </div>
           </div>
@@ -851,28 +909,45 @@ function ServerConfigDialog({
           <strong style={{ fontSize: 18 }}>{formatPrice(cartTotal)}</strong>
         </div>
         <div className="server-split-cart-actions">
-          <Button
-            type="button"
-            variant="outline"
-            className="server-split-add-btn"
-            disabled={checkoutLoading}
-            onClick={handleAddToCartOnly}
-          >
-            Add to cart
-          </Button>
-          <Button
-            className="checkout-button server-split-checkout-btn"
-            disabled={checkoutLoading}
-            onClick={handlePayNow}
-          >
-            {checkoutLoading ? "Opening..." : "Pay now"}
-            <ArrowRight size={16} />
-          </Button>
+          {!taxSettings.sandboxEnabled ? (
+            <Button
+              type="button"
+              className="checkout-button server-split-checkout-btn whatsapp-button"
+              style={{ width: "100%" }}
+              onClick={handleWhatsAppOrder}
+            >
+              <WhatsAppIcon size={16} /> Contact in WhatsApp
+            </Button>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                className="server-split-add-btn"
+                disabled={checkoutLoading}
+                onClick={handleAddToCartOnly}
+              >
+                Add to cart
+              </Button>
+              <Button
+                className="checkout-button server-split-checkout-btn"
+                disabled={checkoutLoading}
+                onClick={handlePayNow}
+              >
+                {checkoutLoading ? "Opening..." : "Pay now"}
+                <ArrowRight size={16} />
+              </Button>
+            </>
+          )}
         </div>
         {checkoutError ? (
           <small className="server-split-error-note">{checkoutError}</small>
         ) : (
-          <small className="server-split-note">You will continue to secure payment.</small>
+          <small className="server-split-note">
+            {!taxSettings.sandboxEnabled
+              ? "Orders are placed directly via WhatsApp chat."
+              : "You will continue to secure payment."}
+          </small>
         )}
       </div>
     </div>
@@ -885,6 +960,8 @@ export function ServerConfigModal({
   product,
   onConfirm,
   products = [],
+  sandboxEnabled,
+  whatsappNumber,
 }: ServerConfigModalProps) {
   const isMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
 
@@ -897,6 +974,8 @@ export function ServerConfigModal({
       product={product}
       onConfirm={onConfirm}
       products={products}
+      sandboxEnabled={sandboxEnabled}
+      whatsappNumber={whatsappNumber}
     />,
     document.body,
   );

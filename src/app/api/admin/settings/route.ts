@@ -17,6 +17,8 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     taxEnabled?: unknown;
     taxRate?: unknown;
+    sandboxEnabled?: unknown;
+    whatsappNumber?: unknown;
   } | null;
 
   if (!body) {
@@ -24,9 +26,20 @@ export async function POST(request: Request) {
   }
 
   const taxEnabled = typeof body.taxEnabled === "boolean" ? body.taxEnabled : undefined;
-  const taxRate = typeof body.taxRate === "number" && !isNaN(body.taxRate) ? Math.max(0, body.taxRate) : undefined;
+  const taxRate =
+    typeof body.taxRate === "number" && !isNaN(body.taxRate)
+      ? Math.max(0, body.taxRate)
+      : undefined;
+  const sandboxEnabled = typeof body.sandboxEnabled === "boolean" ? body.sandboxEnabled : undefined;
+  const whatsappNumber =
+    typeof body.whatsappNumber === "string" ? body.whatsappNumber.trim() : undefined;
 
-  const updated = await updateStoreSettings({ taxEnabled, taxRate });
+  const updated = await updateStoreSettings({
+    taxEnabled,
+    taxRate,
+    sandboxEnabled,
+    whatsappNumber,
+  });
 
   await recordAuditLog({
     action: "SYSTEM_EVENT",
@@ -34,8 +47,8 @@ export async function POST(request: Request) {
     actorEmail: user.email,
     targetType: "system",
     targetId: "store_settings",
-    targetName: "Tax Settings",
-    details: `Updated tax settings: taxEnabled=${updated.taxEnabled}, taxRate=${updated.taxRate}%`,
+    targetName: "Store Settings",
+    details: `Updated store settings: sandboxEnabled=${updated.sandboxEnabled}, taxEnabled=${updated.taxEnabled}, taxRate=${updated.taxRate}%, whatsappNumber=${updated.whatsappNumber}`,
   });
 
   return NextResponse.json({ settings: updated });

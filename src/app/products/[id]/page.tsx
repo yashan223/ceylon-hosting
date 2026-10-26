@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { isAdminUser } from "@/server/auth/admin";
 import { getActiveProductById, getActiveProducts } from "@/server/catalog/products";
+import { getStoreSettings } from "@/server/settings/settings";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { ProductGallery } from "@/components/store/product-gallery";
@@ -50,9 +51,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function ProductDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const [product, allProducts] = await Promise.all([
+  const [product, allProducts, storeSettings] = await Promise.all([
     getProduct(id),
     getActiveProducts(),
+    getStoreSettings(),
   ]);
   if (!product) notFound();
 
@@ -150,9 +152,13 @@ export default async function ProductDetailPage({ params }: PageProps) {
               <Globe size={15} />
               <span>
                 {product.locations && product.locations.length > 1 ? (
-                  <>Available Locations: <strong>{product.locations.join(", ")}</strong></>
+                  <>
+                    Available Locations: <strong>{product.locations.join(", ")}</strong>
+                  </>
                 ) : (
-                  <>Server Location: <strong>{product.locations?.[0] || product.location}</strong></>
+                  <>
+                    Server Location: <strong>{product.locations?.[0] || product.location}</strong>
+                  </>
                 )}
               </span>
             </div>
@@ -188,7 +194,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </span>
               <strong>{formatPrice(product.price)}</strong>
             </div>
-            <ProductAddToCart product={product} isAdmin={isAdmin} />
+            <ProductAddToCart product={product} isAdmin={isAdmin} storeSettings={storeSettings} />
           </div>
           {isAdmin ? (
             <small className="detail-note">
