@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/server/auth/admin";
 import { getStoreSettings, updateStoreSettings } from "@/server/settings/settings";
 import { recordAuditLog } from "@/server/admin/audit";
@@ -50,6 +51,8 @@ export async function POST(request: Request) {
     targetName: "Store Settings",
     details: `Updated store settings: sandboxEnabled=${updated.sandboxEnabled}, taxEnabled=${updated.taxEnabled}, taxRate=${updated.taxRate}%, whatsappNumber=${updated.whatsappNumber}`,
   });
+
+  revalidatePath("/", "layout");
 
   return NextResponse.json({ settings: updated });
 }

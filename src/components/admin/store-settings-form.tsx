@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Percent } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ type StoreSettingsFormProps = {
 };
 
 export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
+  const router = useRouter();
   const [taxEnabled, setTaxEnabled] = useState(initialSettings.taxEnabled);
   const [taxRate, setTaxRate] = useState(initialSettings.taxRate.toString());
   const [sandboxEnabled, setSandboxEnabled] = useState(initialSettings.sandboxEnabled !== false);
@@ -52,6 +54,7 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
       setSandboxEnabled(data.settings.sandboxEnabled !== false);
       setWhatsappNumber(data.settings.whatsappNumber || "+94 78 890 1407");
       setStatus({ message: "Store settings saved successfully." });
+      router.refresh();
     } catch (err) {
       setStatus({
         message: err instanceof Error ? err.message : "Failed to update settings.",
