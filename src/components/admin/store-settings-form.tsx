@@ -73,17 +73,6 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
             <span className="admin-kicker">Store configuration</span>
             <h2>Payment & Tax Settings</h2>
           </div>
-          <div className="admin-settings-header-actions">
-            <Button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSaving}
-              className="admin-settings-save-btn"
-            >
-              <Check size={16} />
-              {isSaving ? "Saving..." : "Save settings"}
-            </Button>
-          </div>
         </div>
 
         {status && (
