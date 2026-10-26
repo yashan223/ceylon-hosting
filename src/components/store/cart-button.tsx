@@ -305,6 +305,10 @@ export function CartButton({
     }
   }
 
+  if (!taxSettings.sandboxEnabled) {
+    return null;
+  }
+
   return (
     <>
       <button
@@ -369,7 +373,7 @@ export function CartButton({
                             style={{
                               display: "inline-block",
                               fontSize: "11px",
-                              color: "#2563eb",
+                              color: "var(--foreground)",
                               fontWeight: 600,
                               marginTop: "2px",
                             }}

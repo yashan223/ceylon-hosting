@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 import { getCurrentUser } from "@/server/auth/session";
+import { getStoreSettings } from "@/server/settings/settings";
 
 type StorePageHeaderProps = { backHref?: string; backLabel?: string };
 
@@ -9,7 +10,7 @@ export async function StorePageHeader({
   backHref,
   backLabel = "Back to store",
 }: StorePageHeaderProps) {
-  const user = await getCurrentUser();
+  const [user, settings] = await Promise.all([getCurrentUser(), getStoreSettings()]);
 
   return (
     <header className="store-page-header">
@@ -37,9 +38,11 @@ export async function StorePageHeader({
             Sign in
           </Link>
         )}
-        <Link className="store-page-cart ui-button ui-button-default" href="/?cart=1#catalog">
-          <ShoppingBag size={17} /> Cart
-        </Link>
+        {settings.sandboxEnabled && (
+          <Link className="store-page-cart ui-button ui-button-default" href="/?cart=1#catalog">
+            <ShoppingBag size={17} /> Cart
+          </Link>
+        )}
         {backHref && (
           <Link className="back-link" href={backHref}>
             <ArrowLeft size={15} /> {backLabel}

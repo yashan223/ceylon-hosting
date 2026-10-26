@@ -156,82 +156,94 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                   </div>
                 )}
 
-                <div className="admin-settings-row" style={{ marginTop: "24px" }}>
-                  <div className="admin-settings-row-text">
-                    <div className="admin-settings-title-row">
-                      <strong>Enable Payment Tax</strong>
-                      <span className={`admin-tax-status-pill ${taxEnabled ? "active" : ""}`}>
-                        {taxEnabled ? "Active" : "Disabled"}
-                      </span>
+                {sandboxEnabled && (
+                  <>
+                    <div className="admin-settings-row" style={{ marginTop: "24px" }}>
+                      <div className="admin-settings-row-text">
+                        <div className="admin-settings-title-row">
+                          <strong>Enable Payment Tax</strong>
+                          <span className={`admin-tax-status-pill ${taxEnabled ? "active" : ""}`}>
+                            {taxEnabled ? "Active" : "Disabled"}
+                          </span>
+                        </div>
+                        <p>
+                          When enabled, tax is automatically calculated and added to every customer
+                          checkout and order payment.
+                        </p>
+                      </div>
+                      <label className="admin-switch">
+                        <input
+                          type="checkbox"
+                          checked={taxEnabled}
+                          onChange={(e) => setTaxEnabled(e.target.checked)}
+                        />
+                        <span className="admin-switch-slider" />
+                      </label>
                     </div>
-                    <p>
-                      When enabled, tax is automatically calculated and added to every customer
-                      checkout and order payment.
-                    </p>
-                  </div>
-                  <label className="admin-switch">
-                    <input
-                      type="checkbox"
-                      checked={taxEnabled}
-                      onChange={(e) => setTaxEnabled(e.target.checked)}
-                    />
-                    <span className="admin-switch-slider" />
-                  </label>
-                </div>
 
-                <div className="admin-settings-field">
-                  <label htmlFor="taxRateInput" className="admin-settings-label">
-                    Tax Rate (%)
-                  </label>
-                  <div className="admin-input-with-adornment">
-                    <input
-                      id="taxRateInput"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      className="admin-settings-input"
-                      value={taxRate}
-                      onChange={(e) => setTaxRate(e.target.value)}
-                      disabled={!taxEnabled}
-                      required
-                    />
-                    <span className="admin-input-adornment">
-                      <Percent size={14} />
-                    </span>
-                  </div>
-                  <div className="admin-tax-presets">
-                    <span className="admin-tax-presets-label">Quick presets:</span>
-                    <button
-                      type="button"
-                      disabled={!taxEnabled}
-                      onClick={() => setTaxRate("2.29")}
-                      className={`admin-tax-preset-chip ${numRate === 2.29 ? "is-active" : ""}`}
-                    >
-                      2.29% (Default)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!taxEnabled}
-                      onClick={() => setTaxRate("5.00")}
-                      className={`admin-tax-preset-chip ${numRate === 5 ? "is-active" : ""}`}
-                    >
-                      5.00%
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!taxEnabled}
-                      onClick={() => setTaxRate("10.00")}
-                      className={`admin-tax-preset-chip ${numRate === 10 ? "is-active" : ""}`}
-                    >
-                      10.00%
-                    </button>
-                  </div>
-                  <small className="admin-settings-hint">
-                    Default rate is 2.29%. This tax applies to all products and server
-                    customizations in the cart.
-                  </small>
-                </div>
+                    <div className="admin-settings-field">
+                      <label htmlFor="taxRateInput" className="admin-settings-label">
+                        Tax Rate (%)
+                      </label>
+                      <div className="admin-input-with-adornment">
+                        <input
+                          id="taxRateInput"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          className="admin-settings-input"
+                          value={taxRate}
+                          onChange={(e) => setTaxRate(e.target.value)}
+                          disabled={!taxEnabled}
+                          required
+                        />
+                        <span className="admin-input-adornment">
+                          <Percent size={14} />
+                        </span>
+                      </div>
+                      <div className="admin-tax-presets">
+                        <span className="admin-tax-presets-label">Quick presets:</span>
+                        <button
+                          type="button"
+                          disabled={!taxEnabled}
+                          onClick={() => setTaxRate("2.29")}
+                          className={`admin-tax-preset-chip ${numRate === 2.29 ? "is-active" : ""}`}
+                        >
+                          2.29% (Default)
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!taxEnabled}
+                          onClick={() => setTaxRate("5.00")}
+                          className={`admin-tax-preset-chip ${numRate === 5 ? "is-active" : ""}`}
+                        >
+                          5.00%
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!taxEnabled}
+                          onClick={() => setTaxRate("8.00")}
+                          className={`admin-tax-preset-chip ${numRate === 8 ? "is-active" : ""}`}
+                        >
+                          8.00%
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!taxEnabled}
+                          onClick={() => setTaxRate("10.00")}
+                          className={`admin-tax-preset-chip ${numRate === 10 ? "is-active" : ""}`}
+                        >
+                          10.00%
+                        </button>
+                      </div>
+                      <small className="admin-settings-hint">
+                        Default rate is 2.29%. This tax applies to all products and server
+                        customizations in the cart.
+                      </small>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -241,43 +253,63 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                   <span className="admin-kicker">Live preview</span>
                   <h3>Checkout simulation</h3>
                 </div>
-                <span className="admin-preview-badge">Rs. 1,000 Order</span>
+                <span className="admin-preview-badge">
+                  {sandboxEnabled ? "Rs. 1,000 Order" : "WhatsApp Mode"}
+                </span>
               </div>
 
               <div className="admin-settings-preview-table">
                 <div className="admin-settings-preview-row">
                   <span>Store Mode:</span>
-                  <strong style={{ color: sandboxEnabled ? "inherit" : "#16a34a" }}>
-                    {sandboxEnabled ? "Online Gateway" : "WhatsApp Orders"}
-                  </strong>
+                  <strong>{sandboxEnabled ? "Online Gateway" : "WhatsApp Orders"}</strong>
                 </div>
-                <div className="admin-settings-preview-row">
-                  <span>Sample Subtotal:</span>
-                  <span>Rs. {sampleSubtotal.toLocaleString("en-LK")}.00</span>
-                </div>
-                <div className="admin-settings-preview-row">
-                  <span>Tax ({taxEnabled ? `${numRate}%` : "Disabled"}):</span>
-                  <span>
-                    {taxEnabled
-                      ? `+Rs. ${sampleTax.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      : "Rs. 0.00"}
-                  </span>
-                </div>
-                <div className="admin-settings-preview-row total">
-                  <span>Customer Pays:</span>
-                  <strong>
-                    Rs.{" "}
-                    {sampleTotal.toLocaleString("en-LK", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </strong>
-                </div>
+                {sandboxEnabled ? (
+                  <>
+                    <div className="admin-settings-preview-row">
+                      <span>Sample Subtotal:</span>
+                      <span>Rs. {sampleSubtotal.toLocaleString("en-LK")}.00</span>
+                    </div>
+                    <div className="admin-settings-preview-row">
+                      <span>Tax ({taxEnabled ? `${numRate}%` : "Disabled"}):</span>
+                      <span>
+                        {taxEnabled
+                          ? `+Rs. ${sampleTax.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : "Rs. 0.00"}
+                      </span>
+                    </div>
+                    <div className="admin-settings-preview-row total">
+                      <span>Customer Pays:</span>
+                      <strong>
+                        Rs.{" "}
+                        {sampleTotal.toLocaleString("en-LK", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </strong>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="admin-settings-preview-row">
+                      <span>Checkout:</span>
+                      <span>Direct via WhatsApp</span>
+                    </div>
+                    <div className="admin-settings-preview-row">
+                      <span>Customer Account:</span>
+                      <span>Not Required</span>
+                    </div>
+                    <div className="admin-settings-preview-row total">
+                      <span>Order Processing:</span>
+                      <strong>Direct Chat</strong>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="admin-settings-preview-note">
-                Tax is automatically itemized on customer order receipts, checkout summaries, and
-                payment requests.
+                {sandboxEnabled
+                  ? "Tax is automatically itemized on customer order receipts, checkout summaries, and payment requests."
+                  : "In WhatsApp Orders mode, online checkout and cart tax are disabled. Customers order directly via WhatsApp chat."}
               </div>
             </aside>
           </div>

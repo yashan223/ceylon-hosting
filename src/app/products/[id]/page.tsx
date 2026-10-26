@@ -129,7 +129,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
               Sign in
             </Link>
           )}
-          {!isAdmin && <CartButton products={allProducts} storeSettings={storeSettings} />}
+          {!isAdmin && storeSettings.sandboxEnabled && (
+            <CartButton products={allProducts} storeSettings={storeSettings} />
+          )}
           <Link className="back-link" href="/">
             <ArrowLeft size={15} /> Back to store
           </Link>

@@ -773,7 +773,7 @@ function ServerConfigDialog({
                   {extraSlots > 0 && (
                     <span className="server-split-item-server">
                       Slots:{" "}
-                      <strong style={{ color: "#16a34a" }}>
+                      <strong style={{ color: "var(--foreground)" }}>
                         +{extraSlots} Extra Slots (+Rs. {extraSlotsCost.toLocaleString("en-LK")})
                       </strong>
                     </span>
@@ -808,7 +808,7 @@ function ServerConfigDialog({
                       {getExtraSlotsCount(item.extraSlots) > 0 ? (
                         <span className="server-split-item-server">
                           Slots:{" "}
-                          <strong style={{ color: "#16a34a" }}>
+                          <strong style={{ color: "var(--foreground)" }}>
                             +{getExtraSlotsCount(item.extraSlots)} Extra Slots (+Rs.{" "}
                             {getExtraSlotsCost(item.extraSlots).toLocaleString("en-LK")})
                           </strong>

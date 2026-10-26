@@ -562,7 +562,7 @@ export function Storefront({
               Sign in
             </Link>
           )}
-          {!isAdmin && (
+          {!isAdmin && settings.sandboxEnabled && (
             <Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}>
               <ShoppingBag size={17} /> Cart <span>{cartQuantity}</span>
             </Button>

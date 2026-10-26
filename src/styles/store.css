@@ -618,9 +618,9 @@
 }
 
 .whatsapp-button {
-  background: #25d366 !important;
-  border-color: #25d366 !important;
-  color: #ffffff !important;
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
   font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -630,11 +630,24 @@
 }
 
 .whatsapp-button:hover:not(:disabled) {
-  background: #20ba5a !important;
-  border-color: #20ba5a !important;
+  background: #333333 !important;
+  border-color: #333333 !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16) !important;
   transform: translateY(-1px);
+}
+
+.ui-button-outline.whatsapp-button {
+  background: #ffffff !important;
+  border-color: var(--border) !important;
+  color: var(--foreground) !important;
+}
+
+.ui-button-outline.whatsapp-button:hover:not(:disabled) {
+  background: var(--muted) !important;
+  border-color: var(--muted-foreground) !important;
+  color: var(--foreground) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
 }
 
 .empty-state {

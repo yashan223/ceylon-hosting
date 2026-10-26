@@ -3009,8 +3009,8 @@
 }
 
 .admin-tax-status-pill.active {
-  background: #ecfdf5;
-  color: #047857;
+  background: #0f172a;
+  color: #ffffff;
 }
 
 .admin-settings-row {
@@ -3369,10 +3369,10 @@
 
 .admin-order-whatsapp-chip {
   align-items: center;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   border-radius: 4px;
-  color: #047857;
+  color: #0f172a;
   display: inline-flex;
   font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
@@ -3385,7 +3385,7 @@
 }
 
 .admin-order-whatsapp-chip:hover {
-  background: #d1fae5;
+  background: #e2e8f0;
 }
 
 .admin-order-total-value {
