@@ -14,8 +14,8 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   const user = await requireAdmin();
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
+    <div className="admin-shell" data-lenis-prevent>
+      <aside className="admin-sidebar" data-lenis-prevent>
         <div className="admin-sidebar-brand-row">
           <Link className="admin-brand" href="/admin">
             <span className="brand-mark">C</span>
@@ -47,7 +47,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
           </form>
         </div>
       </aside>
-      <div className="admin-content">
+      <div className="admin-content" data-lenis-prevent>
         <header className="admin-topbar">
           <div>
             <span className="admin-kicker">Workspace</span>
