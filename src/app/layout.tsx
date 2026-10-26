@@ -6,13 +6,13 @@ import { siteDescription, siteKeywords, siteName, siteTagline, siteUrl } from "@
 import { getCurrentSession } from "@/server/auth/session";
 import { InactivityLogout } from "@/components/auth/inactivity-logout";
 import { MessageNotifications } from "@/components/notifications/message-notifications";
+import { SmoothScroll } from "@/components/ui/smooth-scroll";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 const dmMono = DM_Mono({
@@ -119,6 +119,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <SmoothScroll />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{

@@ -91,14 +91,14 @@
 }
 
 html {
-  scroll-padding-top: 64px;
+  scroll-padding-top: 48px;
   scroll-behavior: smooth;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
-      scroll-behavior: auto;
-    }
+    scroll-behavior: auto;
+  }
 }
 
 body {
@@ -129,21 +129,21 @@ input:focus-visible {
 
 section[id],
 footer[id] {
-  scroll-margin-top: 64px;
+  scroll-margin-top: 48px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   html {
-      scroll-behavior: auto;
-    }
+    scroll-behavior: auto;
+  }
   *,
-    *::before,
-    *::after {
-      animation-duration: 0.01ms !important;
-      animation-iteration-count: 1 !important;
-      scroll-behavior: auto !important;
-      transition-duration: 0.01ms !important;
-    }
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 body {

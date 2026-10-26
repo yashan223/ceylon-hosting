@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
+  ChevronDown,
   LogIn,
   LogOut,
   Globe,
@@ -83,6 +84,49 @@ function createOrderReference() {
   return `ORD-${unique}`;
 }
 
+function smoothScrollTo(targetPosition: number, duration = 850) {
+  if (typeof window === "undefined") return;
+  const startPosition = window.scrollY;
+  const distance = targetPosition - startPosition;
+  if (Math.abs(distance) < 2) return;
+
+  let startTime: number | null = null;
+  let cancelled = false;
+
+  const cancel = () => {
+    cancelled = true;
+    window.removeEventListener("wheel", cancel);
+    window.removeEventListener("touchstart", cancel);
+  };
+  window.addEventListener("wheel", cancel, { passive: true, once: true });
+  window.addEventListener("touchstart", cancel, { passive: true, once: true });
+
+  const easeInOutCubic = (t: number): number =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+  function step(currentTime: number) {
+    if (cancelled) return;
+    if (startTime === null) startTime = currentTime;
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const ease = easeInOutCubic(progress);
+
+    window.scrollTo({
+      top: startPosition + distance * ease,
+      behavior: "instant" as ScrollBehavior,
+    });
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      window.removeEventListener("wheel", cancel);
+      window.removeEventListener("touchstart", cancel);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
 export function Storefront({
   products,
   currentUser,
@@ -123,9 +167,34 @@ export function Storefront({
       }
       programmaticTimeoutRef.current = window.setTimeout(() => {
         isProgrammaticScrollRef.current = false;
-      }, 850);
+      }, 1200);
 
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      const lenis = (
+        window as unknown as {
+          __lenis?: { scrollTo: (target: unknown, opts?: Record<string, unknown>) => void };
+        }
+      ).__lenis;
+      if (lenis) {
+        if (id === "home") {
+          lenis.scrollTo(0, {
+            duration: 1.15,
+            easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          });
+        } else {
+          lenis.scrollTo(el, {
+            offset: -48,
+            duration: 1.15,
+            easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          });
+        }
+      } else {
+        const headerHeight = 48;
+        const targetTop =
+          id === "home"
+            ? 0
+            : Math.max(0, el.getBoundingClientRect().top + window.scrollY - headerHeight);
+        smoothScrollTo(targetTop, 900);
+      }
     }
     if (newActiveSection) {
       setActiveSection(newActiveSection);
@@ -245,14 +314,16 @@ export function Storefront({
   const cartProducts = cart.flatMap((item) => {
     const product = products.find((candidate) => candidate.id === item.productId);
     return product && !(product.type === "server" && product.available === false)
-      ? [{
-          product,
-          quantity: item.quantity,
-          serverName: item.serverName,
-          serverLocation: item.serverLocation,
-          serverPassword: item.serverPassword,
-          rconPassword: item.rconPassword,
-        }]
+      ? [
+          {
+            product,
+            quantity: item.quantity,
+            serverName: item.serverName,
+            serverLocation: item.serverLocation,
+            serverPassword: item.serverPassword,
+            rconPassword: item.rconPassword,
+          },
+        ]
       : [];
   });
   const cartTotal = cartProducts.reduce(
@@ -562,6 +633,18 @@ export function Storefront({
         <span className="intro-corner intro-corner-left">
           BUILT IN SRI LANKA / FOR PLAYERS EVERYWHERE
         </span>
+        <button
+          type="button"
+          className="intro-scroll-down"
+          onClick={() => scrollTo("catalog", "catalog")}
+          aria-label="Scroll down to store products"
+        >
+          <span className="intro-scroll-down-mouse" aria-hidden="true">
+            <span className="intro-scroll-down-wheel" />
+          </span>
+          <span className="intro-scroll-down-text">Scroll down</span>
+          <ChevronDown size={14} className="intro-scroll-down-arrow" aria-hidden="true" />
+        </button>
         <span className="intro-corner intro-corner-right">SERVERS / MODS / SUPPORT</span>
       </section>
 
@@ -665,16 +748,17 @@ export function Storefront({
                   <div className="product-info">
                     <div>
                       <h3>{product.name}</h3>
-                      {product.type === "server" && (product.locations?.length || product.location) && (
-                        <div className="product-location-badge">
-                          <Globe size={11} />
-                          <span>
-                            {product.locations && product.locations.length > 1
-                              ? `${product.locations.length} Locations Available`
-                              : product.locations?.[0] || product.location}
-                          </span>
-                        </div>
-                      )}
+                      {product.type === "server" &&
+                        (product.locations?.length || product.location) && (
+                          <div className="product-location-badge">
+                            <Globe size={11} />
+                            <span>
+                              {product.locations && product.locations.length > 1
+                                ? `${product.locations.length} Locations Available`
+                                : product.locations?.[0] || product.location}
+                            </span>
+                          </div>
+                        )}
                       {cleanDescription && <p>{cleanDescription}</p>}
                       {features.length > 0 && (
                         <ul className="product-feature-points" aria-label="Product features">
@@ -892,7 +976,9 @@ export function Storefront({
                         {serverName
                           ? `Server: ${serverName}${serverLocation ? ` (${serverLocation})` : ""}`
                           : product.type === "server"
-                            ? (serverLocation ? `Game server • ${serverLocation}` : "Game server")
+                            ? serverLocation
+                              ? `Game server • ${serverLocation}`
+                              : "Game server"
                             : product.type === "service"
                               ? "Setup service"
                               : "Mod or tool"}

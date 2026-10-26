@@ -219,44 +219,41 @@ export function LatencyGlobe() {
   const currentUserLocationRef = useRef<UserLocation | null>(null);
   const sceneControlsRef = useRef<SceneControls | null>(null);
 
-  const measurePing = useCallback(
-    async (dc: Datacenter, overrideLocation?: UserLocation) => {
-      setIsPinging(true);
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2000);
-        const start = performance.now();
-        await fetch("/api/ping", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        clearTimeout(timeoutId);
-        const measuredBase = Math.round(performance.now() - start);
+  const measurePing = useCallback(async (dc: Datacenter, overrideLocation?: UserLocation) => {
+    setIsPinging(true);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const start = performance.now();
+      await fetch("/api/ping", {
+        cache: "no-store",
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const measuredBase = Math.round(performance.now() - start);
 
-        const loc = overrideLocation ?? currentUserLocationRef.current;
-        const originLat = loc?.lat ?? 6.9271;
-        const originLng = loc?.lng ?? 79.8612;
-        const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
+      const loc = overrideLocation ?? currentUserLocationRef.current;
+      const originLat = loc?.lat ?? 6.9271;
+      const originLng = loc?.lng ?? 79.8612;
+      const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
 
-        if (distKm < 60) {
-          setPing(Math.max(4, Math.min(10, measuredBase)));
-        } else {
-          const calculated = Math.round(distKm * 0.016 + Math.min(measuredBase, 20));
-          setPing(Math.max(10, calculated));
-        }
-      } catch {
-        const loc = overrideLocation ?? currentUserLocationRef.current;
-        const originLat = loc?.lat ?? 6.9271;
-        const originLng = loc?.lng ?? 79.8612;
-        const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
-        const fallbackCalculated = Math.round(distKm * 0.016 + 10);
-        setPing(Math.max(10, fallbackCalculated));
-      } finally {
-        setIsPinging(false);
+      if (distKm < 60) {
+        setPing(Math.max(4, Math.min(10, measuredBase)));
+      } else {
+        const calculated = Math.round(distKm * 0.016 + Math.min(measuredBase, 20));
+        setPing(Math.max(10, calculated));
       }
-    },
-    [],
-  );
+    } catch {
+      const loc = overrideLocation ?? currentUserLocationRef.current;
+      const originLat = loc?.lat ?? 6.9271;
+      const originLng = loc?.lng ?? 79.8612;
+      const distKm = getDistanceKm(originLat, originLng, dc.lat, dc.lng);
+      const fallbackCalculated = Math.round(distKm * 0.016 + 10);
+      setPing(Math.max(10, fallbackCalculated));
+    } finally {
+      setIsPinging(false);
+    }
+  }, []);
 
   const selectDatacenter = useCallback(
     (dc: Datacenter) => {
@@ -363,7 +360,11 @@ export function LatencyGlobe() {
     const camera = new THREE.PerspectiveCamera(45, containerW / containerH, 0.1, 1000);
     camera.position.z = 200;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(containerW, containerH);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
@@ -624,8 +625,8 @@ export function LatencyGlobe() {
 
       if (_calloutPos.z > -15) {
         _calloutPos.project(camera);
-        const screenX = ((_calloutPos.x + 1) * containerW) * 0.5;
-        const screenY = ((-_calloutPos.y + 1) * containerH) * 0.5;
+        const screenX = (_calloutPos.x + 1) * containerW * 0.5;
+        const screenY = (-_calloutPos.y + 1) * containerH * 0.5;
         calloutRef.current.style.transform = `translate3d(${screenX.toFixed(1)}px, ${screenY.toFixed(1)}px, 0) translate(-50%, -145%)`;
         calloutRef.current.style.opacity = "1";
       } else {
@@ -663,8 +664,14 @@ export function LatencyGlobe() {
 
     const clock = new THREE.Clock();
     let animId: number;
+    let isVisible = true;
+    let animRunning = false;
 
     const animate = () => {
+      if (!isVisible) {
+        animRunning = false;
+        return;
+      }
       animId = requestAnimationFrame(animate);
 
       const delta = Math.min(clock.getDelta(), 0.05);
@@ -703,13 +710,34 @@ export function LatencyGlobe() {
 
       renderer.render(scene, camera);
     };
+
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          isVisible = entry.isIntersecting;
+          if (isVisible && !animRunning) {
+            animRunning = true;
+            clock.getDelta();
+            animate();
+          }
+        }
+      },
+      { threshold: 0 },
+    );
+    intersectionObserver.observe(container);
+
+    animRunning = true;
     animate();
 
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = Math.round(entry.contentRect.width);
         const newHeight = Math.round(entry.contentRect.height);
-        if (newWidth > 0 && newHeight > 0 && (newWidth !== containerW || newHeight !== containerH)) {
+        if (
+          newWidth > 0 &&
+          newHeight > 0 &&
+          (newWidth !== containerW || newHeight !== containerH)
+        ) {
           containerW = newWidth;
           containerH = newHeight;
           camera.aspect = newWidth / newHeight;
@@ -722,6 +750,7 @@ export function LatencyGlobe() {
 
     return () => {
       cancelAnimationFrame(animId);
+      intersectionObserver.disconnect();
       resizeObserver.disconnect();
       if (autoRotateResumeTimeout) clearTimeout(autoRotateResumeTimeout);
 
@@ -795,9 +824,7 @@ export function LatencyGlobe() {
               </span>
               <span className="node-callout-dot">•</span>
               <span className="node-callout-isp">
-                {userLocation?.isp
-                  ? `from ${userLocation.isp}`
-                  : "from your ISP"}
+                {userLocation?.isp ? `from ${userLocation.isp}` : "from your ISP"}
               </span>
             </>
           )}
