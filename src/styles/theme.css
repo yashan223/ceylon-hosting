@@ -159,6 +159,14 @@ footer[id] {
   scroll-margin-top: 48px;
 }
 
+#catalog {
+  scroll-margin-top: -32px;
+}
+
+#faq {
+  scroll-margin-top: -36px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

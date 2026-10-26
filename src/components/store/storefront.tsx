@@ -170,6 +170,12 @@ export function Storefront({
   const isProgrammaticScrollRef = useRef(false);
   const programmaticTimeoutRef = useRef<number | null>(null);
 
+  const getScrollOffset = (targetId: string) => {
+    if (targetId === "catalog") return 32;
+    if (targetId === "faq") return 36;
+    return 0;
+  };
+
   const scrollTo = (id: string, newActiveSection?: string) => {
     const el = document.getElementById(id);
     if (el) {
@@ -180,6 +186,8 @@ export function Storefront({
       programmaticTimeoutRef.current = window.setTimeout(() => {
         isProgrammaticScrollRef.current = false;
       }, 1200);
+
+      const offset = getScrollOffset(id);
 
       const lenis = (
         window as unknown as {
@@ -194,17 +202,16 @@ export function Storefront({
           });
         } else {
           lenis.scrollTo(el, {
-            offset: -48,
+            offset,
             duration: 1.15,
             easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
           });
         }
       } else {
-        const headerHeight = 48;
         const targetTop =
           id === "home"
             ? 0
-            : Math.max(0, el.getBoundingClientRect().top + window.scrollY - headerHeight);
+            : Math.max(0, el.getBoundingClientRect().top + window.scrollY + offset);
         smoothScrollTo(targetTop, 900);
       }
     }
