@@ -46,29 +46,6 @@ const categories = [
   { id: "service", label: "Services" },
 ];
 
-const faqItems = [
-  {
-    question: "How quickly will my server be ready?",
-    answer:
-      "Most server plans are prepared within one business day. Your operator will send the connection details and next steps after checkout.",
-  },
-  {
-    question: "Are the mod packs compatible with my server?",
-    answer:
-      "Each product lists its version and client requirements. If you are unsure, contact support before purchasing and we will help you choose.",
-  },
-  {
-    question: "How does payment work?",
-    answer:
-      "Checkout is handled securely by Payments.lk in Sri Lankan rupees. We never store your card details.",
-  },
-  {
-    question: "Can I get help after purchasing?",
-    answer:
-      "Yes. Every purchase includes operator support for setup, configuration, and getting your community online.",
-  },
-];
-
 type CartItem = {
   productId: string;
   quantity: number;
@@ -345,6 +322,33 @@ export function Storefront({
       return matchesCategory && matchesQuery;
     });
   }, [category, products, query]);
+
+  const currentFaqItems = useMemo(
+    () => [
+      {
+        question: "How quickly will my server be ready?",
+        answer:
+          "Most server plans are prepared within one business day. Your operator will send the connection details and next steps after ordering.",
+      },
+      {
+        question: "Are the mod packs compatible with my server?",
+        answer:
+          "Each product lists its version and client requirements. If you are unsure, contact support before purchasing and we will help you choose.",
+      },
+      {
+        question: "How does payment work?",
+        answer: settings.sandboxEnabled
+          ? "Checkout is handled securely by Payments.lk in Sri Lankan rupees. We never store your card details."
+          : "Direct orders are placed and confirmed through WhatsApp chat with no account or sign-in required. We provide payment instructions directly in the chat.",
+      },
+      {
+        question: "Can I get help after purchasing?",
+        answer:
+          "Yes. Every purchase includes operator support for setup, configuration, and getting your community online.",
+      },
+    ],
+    [settings.sandboxEnabled],
+  );
 
   const cartProducts = cart.flatMap((item) => {
     const product = products.find((candidate) => candidate.id === item.productId);
@@ -886,7 +890,7 @@ export function Storefront({
           </h2>
         </div>
         <div className="faq-list">
-          {faqItems.map((item) => (
+          {currentFaqItems.map((item) => (
             <details key={item.question}>
               <summary>
                 {item.question}
@@ -1091,7 +1095,7 @@ export function Storefront({
               </Button>
               <small>
                 {!settings.sandboxEnabled
-                  ? "Orders are placed directly via WhatsApp chat."
+                  ? "Orders are placed directly via WhatsApp chat. No account or sign-in required."
                   : checkoutState === "error"
                     ? checkoutError
                     : "You will continue to secure payment."}

@@ -129,7 +129,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               Sign in
             </Link>
           )}
-          {!isAdmin && <CartButton products={allProducts} />}
+          {!isAdmin && <CartButton products={allProducts} storeSettings={storeSettings} />}
           <Link className="back-link" href="/">
             <ArrowLeft size={15} /> Back to store
           </Link>
@@ -200,6 +200,14 @@ export default async function ProductDetailPage({ params }: PageProps) {
             <small className="detail-note">
               You are viewing this product as an administrator. Purchasing and cart operations are
               disabled for admin accounts.
+            </small>
+          ) : !storeSettings.sandboxEnabled ? (
+            <small className="detail-note">
+              Direct order via WhatsApp. No account or sign in required to place your order.
+            </small>
+          ) : currentUser ? (
+            <small className="detail-note">
+              Payments are handled securely by Payments.lk.
             </small>
           ) : (
             <small className="detail-note">

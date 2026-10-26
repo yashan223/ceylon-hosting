@@ -109,9 +109,8 @@ export function StoreSettingsForm({ initialSettings }: StoreSettingsFormProps) {
                     </div>
                     <p>
                       When enabled, customer purchases flow through standard cart checkout and
-                      Payments.lk gateway. When disabled, &quot;Add to cart&quot; buttons switch to
-                      &quot;Contact in WhatsApp&quot; and direct customers to chat with you
-                      directly.
+                      Payments.lk gateway (login required). When disabled, customers order directly
+                      via WhatsApp chat with no account or sign-in required.
                     </p>
                   </div>
                   <label className="admin-switch">

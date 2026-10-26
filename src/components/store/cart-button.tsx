@@ -9,6 +9,7 @@ import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { openWhatsAppChat, getCartWhatsAppMessage } from "@/lib/whatsapp";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
+import type { StoreSettings } from "@/server/settings/settings";
 
 function getExtraSlotsCost(slots?: number | boolean): number {
   if (typeof slots === "number") {
@@ -87,7 +88,13 @@ function getServerSnapshot() {
   return false;
 }
 
-export function CartButton({ products: initialProducts = [] }: { products?: Product[] }) {
+export function CartButton({
+  products: initialProducts = [],
+  storeSettings,
+}: {
+  products?: Product[];
+  storeSettings?: StoreSettings;
+}) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const isMounted = useSyncExternalStore(emptySubscribe, getClientSnapshot, getServerSnapshot);
@@ -146,10 +153,10 @@ export function CartButton({ products: initialProducts = [] }: { products?: Prod
     sandboxEnabled: boolean;
     whatsappNumber: string;
   }>({
-    taxEnabled: true,
-    taxRate: 2.29,
-    sandboxEnabled: true,
-    whatsappNumber: "+94 78 890 1407",
+    taxEnabled: storeSettings?.taxEnabled ?? true,
+    taxRate: storeSettings?.taxRate ?? 2.29,
+    sandboxEnabled: storeSettings ? storeSettings.sandboxEnabled !== false : true,
+    whatsappNumber: storeSettings?.whatsappNumber || "+94 78 890 1407",
   });
 
   useEffect(() => {
@@ -485,7 +492,7 @@ export function CartButton({ products: initialProducts = [] }: { products?: Prod
                 </Button>
                 <small>
                   {!taxSettings.sandboxEnabled
-                    ? "Orders are placed directly via WhatsApp chat."
+                    ? "Orders are placed directly via WhatsApp chat. No account or sign-in required."
                     : checkoutState === "error"
                       ? checkoutError
                       : "You will continue to secure payment."}

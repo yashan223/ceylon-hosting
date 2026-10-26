@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { isUserAdmin } from "@/server/auth/admin";
 import { createOrder } from "@/server/orders/orders";
+import { getStoreSettings } from "@/server/settings/settings";
 import { enforceRateLimit } from "@/server/rate-limit";
 
 type OrderRequest = {
@@ -20,6 +21,17 @@ type OrderRequest = {
 export async function POST(request: Request) {
   const limited = enforceRateLimit(request, "orders-create", { limit: 30, windowMs: 5 * 60_000 });
   if (limited) return limited;
+
+  const settings = await getStoreSettings();
+  if (!settings.sandboxEnabled) {
+    return NextResponse.json(
+      {
+        error:
+          "Online checkout is currently disabled. Please contact us directly on WhatsApp to place your order with no login required.",
+      },
+      { status: 403 },
+    );
+  }
 
   const user = await getCurrentUser();
   if (!user)

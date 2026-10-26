@@ -882,7 +882,7 @@ function ServerConfigDialog({
               </div>
               <small className="server-split-note">
                 {!taxSettings.sandboxEnabled
-                  ? "Orders are placed directly via WhatsApp chat."
+                  ? "Orders are placed directly via WhatsApp chat. No account or sign-in required."
                   : checkoutError || "You will continue to secure payment."}
               </small>
             </div>
@@ -945,7 +945,7 @@ function ServerConfigDialog({
         ) : (
           <small className="server-split-note">
             {!taxSettings.sandboxEnabled
-              ? "Orders are placed directly via WhatsApp chat."
+              ? "Orders are placed directly via WhatsApp chat. No account or sign-in required."
               : "You will continue to secure payment."}
           </small>
         )}
