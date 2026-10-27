@@ -14,7 +14,7 @@
   padding: 0 16px;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 50;
 }
 
 .brand {
@@ -29,6 +29,13 @@
 .site-header-scrolled .brand {
   opacity: 1;
   pointer-events: auto;
+}
+
+@media (max-width: 800px) {
+  .site-header .brand {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .brand-logo {
@@ -130,10 +137,16 @@
   padding: 0 10px;
 }
 
-.site-header .ui-button-icon {
-  height: 26px;
-  min-height: 26px;
-  width: 26px;
+.site-header .ui-button.ui-button-icon,
+.site-header .menu-button {
+  height: 36px;
+  min-height: 36px;
+  width: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ui-button {
@@ -294,7 +307,7 @@
 }
 
 .trust-row svg {
-  color: var(--accent);
+  color: var(--foreground);
   flex: 0 0 auto;
 }
 
@@ -327,11 +340,11 @@
 }
 
 .section-kicker {
-  color: var(--accent);
+  color: var(--muted-foreground);
   font-family: var(--font-dm-mono), monospace;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   margin: 0 0 10px;
   text-transform: uppercase;
 }
@@ -386,7 +399,7 @@
 }
 
 .category-tabs button.selected::after {
-  background: var(--accent);
+  background: var(--foreground);
   bottom: -1px;
   content: "";
   height: 2px;
@@ -677,7 +690,7 @@
 }
 
 .process-list > div > span {
-  color: var(--accent);
+  color: var(--muted-foreground);
   font-family: var(--font-dm-mono), monospace;
   font-size: 11px;
 }
@@ -1511,11 +1524,22 @@
   .site-header {
     height: 52px;
   }
+  .site-header .brand {
+    opacity: 1;
+    pointer-events: auto;
+    min-width: 0;
+  }
+  .site-header .brand-logo {
+    max-width: 110px;
+    width: 110px;
+  }
   .site-nav.site-nav-open {
-    background: rgba(255, 255, 255, 0.96);
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid #e5e5e5;
-    border-radius: 10px;
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
     gap: 0;
     padding: 8px;
     z-index: 100;
@@ -1528,6 +1552,17 @@
   }
   .header-actions {
     min-width: auto;
+    gap: 8px;
+  }
+  .menu-button {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+    padding: 0 !important;
   }
   .site-nav.site-nav-open .mobile-nav-auth {
     border-top: 1px solid #e5e5e5;
@@ -1581,6 +1616,15 @@
     background: rgba(239, 68, 68, 0.08);
     color: #dc2626 !important;
   }
+}
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 45;
 }
 
 @media (min-width: 641px) and (max-width: 800px) {
@@ -2128,14 +2172,30 @@
   .site-header .brand,
   .store-page-brand {
     min-width: 0;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
   .site-header .brand-logo,
   .store-page-brand img {
-    max-width: 100px;
-    width: 100px;
+    max-width: 105px;
+    width: 105px;
   }
   .site-header .header-actions {
-    gap: 4px;
+    min-width: 0;
+    gap: 6px;
+    align-items: center;
+  }
+  .site-header .ui-button.ui-button-icon,
+  .site-header .menu-button {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0;
   }
   .site-header .cart-button {
     min-height: 32px;
@@ -2158,8 +2218,14 @@
   .catalog-section,
   .how-section,
   .faq-section {
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .section-heading h2,
+  .how-section h2,
+  .store-cta h2 {
+    letter-spacing: -0.025em;
+    line-height: 1.15;
   }
   .catalog-toolbar {
     align-items: stretch;
@@ -2168,7 +2234,12 @@
   .category-tabs {
     gap: 16px;
     overflow-x: auto;
-    padding-bottom: 1px;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .category-tabs::-webkit-scrollbar {
+    display: none;
   }
   .category-tabs button {
     flex: 0 0 auto;

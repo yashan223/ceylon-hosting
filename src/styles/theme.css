@@ -131,6 +131,7 @@ html.lenis body {
 body {
   font-family: var(--font-manrope), sans-serif;
   margin: 0;
+  overflow-x: hidden;
 }
 
 button,

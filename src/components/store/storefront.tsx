@@ -461,6 +461,13 @@ export function Storefront({
 
   return (
     <main className="store-shell">
+      {isMenuOpen && (
+        <div
+          className="mobile-nav-backdrop"
+          onClick={() => setIsMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
         <a
           className="brand"
