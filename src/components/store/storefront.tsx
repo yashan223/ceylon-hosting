@@ -209,9 +209,7 @@ export function Storefront({
         }
       } else {
         const targetTop =
-          id === "home"
-            ? 0
-            : Math.max(0, el.getBoundingClientRect().top + window.scrollY + offset);
+          id === "home" ? 0 : Math.max(0, el.getBoundingClientRect().top + window.scrollY + offset);
         smoothScrollTo(targetTop, 900);
       }
     }
@@ -475,7 +473,7 @@ export function Storefront({
         >
           <Image
             src="/logo.png"
-            alt="CeylonHosting"
+            alt="CeylonHosting - COD4 Servers & Mods"
             className="brand-logo"
             width={120}
             height={30}
@@ -623,15 +621,20 @@ export function Storefront({
         </div>
         <div className="brand-intro-content brand-intro-split">
           <div className="brand-intro-left">
-            <Image
-              src="/logo.png"
-              alt="CeylonHosting"
-              className="intro-logo"
-              width={560}
-              height={150}
-              priority
-              style={{ height: "auto" }}
-            />
+            <h1 className="intro-heading">
+              <Image
+                src="/logo.png"
+                alt="CeylonHosting - COD4 Servers, Mods and Hosting Support"
+                className="intro-logo"
+                width={560}
+                height={150}
+                priority
+                style={{ height: "auto" }}
+              />
+              <span className="sr-only">
+                CeylonHosting — Call of Duty 4 Game Servers, Custom Mods & Setup Support Sri Lanka
+              </span>
+            </h1>
             <p>
               Build your ideal COD4 experience with reliable servers, mods, and support that keeps
               your community in the game.
@@ -697,7 +700,7 @@ export function Storefront({
       <section className="catalog-section" id="catalog">
         <div className="section-heading">
           <div>
-            <p className="section-kicker">Shop the collection</p>
+            <p className="section-kicker">COD4 Store Catalog</p>
             <h2>Find your Products</h2>
           </div>
         </div>
@@ -736,25 +739,36 @@ export function Storefront({
               <Card
                 className="product-card"
                 key={product.id}
-                onClick={() => router.push(`/products/${product.id}`)}
+                onClick={(e) => {
+                  const target = e.target as HTMLElement;
+                  if (target.closest("button") || target.closest("a")) return;
+                  router.push(`/products/${product.id}`);
+                }}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ")
+                  if (event.key === "Enter" || event.key === " ") {
+                    const target = event.target as HTMLElement;
+                    if (target.closest("button") || target.closest("a")) return;
                     router.push(`/products/${product.id}`);
+                  }
                 }}
                 role="link"
                 tabIndex={0}
               >
-                <div
+                <Link
+                  href={`/products/${product.id}`}
                   className={cn(
                     "product-art",
+                    "product-art-link",
                     `product-art-${product.accent}`,
                     (product.imageUrl || product.images?.[0]) && "has-image",
                   )}
+                  aria-label={`View details for ${product.name}`}
+                  tabIndex={-1}
                 >
                   {product.imageUrl || product.images?.[0] ? (
                     <Image
                       src={product.imageUrl || product.images![0]}
-                      alt={product.name}
+                      alt={`${product.name} - COD4 ${product.type === "server" ? "server hosting" : product.type === "service" ? "setup service" : "mod"}`}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
                       className="product-art-image"
@@ -789,11 +803,15 @@ export function Storefront({
                     </span>
                   )}
                   {product.type !== "server" && product.tag && <Badge>{product.tag}</Badge>}
-                </div>
+                </Link>
                 <CardContent>
                   <div className="product-info">
                     <div>
-                      <h3>{product.name}</h3>
+                      <h3>
+                        <Link href={`/products/${product.id}`} className="product-title-link">
+                          {product.name}
+                        </Link>
+                      </h3>
                       {product.type === "server" &&
                         (product.locations?.length || product.location) && (
                           <div className="product-location-badge">
@@ -914,7 +932,7 @@ export function Storefront({
           <div className="footer-brand">
             <Image
               src="/logo.png"
-              alt="CeylonHosting"
+              alt="CeylonHosting - Gaming Servers and Mods Sri Lanka"
               className="footer-logo"
               width={160}
               height={34}

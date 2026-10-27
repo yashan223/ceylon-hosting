@@ -487,3 +487,37 @@
       width: 100%;
     }
 }
+
+.product-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-bottom: 18px;
+  font-family: var(--font-dm-mono), monospace;
+}
+
+.product-breadcrumb a {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.product-breadcrumb a:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+
+.product-breadcrumb-sep {
+  opacity: 0.5;
+}
+
+.product-breadcrumb-current {
+  color: var(--foreground);
+  font-weight: 500;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

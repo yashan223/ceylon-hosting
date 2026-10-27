@@ -1,16 +1,41 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildBreadcrumbSchema, siteName } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "No Refund Policy",
   description:
-    "Understand when COD4 servers, mods, and setup services bought from CeylonHosting can be refunded.",
+    "Review CeylonHosting refund and cancellation policy for COD4 game servers, custom mods, tools, and VPS setup services.",
   alternates: { canonical: "/refund-policy" },
+  openGraph: {
+    type: "website",
+    url: "/refund-policy",
+    title: `No Refund Policy | ${siteName}`,
+    description:
+      "Understand when COD4 servers, mods, and setup services bought from CeylonHosting can be refunded or cancelled.",
+  },
+  twitter: {
+    card: "summary",
+    title: `No Refund Policy | ${siteName}`,
+    description:
+      "Understand when COD4 servers, mods, and setup services bought from CeylonHosting can be refunded or cancelled.",
+  },
 };
+
+const breadcrumbSchema = buildBreadcrumbSchema([
+  { name: "Home", path: "/" },
+  { name: "No Refund Policy", path: "/refund-policy" },
+]);
 
 export default function RefundPolicyPage() {
   return (
     <main className="policy-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c"),
+        }}
+      />
       <Link className="back-link" href="/">
         Back to store
       </Link>

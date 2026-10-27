@@ -2983,3 +2983,20 @@
   color: #ffffff;
   font-weight: 600;
 }
+
+.product-title-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.product-title-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.product-art-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}

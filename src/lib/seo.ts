@@ -7,11 +7,20 @@ export const siteKeywords = [
   "COD4 server",
   "Call of Duty 4 hosting",
   "COD4 server hosting",
+  "COD4 server Sri Lanka",
   "COD4 mods",
   "COD4 mod pack",
   "Promod server",
+  "Promod live Sri Lanka",
   "game server Sri Lanka",
   "private COD4 server",
+  "Call of Duty 4 VPS setup",
+  "COD4 dedicated server",
+  "low ping COD4 server",
+  "COD4 bot mod",
+  "COD4 server buy",
+  "Sri Lanka gaming server rental",
+  "Payments.lk game server",
 ];
 
 import { getAppUrl } from "./env";
@@ -24,4 +33,17 @@ export function absoluteUrl(path = "/") {
   } catch {
     return siteUrl;
   }
+}
+
+export function buildBreadcrumbSchema(items: { name: string; path: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: items.map((item, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: item.name,
+      item: absoluteUrl(item.path),
+    })),
+  };
 }

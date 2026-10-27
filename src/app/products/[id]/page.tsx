@@ -12,7 +12,7 @@ import { getStoreSettings } from "@/server/settings/settings";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { ProductGallery } from "@/components/store/product-gallery";
-import { absoluteUrl, siteName } from "@/lib/seo";
+import { absoluteUrl, siteName, siteUrl } from "@/lib/seo";
 import { parseProductDetails } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
@@ -30,21 +30,50 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const product = await getProduct(id);
   if (!product) return { title: "Product not found" };
 
-  const description = product.description.slice(0, 160);
+  const isService = product.type === "service";
+  const typeLabel =
+    product.type === "server" ? "COD4 Server Hosting" : isService ? "Setup Service" : "COD4 Mod";
+
+  const rawDescription = product.description.replace(/\r?\n+/g, " ").trim();
+  const description =
+    rawDescription.length > 155 ? `${rawDescription.slice(0, 152)}...` : rawDescription;
+
+  const title = `${product.name} — ${typeLabel}`;
+  const canonicalUrl = `/products/${product.id}`;
+  const imageUrl = product.imageUrl || product.images?.[0];
+  const ogImage = imageUrl ? absoluteUrl(imageUrl) : absoluteUrl("/opengraph-image");
+
   return {
-    title: product.name,
+    title,
     description,
-    alternates: { canonical: `/products/${product.id}` },
+    keywords: [
+      product.name,
+      `COD4 ${product.name}`,
+      product.type === "server" ? "COD4 game server rental" : "COD4 mod pack",
+      "CeylonHosting",
+      "Call of Duty 4 Sri Lanka",
+      "low ping game server",
+    ],
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       type: "website",
-      url: `/products/${product.id}`,
-      title: `${product.name} | ${siteName}`,
+      url: canonicalUrl,
+      title: `${title} | ${siteName}`,
       description,
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: `${product.name} - ${typeLabel}`,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${product.name} | ${siteName}`,
+      title: `${title} | ${siteName}`,
       description,
+      images: [ogImage],
     },
   };
 }
@@ -63,34 +92,92 @@ export default async function ProductDetailPage({ params }: PageProps) {
   const isAdmin = await isAdminUser();
   const { summary: cleanDescription, features } = parseProductDetails(product);
 
-  const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: product.name,
-    description: product.description,
-    sku: product.id,
-    category:
-      product.type === "server"
-        ? "Game server hosting"
-        : isService
-          ? "Setup service"
-          : "Game mods and tools",
-    image: (product.images && product.images.length > 0
-      ? product.images
-      : [product.imageUrl || "/logo.png"]
-    ).map((img) => absoluteUrl(img)),
-    brand: { "@type": "Brand", name: siteName },
-    offers: {
-      "@type": "Offer",
-      url: absoluteUrl(`/products/${product.id}`),
-      priceCurrency: "LKR",
-      price: product.price,
-      availability:
-        product.type === "server" && product.available === false
-          ? "https://schema.org/OutOfStock"
-          : "https://schema.org/InStock",
+  const productImages = (
+    product.images && product.images.length > 0 ? product.images : [product.imageUrl || "/logo.png"]
+  ).map((img) => absoluteUrl(img));
+
+  const structuredData = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Product",
+      name: product.name,
+      description: product.description,
+      sku: product.id,
+      mpn: product.id,
+      category:
+        product.type === "server"
+          ? "Game Server Hosting"
+          : isService
+            ? "Setup Service"
+            : "Game Mods & Tools",
+      image: productImages,
+      brand: { "@type": "Brand", name: siteName },
+      offers: {
+        "@type": "Offer",
+        url: absoluteUrl(`/products/${product.id}`),
+        priceCurrency: "LKR",
+        price: product.price,
+        priceValidUntil: `${new Date().getFullYear() + 1}-12-31`,
+        itemCondition: "https://schema.org/NewCondition",
+        availability:
+          product.type === "server" && product.available === false
+            ? "https://schema.org/OutOfStock"
+            : "https://schema.org/InStock",
+        seller: {
+          "@type": "Organization",
+          name: siteName,
+          url: siteUrl,
+        },
+        hasMerchantReturnPolicy: {
+          "@type": "MerchantReturnPolicy",
+          applicableCountry: "LK",
+          returnPolicyCategory: "https://schema.org/MerchantReturnNotPermitted",
+          merchantReturnLink: absoluteUrl("/refund-policy"),
+        },
+        shippingDetails: {
+          "@type": "OfferShippingDetails",
+          shippingRate: {
+            "@type": "MonetaryAmount",
+            value: "0",
+            currency: "LKR",
+          },
+          deliveryTime: {
+            "@type": "ShippingDeliveryTime",
+            handlingTime: {
+              "@type": "QuantitativeValue",
+              minValue: 0,
+              maxValue: 1,
+              unitCode: "DAY",
+            },
+          },
+        },
+      },
     },
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: siteUrl,
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Catalog",
+          item: `${siteUrl}/#catalog`,
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: product.name,
+          item: absoluteUrl(`/products/${product.id}`),
+        },
+      ],
+    },
+  ];
 
   return (
     <main className="product-detail-page">
@@ -104,7 +191,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         <Link className="brand" href="/" aria-label="CeylonHosting home">
           <Image
             src="/logo.png"
-            alt="CeylonHosting"
+            alt="CeylonHosting - COD4 Servers and Mods"
             className="brand-logo"
             width={120}
             height={30}
@@ -140,6 +227,15 @@ export default async function ProductDetailPage({ params }: PageProps) {
       <div className="product-detail-layout">
         <ProductGallery product={product} />
         <article className="product-detail-copy">
+          <nav className="product-breadcrumb" aria-label="Breadcrumb">
+            <Link href="/">Home</Link>
+            <span className="product-breadcrumb-sep">/</span>
+            <Link href="/#catalog">Catalog</Link>
+            <span className="product-breadcrumb-sep">/</span>
+            <span className="product-breadcrumb-current" aria-current="page">
+              {product.name}
+            </span>
+          </nav>
           <Badge>
             {product.tag ??
               (product.type === "server"
@@ -208,9 +304,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
               Direct order via WhatsApp. No account or sign in required to place your order.
             </small>
           ) : currentUser ? (
-            <small className="detail-note">
-              Payments are handled securely by Payments.lk.
-            </small>
+            <small className="detail-note">Payments are handled securely by Payments.lk.</small>
           ) : (
             <small className="detail-note">
               Sign in before ordering to save this purchase to your account. Payments are handled

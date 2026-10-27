@@ -36,8 +36,10 @@ export const metadata: Metadata = {
   creator: siteName,
   publisher: siteName,
   category: "shopping",
-  alternates: {
-    canonical: "/",
+  formatDetection: {
+    telephone: false,
+    address: false,
+    email: false,
   },
   openGraph: {
     type: "website",
@@ -46,11 +48,20 @@ export const metadata: Metadata = {
     siteName,
     title: defaultTitle,
     description: siteDescription,
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: `${siteName} — ${siteTagline}`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
     description: siteDescription,
+    images: ["/twitter-image"],
   },
   robots: {
     index: true,
@@ -82,22 +93,46 @@ const structuredData = {
   "@graph": [
     {
       "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
       name: siteName,
       url: siteUrl,
       logo: `${siteUrl}/logo.png`,
       description: siteDescription,
+      sameAs: ["https://discord.gg/rXHvDAHAw3", "https://wa.me/94788901407"],
+      currenciesAccepted: "LKR",
+      knowsAbout: [
+        "Call of Duty 4: Modern Warfare",
+        "Game Server Hosting",
+        "Promod Live Sri Lanka",
+        "Linux Server Administration",
+        "VPS Configuration",
+      ],
       contactPoint: {
         "@type": "ContactPoint",
         contactType: "customer support",
         email: "ceylonhosting@proton.me",
+        telephone: "+94788901407",
+        areaServed: ["LK", "Worldwide"],
         availableLanguage: ["en", "si", "ta"],
       },
     },
     {
       "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
       name: siteName,
       url: siteUrl,
       description: siteTagline,
+      publisher: {
+        "@id": `${siteUrl}/#organization`,
+      },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: `${siteUrl}/?search={search_term_string}#catalog`,
+        },
+        "query-input": "required name=search_term_string",
+      },
     },
   ],
 };

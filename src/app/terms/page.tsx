@@ -1,16 +1,41 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { buildBreadcrumbSchema, siteName } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Terms & Conditions",
   description:
-    "The terms that apply when you buy COD4 servers, mods, and setup services from CeylonHosting.",
+    "Review CeylonHosting terms of service for purchasing private Call of Duty 4 servers, custom mods, and remote VPS setup services in Sri Lanka.",
   alternates: { canonical: "/terms" },
+  openGraph: {
+    type: "website",
+    url: "/terms",
+    title: `Terms & Conditions | ${siteName}`,
+    description:
+      "Review CeylonHosting terms of service for purchasing private Call of Duty 4 servers, custom mods, and remote VPS setup services.",
+  },
+  twitter: {
+    card: "summary",
+    title: `Terms & Conditions | ${siteName}`,
+    description:
+      "Review CeylonHosting terms of service for purchasing private Call of Duty 4 servers, custom mods, and remote VPS setup services.",
+  },
 };
+
+const breadcrumbSchema = buildBreadcrumbSchema([
+  { name: "Home", path: "/" },
+  { name: "Terms & Conditions", path: "/terms" },
+]);
 
 export default function TermsPage() {
   return (
     <main className="policy-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c"),
+        }}
+      />
       <Link className="back-link" href="/">
         Back to store
       </Link>
