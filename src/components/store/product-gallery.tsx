@@ -240,8 +240,8 @@ export function ProductGallery({ product }: ProductGalleryProps) {
                         <Image
                           src={imgUrl}
                           alt={`Thumbnail ${idx + 1}`}
-                          width={48}
-                          height={48}
+                          width={64}
+                          height={36}
                           style={{ objectFit: "cover" }}
                         />
                       </button>

@@ -447,7 +447,8 @@
   align-items: center;
   display: flex;
   justify-content: center;
-  min-height: 190px;
+  aspect-ratio: 16 / 9;
+  min-height: 180px;
   overflow: hidden;
   position: relative;
 }
