@@ -7,6 +7,7 @@ import { getCurrentSession } from "@/server/auth/session";
 import { InactivityLogout } from "@/components/auth/inactivity-logout";
 import { MessageNotifications } from "@/components/notifications/message-notifications";
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
+import { Analytics } from "@vercel/analytics/react";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -164,6 +165,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <InactivityLogout enabled={Boolean(currentSession && !currentSession.rememberMe)} />
         <MessageNotifications enabled={Boolean(currentSession)} />
         {children}
+        <Analytics />
       </body>
     </html>
   );
