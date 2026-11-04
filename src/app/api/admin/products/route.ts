@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/server/auth/admin";
+import { getAdminApiUser } from "@/server/auth/admin";
 import { insertProduct } from "@/server/catalog/products";
 import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type Product, type ProductType } from "@/types/product";
@@ -54,38 +54,50 @@ function productInput(body: Record<string, unknown>) {
 }
 
 export async function POST(request: Request) {
-  const admin = await requireAdmin();
-  const input = productInput((await request.json()) as Record<string, unknown>);
-  if (!input)
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
+  try {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const input = productInput(body);
+    if (!input) {
+      return NextResponse.json(
+        { error: "Enter a valid name, type, description, and price." },
+        { status: 400 },
+      );
+    }
+    const now = new Date();
+    const id = `${input.name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
+    const product: Product = {
+      id,
+      ...input,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    };
+    await insertProduct(product);
+
+    await recordAuditLog({
+      action: "PRODUCT_CREATED",
+      actorId: admin.id,
+      actorEmail: admin.email,
+      targetType: "product",
+      targetId: id,
+      targetName: input.name,
+      details: `Created new ${input.type} item "${input.name}" at Rs. ${input.price}`,
+    });
+
     return NextResponse.json(
-      { error: "Enter a valid name, type, description, and price." },
-      { status: 400 },
+      { product },
+      { status: 201 },
     );
-  const now = new Date();
-  const id = `${input.name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
-  const product: Product = {
-    id,
-    ...input,
-    createdAt: now.toISOString(),
-    updatedAt: now.toISOString(),
-  };
-  await insertProduct(product);
-
-  await recordAuditLog({
-    action: "PRODUCT_CREATED",
-    actorId: admin.id,
-    actorEmail: admin.email,
-    targetType: "product",
-    targetId: id,
-    targetName: input.name,
-    details: `Created new ${input.type} item "${input.name}" at Rs. ${input.price}`,
-  });
-
-  return NextResponse.json(
-    { product },
-    { status: 201 },
-  );
+  } catch (err) {
+    console.error("POST product failed:", err);
+    return NextResponse.json(
+      { error: "Failed to create product in database." },
+      { status: 500 },
+    );
+  }
 }

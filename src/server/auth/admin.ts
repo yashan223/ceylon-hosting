@@ -32,3 +32,11 @@ export async function requireAdmin() {
   if (!isUserAdmin(user)) redirect("/");
   return user;
 }
+
+export async function getAdminApiUser() {
+  const user = await getCurrentUser();
+  if (!user || !isUserAdmin(user)) {
+    return null;
+  }
+  return user;
+}

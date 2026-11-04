@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/server/auth/admin";
+import { getAdminApiUser } from "@/server/auth/admin";
 import { updateProduct, deleteProduct } from "@/server/catalog/products";
 import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type ProductType } from "@/types/product";
@@ -7,9 +7,11 @@ import { productTypes, type ProductType } from "@/types/product";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const admin = await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
-  const body = (await request.json()) as Record<string, unknown>;
+  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
   const allowed = [
     "name",
     "description",
@@ -113,7 +115,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  const admin = await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
   const deleted = await deleteProduct(id);
   if (!deleted)

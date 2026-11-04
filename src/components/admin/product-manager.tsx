@@ -240,6 +240,27 @@ export function ProductManager({
     setIsSaving(false);
   }
 
+  async function safeParseJson<T>(
+    response: Response,
+  ): Promise<{ ok: boolean; data?: T; error?: string }> {
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text) as T;
+      return { ok: response.ok, data };
+    } catch {
+      if (response.status === 413) {
+        return {
+          ok: false,
+          error: "Uploaded file is too large for server limits (exceeds 4.5 MB host payload limit).",
+        };
+      }
+      return {
+        ok: false,
+        error: `Server returned status ${response.status}: ${text.slice(0, 100) || response.statusText || "Unexpected response"}`,
+      };
+    }
+  }
+
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
@@ -279,12 +300,13 @@ export function ProductManager({
           body: JSON.stringify(payload),
         },
       );
-      const result = (await response.json()) as { product?: Product; error?: string };
-      if (!response.ok) {
-        setStatus(result.error ?? "Unable to save product.");
+      const resParsed = await safeParseJson<{ product?: Product; error?: string }>(response);
+      if (!resParsed.ok || !response.ok) {
+        setStatus(resParsed.data?.error ?? resParsed.error ?? "Unable to save product.");
         setIsSaving(false);
         return;
       }
+      const result = resParsed.data || {};
 
       const productId = editingProduct ? editingProduct.id : result.product?.id;
       if (!productId) {
@@ -303,42 +325,138 @@ export function ProductManager({
       let finalImages = [...galleryUrls];
 
       if (extraImageFiles.length > 0) {
-        const extraForm = new FormData();
+        setStatus("Uploading images...");
+        const uploadedImages: Array<{ storagePath: string; fileName: string; contentType: string }> = [];
+        const fallbackFiles: File[] = [];
+
         for (const file of extraImageFiles) {
-          extraForm.append("files", file);
-        }
-        const extraResponse = await fetch(`/api/admin/products/${productId}/images`, {
-          method: "POST",
-          body: extraForm,
-        });
-        const extraResult = (await extraResponse.json()) as { images?: string[]; error?: string };
-        if (extraResponse.ok && Array.isArray(extraResult.images)) {
-          finalImages = extraResult.images;
-          if (finalImages.length > 0) {
-            imageUrl = finalImages[0];
+          try {
+            const urlRes = await fetch(`/api/admin/products/${productId}/upload-url`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fileName: file.name }),
+            });
+            const urlData = urlRes.ok ? await urlRes.json().catch(() => null) : null;
+
+            if (urlData?.directUpload && urlData.signedUrl) {
+              const putRes = await fetch(urlData.signedUrl, {
+                method: "PUT",
+                headers: { "Content-Type": file.type || "application/octet-stream" },
+                body: file,
+              });
+              if (!putRes.ok) throw new Error("Image upload to storage failed.");
+              uploadedImages.push({
+                storagePath: urlData.storagePath,
+                fileName: urlData.fileName,
+                contentType: file.type || "application/octet-stream",
+              });
+            } else {
+              fallbackFiles.push(file);
+            }
+          } catch {
+            fallbackFiles.push(file);
           }
-        } else if (!extraResponse.ok) {
-          setStatus(extraResult.error ?? "Product saved, but image upload failed.");
-          setIsSaving(false);
-          return;
+        }
+
+        if (uploadedImages.length > 0) {
+          const confirmRes = await fetch(`/api/admin/products/${productId}/images`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uploaded: uploadedImages }),
+          });
+          const confirmData = (await confirmRes.json().catch(() => ({}))) as { images?: string[] };
+          if (Array.isArray(confirmData.images)) {
+            finalImages = confirmData.images;
+            if (finalImages.length > 0) {
+              imageUrl = finalImages[0];
+            }
+          }
+        }
+
+        if (fallbackFiles.length > 0) {
+          const extraForm = new FormData();
+          for (const file of fallbackFiles) {
+            extraForm.append("files", file);
+          }
+          const extraResponse = await fetch(`/api/admin/products/${productId}/images`, {
+            method: "POST",
+            body: extraForm,
+          });
+          const extraParsed = await safeParseJson<{ images?: string[]; error?: string }>(extraResponse);
+          if (extraResponse.ok && Array.isArray(extraParsed.data?.images)) {
+            finalImages = extraParsed.data.images;
+            if (finalImages.length > 0) {
+              imageUrl = finalImages[0];
+            }
+          } else if (!extraResponse.ok) {
+            setStatus(extraParsed.data?.error ?? extraParsed.error ?? "Product saved, but image upload failed.");
+            setIsSaving(false);
+            return;
+          }
         }
       }
 
       if (downloadFile) {
-        const fileForm = new FormData();
-        fileForm.append("file", downloadFile);
-        const fileResponse = await fetch(`/api/admin/products/${productId}/file`, {
-          method: "POST",
-          body: fileForm,
-        });
-        const fileResult = (await fileResponse.json()) as { fileName?: string; size?: number; error?: string };
-        if (fileResponse.ok && fileResult.fileName) {
-          downloadName = fileResult.fileName;
-          downloadSize = fileResult.size;
-        } else if (!fileResponse.ok) {
-          setStatus(fileResult.error ?? "Product saved, but file attachment failed.");
-          setIsSaving(false);
-          return;
+        setStatus("Uploading downloadable file...");
+        let uploadedDirect = false;
+        try {
+          const urlRes = await fetch(`/api/admin/products/${productId}/upload-url`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileName: downloadFile.name }),
+          });
+          const urlData = urlRes.ok ? await urlRes.json().catch(() => null) : null;
+
+          if (urlData?.directUpload && urlData.signedUrl) {
+            const putRes = await fetch(urlData.signedUrl, {
+              method: "PUT",
+              headers: { "Content-Type": downloadFile.type || "application/octet-stream" },
+              body: downloadFile,
+            });
+            if (!putRes.ok) {
+              throw new Error("Direct file upload to storage failed.");
+            }
+
+            const confirmRes = await fetch(`/api/admin/products/${productId}/file`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                storagePath: urlData.storagePath,
+                fileName: downloadFile.name,
+                size: downloadFile.size,
+              }),
+            });
+            const confirmParsed = await safeParseJson<{ fileName?: string; size?: number; error?: string }>(confirmRes);
+            if (confirmRes.ok && confirmParsed.data?.fileName) {
+              downloadName = confirmParsed.data.fileName;
+              downloadSize = confirmParsed.data.size;
+              uploadedDirect = true;
+            } else {
+              setStatus(confirmParsed.data?.error ?? confirmParsed.error ?? "Product saved, but file attachment failed.");
+              setIsSaving(false);
+              return;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn("Direct upload failed, attempting fallback:", uploadErr);
+        }
+
+        if (!uploadedDirect) {
+          const fileForm = new FormData();
+          fileForm.append("file", downloadFile);
+          const fileResponse = await fetch(`/api/admin/products/${productId}/file`, {
+            method: "POST",
+            body: fileForm,
+          });
+          const fileParsed = await safeParseJson<{ fileName?: string; size?: number; error?: string }>(fileResponse);
+          if (fileResponse.ok && fileParsed.data?.fileName) {
+            downloadName = fileParsed.data.fileName;
+            downloadSize = fileParsed.data.size;
+          } else if (!fileResponse.ok) {
+            setStatus(fileParsed.data?.error ?? fileParsed.error ?? "Product saved, but file attachment failed.");
+            setIsSaving(false);
+            return;
+          }
         }
       }
 
@@ -373,8 +491,13 @@ export function ProductManager({
       }
 
       closeEditor();
-    } catch {
-      setStatus("A network error occurred while saving the item.");
+    } catch (err) {
+      console.error("Save product error:", err);
+      setStatus(
+        err instanceof Error
+          ? err.message
+          : "A network error occurred while saving the item.",
+      );
     } finally {
       setIsSaving(false);
     }

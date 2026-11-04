@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/server/auth/admin";
+import { getAdminApiUser } from "@/server/auth/admin";
 import { getProductById, updateProduct } from "@/server/catalog/products";
 import {
   uploadProductFile,
   readProductFile,
   deleteProductFile,
+  getProductDownloadSignedUrl,
 } from "@/server/storage/private-files";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -12,11 +13,18 @@ type RouteContext = { params: Promise<{ id: string }> };
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, context: RouteContext) {
-  await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
   const product = await getProductById(id);
   if (!product?.downloadKey || !product.downloadName)
     return NextResponse.json({ error: "No file found for this product." }, { status: 404 });
+
+  const signedUrl = await getProductDownloadSignedUrl(product.downloadKey, product.downloadName);
+  if (signedUrl) {
+    return NextResponse.redirect(signedUrl);
+  }
 
   try {
     const file = await readProductFile(product.downloadKey);
@@ -33,17 +41,49 @@ export async function GET(_request: Request, context: RouteContext) {
 }
 
 export async function POST(request: Request, context: RouteContext) {
-  const admin = await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
+  const product = await getProductById(id);
+  if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
+
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const body = (await request.json().catch(() => ({}))) as {
+      storagePath?: string;
+      fileName?: string;
+      size?: number;
+    };
+
+    if (!body.storagePath || !body.fileName) {
+      return NextResponse.json({ error: "Invalid file metadata." }, { status: 400 });
+    }
+
+    if (product.downloadKey && product.downloadKey !== body.storagePath) {
+      await deleteProductFile(product.downloadKey);
+    }
+
+    await updateProduct(id, {
+      downloadKey: body.storagePath,
+      downloadName: body.fileName,
+      downloadSize: Number(body.size) || 0,
+    });
+
+    return NextResponse.json({
+      uploaded: true,
+      fileName: body.fileName,
+      size: Number(body.size) || 0,
+    });
+  }
+
   const formData = await request.formData();
   const file = formData.get("file");
   if (!(file instanceof File))
     return NextResponse.json({ error: "Attach a file." }, { status: 400 });
   if (file.size === 0 || file.size > 500 * 1024 * 1024)
     return NextResponse.json({ error: "File must be between 1 byte and 500 MB." }, { status: 400 });
-
-  const product = await getProductById(id);
-  if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   if (product.downloadKey) {
     await deleteProductFile(product.downloadKey);
@@ -77,7 +117,9 @@ export async function POST(request: Request, context: RouteContext) {
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
   const product = await getProductById(id);
   if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
@@ -96,9 +138,11 @@ export async function DELETE(_request: Request, context: RouteContext) {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  await requireAdmin();
+  const admin = await getAdminApiUser();
+  if (!admin) return NextResponse.json({ error: "Admin access required." }, { status: 401 });
+
   const { id } = await context.params;
-  const body = (await request.json()) as { downloadName?: string };
+  const body = (await request.json().catch(() => ({}))) as { downloadName?: string };
   const downloadName = typeof body.downloadName === "string" ? body.downloadName.trim() : "";
   if (!downloadName) {
     return NextResponse.json({ error: "Provide a valid file name." }, { status: 400 });

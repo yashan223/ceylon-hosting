@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { canDownloadProduct, recordOrderEvent } from "@/server/orders/orders";
 import { getProductById } from "@/server/catalog/products";
-import { readProductFile } from "@/server/storage/private-files";
+import { readProductFile, getProductDownloadSignedUrl } from "@/server/storage/private-files";
 
 type RouteContext = { params: Promise<{ id: string; productId: string }> };
 
@@ -26,6 +26,12 @@ export async function GET(_request: Request, context: RouteContext) {
     );
 
   try {
+    const signedUrl = await getProductDownloadSignedUrl(product.downloadKey, product.downloadName);
+    if (signedUrl) {
+      await recordOrderEvent(orderId, "download.authorized", user.id, productId);
+      return NextResponse.redirect(signedUrl);
+    }
+
     const file = await readProductFile(product.downloadKey);
     await recordOrderEvent(orderId, "download.authorized", user.id, productId);
     return new NextResponse(new Uint8Array(file), {

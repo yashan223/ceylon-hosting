@@ -37,6 +37,60 @@ function assertInsideRoot(filePath: string) {
     throw new Error("Invalid private file path.");
 }
 
+export async function createProductUploadSignedUrl(productId: string, fileName: string) {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+  const cleanName = safeFileName(fileName);
+  const randomPrefix = randomBytes(16).toString("hex");
+  const storagePath = `products/${safeProductId(productId)}/${randomPrefix}-${cleanName}`;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUploadUrl(storagePath);
+
+    if (error || !data) {
+      console.warn("Failed to create signed upload URL:", error);
+      return null;
+    }
+
+    return {
+      signedUrl: data.signedUrl,
+      storagePath,
+      fileName: cleanName,
+    };
+  } catch (err) {
+    console.warn("Exception creating signed upload URL:", err);
+    return null;
+  }
+}
+
+export async function getProductDownloadSignedUrl(key: string, downloadName?: string): Promise<string | null> {
+  if (!isSupabaseConfigured()) {
+    return null;
+  }
+  const normalizedKey = key.replace(/\\/g, "/");
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.storage
+      .from(BUCKET_NAME)
+      .createSignedUrl(
+        normalizedKey,
+        300,
+        downloadName ? { download: safeFileName(downloadName) } : undefined,
+      );
+
+    if (!error && data?.signedUrl) {
+      return data.signedUrl;
+    }
+  } catch (err) {
+    console.warn("Failed to generate signed download URL:", err);
+  }
+  return null;
+}
+
 export async function uploadProductFile(productId: string, file: File) {
   const fileName = `${randomBytes(16).toString("hex")}-${safeFileName(file.name)}`;
   const storagePath = `products/${safeProductId(productId)}/${fileName}`;
