@@ -1,11 +1,11 @@
 import { promisify } from "node:util";
 import { createHash, randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
-import { getDatabase } from "@/server/db/mongodb";
+import { getSupabaseAdmin } from "@/server/db/supabase";
 
 const scrypt = promisify(scryptCallback);
 const verificationLifetimeMs = 24 * 60 * 60 * 1000;
 
-type UserRecord = {
+export type UserRecord = {
   id: string;
   email: string;
   firstName?: string;
@@ -28,26 +28,27 @@ export type AdminUser = Pick<
   "id" | "email" | "firstName" | "country" | "whatsapp" | "emailVerified" | "createdAt" | "updatedAt"
 >;
 
-let indexesPromise: Promise<void> | undefined;
-
-function ensureIndexes() {
-  indexesPromise ??= (async () => {
-    const collection = (await getDatabase()).collection<UserRecord>("users");
-    await collection.createIndex({ email: 1 }, { unique: true });
-    await collection.createIndex({ id: 1 }, { unique: true });
-    await collection.createIndex({ verificationTokenHash: 1 }, { sparse: true });
-    await collection.createIndex({ passwordResetTokenHash: 1 }, { sparse: true });
-  })().catch((error) => {
-    indexesPromise = undefined;
-    throw error;
-  });
-  return indexesPromise;
-}
-
-async function usersCollection() {
-  const database = await getDatabase();
-  await ensureIndexes();
-  return database.collection<UserRecord>("users");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapSupabaseUser(row: any): UserRecord {
+  return {
+    id: row.id,
+    email: row.email,
+    firstName: row.first_name || undefined,
+    country: row.country || undefined,
+    whatsapp: row.whatsapp || undefined,
+    passwordHash: row.password_hash,
+    emailVerified: Boolean(row.email_verified),
+    verificationTokenHash: row.verification_token_hash || undefined,
+    verificationTokenExpiresAt: row.verification_token_expires_at
+      ? new Date(row.verification_token_expires_at)
+      : undefined,
+    passwordResetTokenHash: row.password_reset_token_hash || undefined,
+    passwordResetTokenExpiresAt: row.password_reset_token_expires_at
+      ? new Date(row.password_reset_token_expires_at)
+      : undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
 }
 
 function normalizeEmail(email: string) {
@@ -76,34 +77,85 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
-export async function findUserByEmail(email: string) {
-  const collection = await usersCollection();
-  return collection.findOne({ email: normalizeEmail(email) });
+export async function findUserByEmail(email: string): Promise<UserRecord | null> {
+  const normalized = normalizeEmail(email);
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("email", normalized)
+      .maybeSingle();
+
+    if (data && !error) {
+      return mapSupabaseUser(data);
+    }
+  } catch (err) {
+    console.warn("Supabase findUserByEmail error:", err);
+  }
+  return null;
 }
 
-export async function findUserById(id: string) {
-  const collection = await usersCollection();
-  return collection.findOne({ id });
+export async function findUserById(id: string): Promise<UserRecord | null> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (data && !error) {
+      return mapSupabaseUser(data);
+    }
+  } catch (err) {
+    console.warn("Supabase findUserById error:", err);
+  }
+  return null;
 }
 
-export async function findUsersByIds(ids: string[]) {
+export async function findUsersByIds(ids: string[]): Promise<UserRecord[]> {
   if (ids.length === 0) return [];
-  const collection = await usersCollection();
-  return collection.find({ id: { $in: ids } }).toArray();
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .in("id", ids);
+
+    if (data && !error) {
+      return data.map(mapSupabaseUser);
+    }
+  } catch (err) {
+    console.warn("Supabase findUsersByIds error:", err);
+  }
+  return [];
 }
 
 export async function updateUserProfile(
   id: string,
   input: { firstName?: string; country?: string; whatsapp?: string },
 ) {
-  const collection = await usersCollection();
   const firstName = input.firstName?.trim().slice(0, 80) || undefined;
   const country = input.country?.trim().slice(0, 80) || undefined;
   const whatsapp = input.whatsapp?.trim().slice(0, 30) || undefined;
-  await collection.updateOne(
-    { id },
-    { $set: { firstName, country, whatsapp, updatedAt: new Date() } },
-  );
+  const now = new Date();
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase
+      .from("users")
+      .update({
+        first_name: firstName ?? null,
+        country: country ?? null,
+        whatsapp: whatsapp ?? null,
+        updated_at: now.toISOString(),
+      })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("Supabase updateUserProfile error:", err);
+  }
+
   return findUserById(id);
 }
 
@@ -118,82 +170,107 @@ async function ensureDefaultAdmin(email: string, password: string) {
   )
     return null;
 
-  const collection = await usersCollection();
   const now = new Date();
   const passwordHash = await hashPassword(password);
-  const existing = await collection.findOne({ email: configuredEmail });
-  if (existing) {
-    await collection.updateOne(
-      { id: existing.id },
-      { $set: { passwordHash, emailVerified: true, updatedAt: now } },
-    );
-    return findUserById(existing.id);
-  }
 
-  const user: UserRecord = {
-    id: randomBytes(16).toString("hex"),
-    email: configuredEmail,
-    firstName: "Admin",
-    passwordHash,
-    emailVerified: true,
-    createdAt: now,
-    updatedAt: now,
-  };
-  await collection.insertOne(user);
-  return user;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: existing } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", configuredEmail)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("users")
+        .update({
+          password_hash: passwordHash,
+          email_verified: true,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", existing.id);
+      return findUserById(existing.id);
+    }
+
+    const adminId = randomBytes(16).toString("hex");
+    await supabase.from("users").insert({
+      id: adminId,
+      email: configuredEmail,
+      first_name: "Admin",
+      password_hash: passwordHash,
+      email_verified: true,
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    });
+    return findUserById(adminId);
+  } catch (err) {
+    console.warn("Supabase ensureDefaultAdmin error:", err);
+    return null;
+  }
 }
 
 export async function changeUserPassword(id: string, currentPassword: string, newPassword: string) {
-  const collection = await usersCollection();
-  const user = await collection.findOne({ id });
+  const user = await findUserById(id);
   if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) return false;
-  const database = await getDatabase();
-  await Promise.all([
-    collection.updateOne(
-      { id },
-      { $set: { passwordHash: await hashPassword(newPassword), updatedAt: new Date() } },
-    ),
-    database.collection("sessions").deleteMany({ userId: id }),
-  ]);
-  return true;
+  const newHash = await hashPassword(newPassword);
+  const now = new Date();
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await Promise.all([
+      supabase
+        .from("users")
+        .update({ password_hash: newHash, updated_at: now.toISOString() })
+        .eq("id", id),
+      supabase.from("sessions").delete().eq("user_id", id),
+    ]);
+    return true;
+  } catch (err) {
+    console.warn("Supabase changeUserPassword error:", err);
+    return false;
+  }
 }
 
 export async function listAdminUsers(): Promise<AdminUser[]> {
-  const collection = await usersCollection();
-  const users = await collection
-    .find(
-      {},
-      {
-        projection: {
-          passwordHash: 0,
-          verificationTokenHash: 0,
-          verificationTokenExpiresAt: 0,
-          passwordResetTokenHash: 0,
-          passwordResetTokenExpiresAt: 0,
-        },
-      },
-    )
-    .sort({ createdAt: -1 })
-    .toArray();
-  return users.map(
-    ({ id, email, firstName, country, whatsapp, emailVerified, createdAt, updatedAt }) => ({
-      id,
-      email,
-      firstName,
-      country,
-      whatsapp,
-      emailVerified,
-      createdAt,
-      updatedAt,
-    }),
-  );
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("users")
+      .select("id, email, first_name, country, whatsapp, email_verified, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (data && !error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return data.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        firstName: u.first_name || undefined,
+        country: u.country || undefined,
+        whatsapp: u.whatsapp || undefined,
+        emailVerified: Boolean(u.email_verified),
+        createdAt: new Date(u.created_at),
+        updatedAt: new Date(u.updated_at),
+      }));
+    }
+  } catch (err) {
+    console.warn("Supabase listAdminUsers error:", err);
+  }
+  return [];
 }
 
-export async function deleteUser(id: string) {
-  const database = await getDatabase();
-  const result = await database.collection<UserRecord>("users").deleteOne({ id });
-  if (result.deletedCount > 0) await database.collection("sessions").deleteMany({ userId: id });
-  return result.deletedCount > 0;
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdmin();
+    await Promise.all([
+      supabase.from("sessions").delete().eq("user_id", id),
+      supabase.from("users").delete().eq("id", id),
+    ]);
+    return true;
+  } catch (err) {
+    console.warn("Supabase deleteUser error:", err);
+    return false;
+  }
 }
 
 export async function createUser(input: {
@@ -203,8 +280,6 @@ export async function createUser(input: {
   country?: string;
   whatsapp?: string;
 }) {
-  const collection = await usersCollection();
-
   const now = new Date();
   const verificationToken = createVerificationToken();
   const user: UserRecord = {
@@ -221,75 +296,79 @@ export async function createUser(input: {
     updatedAt: now,
   };
 
-  await collection.insertOne(user);
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from("users").insert({
+      id: user.id,
+      email: user.email,
+      first_name: user.firstName ?? null,
+      country: user.country ?? null,
+      whatsapp: user.whatsapp ?? null,
+      password_hash: user.passwordHash,
+      email_verified: false,
+      verification_token_hash: user.verificationTokenHash,
+      verification_token_expires_at: user.verificationTokenExpiresAt?.toISOString(),
+      created_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    });
+  } catch (err) {
+    console.warn("Supabase createUser error:", err);
+  }
+
   return { user, verificationToken };
 }
 
 export async function updateVerificationToken(userId: string) {
-  const collection = await usersCollection();
   const verificationToken = createVerificationToken();
   const now = new Date();
-  await collection.updateOne(
-    { id: userId },
-    {
-      $set: {
-        verificationTokenHash: hashToken(verificationToken),
-        verificationTokenExpiresAt: new Date(now.getTime() + verificationLifetimeMs),
-        updatedAt: now,
-      },
-    },
-  );
+  const expiresAt = new Date(now.getTime() + verificationLifetimeMs);
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase
+      .from("users")
+      .update({
+        verification_token_hash: hashToken(verificationToken),
+        verification_token_expires_at: expiresAt.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq("id", userId);
+  } catch (err) {
+    console.warn("Supabase updateVerificationToken error:", err);
+  }
+
   return verificationToken;
 }
 
 export async function verifyEmail(token: string) {
   if (!token || typeof token !== "string") return false;
-  const collection = await usersCollection();
   const tokenHash = hashToken(token);
   const now = new Date();
 
-  // Fast O(1) indexed lookup for SHA-256 hashed verification tokens
-  const user = await collection.findOne({
-    emailVerified: false,
-    verificationTokenHash: tokenHash,
-    verificationTokenExpiresAt: { $gt: now },
-  });
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: user } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email_verified", false)
+      .eq("verification_token_hash", tokenHash)
+      .gt("verification_token_expires_at", now.toISOString())
+      .maybeSingle();
 
-  if (user) {
-    await collection.updateOne(
-      { id: user.id },
-      {
-        $set: { emailVerified: true, updatedAt: new Date() },
-        $unset: { verificationTokenHash: "", verificationTokenExpiresAt: "" },
-      },
-    );
-    return true;
-  }
-
-  // Fallback for any legacy scrypt verification tokens containing a salt delimiter ':'
-  const legacyUsers = await collection
-    .find({
-      emailVerified: false,
-      verificationTokenHash: { $regex: /^[^:]+:[^:]+$/ },
-      verificationTokenExpiresAt: { $gt: now },
-    })
-    .limit(5)
-    .toArray();
-
-  for (const legacyUser of legacyUsers) {
-    if (
-      legacyUser.verificationTokenHash &&
-      (await verifyPassword(token, legacyUser.verificationTokenHash))
-    ) {
-      await collection.updateOne(
-        { id: legacyUser.id },
-        {
-          $set: { emailVerified: true, updatedAt: new Date() },
-          $unset: { verificationTokenHash: "", verificationTokenExpiresAt: "" },
-        },
-      );
+    if (user) {
+      await supabase
+        .from("users")
+        .update({
+          email_verified: true,
+          verification_token_hash: null,
+          verification_token_expires_at: null,
+          updated_at: now.toISOString(),
+        })
+        .eq("id", user.id);
       return true;
     }
+  } catch (err) {
+    console.warn("Supabase verifyEmail error:", err);
   }
 
   return false;
@@ -305,41 +384,62 @@ export async function authenticateUser(email: string, password: string) {
 }
 
 export async function createPasswordResetToken(email: string) {
-  const collection = await usersCollection();
-  const user = await collection.findOne({ email: normalizeEmail(email) });
+  const user = await findUserByEmail(email);
   if (!user) return null;
   const token = createVerificationToken();
-  await collection.updateOne(
-    { id: user.id },
-    {
-      $set: {
-        passwordResetTokenHash: hashToken(token),
-        passwordResetTokenExpiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        updatedAt: new Date(),
-      },
-    },
-  );
-  return { user, token };
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+  const now = new Date();
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase
+      .from("users")
+      .update({
+        password_reset_token_hash: hashToken(token),
+        password_reset_token_expires_at: expiresAt.toISOString(),
+        updated_at: now.toISOString(),
+      })
+      .eq("id", user.id);
+    return { user, token };
+  } catch (err) {
+    console.warn("Supabase createPasswordResetToken error:", err);
+    return null;
+  }
 }
 
 export async function resetPassword(token: string, password: string) {
   if (!token || typeof token !== "string") return false;
-  const collection = await usersCollection();
-  const user = await collection.findOne({
-    passwordResetTokenHash: hashToken(token),
-    passwordResetTokenExpiresAt: { $gt: new Date() },
-  });
-  if (!user) return false;
-  const database = await getDatabase();
-  await Promise.all([
-    collection.updateOne(
-      { id: user.id },
-      {
-        $set: { passwordHash: await hashPassword(password), updatedAt: new Date() },
-        $unset: { passwordResetTokenHash: "", passwordResetTokenExpiresAt: "" },
-      },
-    ),
-    database.collection("sessions").deleteMany({ userId: user.id }),
-  ]);
-  return true;
+  const tokenHash = hashToken(token);
+  const now = new Date();
+  const passwordHash = await hashPassword(password);
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: user } = await supabase
+      .from("users")
+      .select("id")
+      .eq("password_reset_token_hash", tokenHash)
+      .gt("password_reset_token_expires_at", now.toISOString())
+      .maybeSingle();
+
+    if (user) {
+      await Promise.all([
+        supabase
+          .from("users")
+          .update({
+            password_hash: passwordHash,
+            password_reset_token_hash: null,
+            password_reset_token_expires_at: null,
+            updated_at: now.toISOString(),
+          })
+          .eq("id", user.id),
+        supabase.from("sessions").delete().eq("user_id", user.id),
+      ]);
+      return true;
+    }
+  } catch (err) {
+    console.warn("Supabase resetPassword error:", err);
+  }
+
+  return false;
 }

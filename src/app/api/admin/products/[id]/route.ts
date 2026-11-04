@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
-import { getDatabase } from "@/server/db/mongodb";
+import { updateProduct, deleteProduct } from "@/server/catalog/products";
 import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type ProductType } from "@/types/product";
 
@@ -94,12 +94,9 @@ export async function PATCH(request: Request, context: RouteContext) {
   if ("accent" in update && typeof update.accent === "string") {
     update.accent = update.accent.trim() || "slate";
   }
-  const result = await (
-    await getDatabase()
-  )
-    .collection("products")
-    .updateOne({ id }, { $set: { ...update, updatedAt: new Date() } });
-  if (result.matchedCount === 0)
+
+  const updated = await updateProduct(id, update);
+  if (!updated)
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   await recordAuditLog({
@@ -118,8 +115,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   const admin = await requireAdmin();
   const { id } = await context.params;
-  const result = await (await getDatabase()).collection("products").deleteOne({ id });
-  if (result.deletedCount === 0)
+  const deleted = await deleteProduct(id);
+  if (!deleted)
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   await recordAuditLog({

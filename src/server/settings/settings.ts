@@ -1,4 +1,4 @@
-import { getDatabase } from "@/server/db/mongodb";
+import { getSupabaseAdmin } from "@/server/db/supabase";
 
 export type StoreSettings = {
   taxEnabled: boolean;
@@ -18,28 +18,36 @@ const DEFAULT_SETTINGS: StoreSettings = {
 
 export async function getStoreSettings(): Promise<StoreSettings> {
   try {
-    const db = await getDatabase();
-    const doc = await db
-      .collection("settings")
-      .findOne({ _id: "store_settings" as unknown as import("mongodb").ObjectId });
-    if (!doc) return DEFAULT_SETTINGS;
-    return {
-      taxEnabled: doc.taxEnabled !== false,
-      taxRate: typeof doc.taxRate === "number" && !isNaN(doc.taxRate) ? doc.taxRate : 2.29,
-      sandboxEnabled: doc.sandboxEnabled !== false,
-      whatsappNumber:
-        typeof doc.whatsappNumber === "string" && doc.whatsappNumber.trim()
-          ? doc.whatsappNumber.trim()
-          : "+94 78 890 1407",
-      updatedAt: doc.updatedAt instanceof Date ? doc.updatedAt : new Date(),
-    };
-  } catch {
-    return DEFAULT_SETTINGS;
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("settings")
+      .select("*")
+      .eq("id", "store_settings")
+      .maybeSingle();
+
+    if (data && !error) {
+      return {
+        taxEnabled: data.tax_enabled !== false,
+        taxRate:
+          typeof data.tax_rate === "number" && !isNaN(data.tax_rate)
+            ? data.tax_rate
+            : Number(data.tax_rate) || 2.29,
+        sandboxEnabled: data.sandbox_enabled !== false,
+        whatsappNumber:
+          typeof data.whatsapp_number === "string" && data.whatsapp_number.trim()
+            ? data.whatsapp_number.trim()
+            : "+94 78 890 1407",
+        updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
+      };
+    }
+  } catch (err) {
+    console.warn("Supabase getStoreSettings error:", err);
   }
+
+  return DEFAULT_SETTINGS;
 }
 
 export async function updateStoreSettings(updates: Partial<StoreSettings>): Promise<StoreSettings> {
-  const db = await getDatabase();
   const current = await getStoreSettings();
   const taxEnabled =
     updates.taxEnabled !== undefined ? Boolean(updates.taxEnabled) : current.taxEnabled;
@@ -54,21 +62,28 @@ export async function updateStoreSettings(updates: Partial<StoreSettings>): Prom
       ? updates.whatsappNumber.trim()
       : current.whatsappNumber;
 
+  const now = new Date();
   const updated: StoreSettings = {
     taxEnabled,
     taxRate,
     sandboxEnabled,
     whatsappNumber,
-    updatedAt: new Date(),
+    updatedAt: now,
   };
 
-  await db
-    .collection("settings")
-    .updateOne(
-      { _id: "store_settings" as unknown as import("mongodb").ObjectId },
-      { $set: updated },
-      { upsert: true },
-    );
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from("settings").upsert({
+      id: "store_settings",
+      tax_enabled: taxEnabled,
+      tax_rate: taxRate,
+      sandbox_enabled: sandboxEnabled,
+      whatsapp_number: whatsappNumber,
+      updated_at: now.toISOString(),
+    });
+  } catch (err) {
+    console.warn("Supabase updateStoreSettings error:", err);
+  }
 
   return updated;
 }

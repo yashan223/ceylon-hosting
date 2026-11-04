@@ -9,9 +9,6 @@ export function SmoothScroll() {
   const lenisRef = useRef<Lenis | null>(null);
 
   useEffect(() => {
-    // Only enable smooth momentum scrolling on customer-facing storefront pages.
-    // Administrative consoles (/admin) and client dashboards (/dashboard) have their own
-    // fixed layouts, data grids, and internal overflow scroll containers.
     const isExcluded = pathname?.startsWith("/admin") || pathname?.startsWith("/dashboard");
 
     if (isExcluded) {
@@ -23,48 +20,36 @@ export function SmoothScroll() {
       return;
     }
 
-    if (lenisRef.current) {
-      return;
-    }
-
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (lenisRef.current) return;
 
     const lenis = new Lenis({
-      duration: 1.2,
+      duration: 1.05,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
-      smoothWheel: !prefersReducedMotion,
-      wheelMultiplier: 0.95,
-      touchMultiplier: 1.5,
-      autoRaf: true,
-      respectReducedMotion: true,
-      allowNestedScroll: true,
-      prevent: (node) => {
-        if (!node || typeof (node as HTMLElement).closest !== "function") return false;
-        const el = node as HTMLElement;
-        return (
-          el.closest(".admin-shell") !== null ||
-          el.closest(".admin-content") !== null ||
-          el.closest(".dashboard-shell") !== null ||
-          el.closest("[data-lenis-prevent]") !== null ||
-          el.tagName === "TEXTAREA" ||
-          el.tagName === "SELECT"
-        );
-      },
+      smoothWheel: true,
+      wheelMultiplier: 0.9,
+      touchMultiplier: 1.4,
     });
 
     lenisRef.current = lenis;
     (window as unknown as { __lenis?: Lenis }).__lenis = lenis;
 
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+    rafId = requestAnimationFrame(raf);
+
     return () => {
+      cancelAnimationFrame(rafId);
       lenis.destroy();
       lenisRef.current = null;
       delete (window as unknown as { __lenis?: Lenis }).__lenis;
     };
   }, [pathname]);
 
-  // When changing pages/routes on storefront, ensure scroll starts at top unless an anchor hash is present
   useEffect(() => {
     const lenis = lenisRef.current;
     if (lenis && !window.location.hash) {

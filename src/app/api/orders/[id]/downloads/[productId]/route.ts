@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { canDownloadProduct, recordOrderEvent } from "@/server/orders/orders";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById } from "@/server/catalog/products";
 import { readProductFile } from "@/server/storage/private-files";
-import type { Product } from "@/types/product";
 
 type RouteContext = { params: Promise<{ id: string; productId: string }> };
 
@@ -19,8 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
       { status: 403 },
     );
 
-  const database = await getDatabase();
-  const product = await database.collection<Product>("products").findOne({ id: productId });
+  const product = await getProductById(productId);
   if (!product?.downloadKey || !product.downloadName)
     return NextResponse.json(
       { error: "This product has no downloadable file yet." },
@@ -30,7 +28,7 @@ export async function GET(_request: Request, context: RouteContext) {
   try {
     const file = await readProductFile(product.downloadKey);
     await recordOrderEvent(orderId, "download.authorized", user.id, productId);
-    return new NextResponse(file, {
+    return new NextResponse(new Uint8Array(file), {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${product.downloadName.replace(/[^a-zA-Z0-9._-]/g, "_")}"`,

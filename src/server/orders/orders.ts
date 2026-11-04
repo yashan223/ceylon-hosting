@@ -1,12 +1,12 @@
 import { randomBytes } from "node:crypto";
-import { getDatabase } from "@/server/db/mongodb";
 import { getActiveProductsByIds } from "@/server/catalog/products";
 import { getStoreSettings } from "@/server/settings/settings";
 import type { AuthUser } from "@/server/auth/users";
+import { getSupabaseAdmin } from "@/server/db/supabase";
 
-type OrderStatus = "requested" | "accepted" | "in_progress" | "completed" | "cancelled";
+export type OrderStatus = "requested" | "accepted" | "in_progress" | "completed" | "cancelled";
 
-type OrderItem = {
+export type OrderItem = {
   productId: string;
   name: string;
   type: string;
@@ -19,7 +19,7 @@ type OrderItem = {
   extraSlots?: number | boolean;
 };
 
-type OrderRecord = {
+export type OrderRecord = {
   id: string;
   userId: string;
   email: string;
@@ -36,7 +36,7 @@ type OrderRecord = {
   updatedAt: Date;
 };
 
-type OrderEvent = {
+export type OrderEvent = {
   orderId: string;
   type: string;
   actorId: string;
@@ -44,7 +44,7 @@ type OrderEvent = {
   createdAt: Date;
 };
 
-type OrderMessage = {
+export type OrderMessage = {
   id: string;
   orderId: string;
   senderId: string;
@@ -53,48 +53,35 @@ type OrderMessage = {
   createdAt: Date;
 };
 
-type NotificationRecord = {
-  key: string;
-  userId: string;
-  readAt: Date;
-};
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-let indexesPromise: Promise<void> | undefined;
-
-function ensureIndexes() {
-  indexesPromise ??= (async () => {
-    const database = await getDatabase();
-    await Promise.all([
-      database.collection<OrderRecord>("orders").createIndex({ id: 1 }, { unique: true }),
-      database.collection<OrderRecord>("orders").createIndex({ userId: 1, createdAt: -1 }),
-      database.collection<OrderEvent>("order_events").createIndex({ orderId: 1, createdAt: 1 }),
-      database.collection<OrderMessage>("order_messages").createIndex({ orderId: 1, createdAt: 1 }),
-      database
-        .collection<OrderMessage>("order_messages")
-        .createIndex({ senderRole: 1, createdAt: -1 }),
-      database
-        .collection<NotificationRecord>("notification_reads")
-        .createIndex({ key: 1 }, { unique: true }),
-    ]);
-  })().catch((error) => {
-    indexesPromise = undefined;
-    throw error;
-  });
-  return indexesPromise;
-}
-
-async function collections() {
-  const database = await getDatabase();
-  await ensureIndexes();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapSupabaseOrder(row: any): OrderRecord {
   return {
-    orders: database.collection<OrderRecord>("orders"),
-    events: database.collection<OrderEvent>("order_events"),
-    messages: database.collection<OrderMessage>("order_messages"),
-    reads: database.collection<NotificationRecord>("notification_reads"),
+    id: row.id,
+    userId: row.user_id,
+    email: row.email,
+    whatsapp: row.whatsapp || undefined,
+    items: Array.isArray(row.items) ? row.items : [],
+    subtotal: row.subtotal != null ? Number(row.subtotal) : undefined,
+    taxRate: row.tax_rate != null ? Number(row.tax_rate) : undefined,
+    taxAmount: row.tax_amount != null ? Number(row.tax_amount) : undefined,
+    total: row.total != null ? Number(row.total) : undefined,
+    status: row.status,
+    paymentStatus: row.payment_status,
+    paymentId: row.payment_id || undefined,
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapSupabaseMessage(row: any): OrderMessage {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    senderId: row.sender_id,
+    senderRole: row.sender_role,
+    body: row.body,
+    createdAt: new Date(row.created_at),
   };
 }
 
@@ -104,8 +91,19 @@ export async function recordOrderEvent(
   actorId: string,
   details?: string,
 ) {
-  const { events } = await collections();
-  await events.insertOne({ orderId, type, actorId, details, createdAt: new Date() });
+  const now = new Date();
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from("order_events").insert({
+      order_id: orderId,
+      type,
+      actor_id: actorId,
+      details: details ?? null,
+      created_at: now.toISOString(),
+    });
+  } catch (err) {
+    console.warn("Supabase recordOrderEvent error:", err);
+  }
 }
 
 export async function createOrder(
@@ -159,7 +157,6 @@ export async function createOrder(
     },
   );
   const now = new Date();
-  const { orders, events } = await collections();
   const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const taxRate = settings.taxEnabled ? settings.taxRate : 0;
   const taxAmount = settings.taxEnabled ? Math.round(subtotal * (settings.taxRate / 100) * 100) / 100 : 0;
@@ -180,49 +177,76 @@ export async function createOrder(
     createdAt: now,
     updatedAt: now,
   };
-  await orders.insertOne(order);
-  await events.insertOne({
-    orderId: order.id,
-    type: "order.requested",
-    actorId: user.id,
-    details: "Customer submitted an order request.",
-    createdAt: now,
+
+  const supabase = getSupabaseAdmin();
+  await supabase.from("orders").insert({
+    id: order.id,
+    user_id: order.userId,
+    email: order.email,
+    whatsapp: order.whatsapp ?? null,
+    items: order.items,
+    subtotal: order.subtotal,
+    tax_rate: order.taxRate,
+    tax_amount: order.taxAmount,
+    total: order.total,
+    status: order.status,
+    payment_status: order.paymentStatus,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
   });
+  await recordOrderEvent(order.id, "order.requested", user.id, "Customer submitted an order request.");
   return order;
 }
 
 export async function markOrderPaid(orderId: string, paymentId: string, amountCents: number) {
-  const { orders, events } = await collections();
   const now = new Date();
-  const order = await orders.findOne({
-    id: orderId,
-    status: { $in: ["requested", "accepted"] },
-    paymentStatus: { $ne: "paid" },
-  });
-  if (!order) return false;
+  const supabase = getSupabaseAdmin();
+  const { data: orderData } = await supabase
+    .from("orders")
+    .select("*")
+    .eq("id", orderId)
+    .in("status", ["requested", "accepted"])
+    .neq("payment_status", "paid")
+    .maybeSingle();
+
+  if (!orderData) return false;
+
+  const order = mapSupabaseOrder(orderData);
   const settings = await getStoreSettings();
   const subtotalCents = order.items.reduce(
-    (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
+    (sum, it) => sum + Math.round(it.unitPrice * 100) * it.quantity,
     0,
   );
-  const taxCents = order.taxAmount !== undefined
-    ? Math.round(order.taxAmount * 100)
-    : (settings.taxEnabled ? Math.round(subtotalCents * (settings.taxRate / 100)) : 0);
-  const expectedAmountCents = subtotalCents + taxCents;
-  if (Math.abs(amountCents - expectedAmountCents) > 1) return false;
-  const result = await orders.updateOne(
-    { id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } },
-    { $set: { paymentStatus: "paid", paymentId, updatedAt: now } },
-  );
-  if (result.matchedCount === 0) return false;
-  await events.insertOne({
-    orderId,
-    type: "payment.succeeded",
-    actorId: "payments.lk",
-    details: paymentId,
-    createdAt: now,
-  });
+  const taxCents =
+    order.taxAmount !== undefined
+      ? Math.round(order.taxAmount * 100)
+      : settings.taxEnabled
+        ? Math.round(subtotalCents * (settings.taxRate / 100))
+        : 0;
+  const expectedCents = subtotalCents + taxCents;
 
+  if (Math.abs(amountCents - expectedCents) > 1) return false;
+
+  await supabase
+    .from("orders")
+    .update({
+      payment_status: "paid",
+      payment_id: paymentId,
+      updated_at: now.toISOString(),
+    })
+    .eq("id", orderId);
+
+  await recordOrderEvent(orderId, "payment.succeeded", "payments.lk", paymentId);
+  await handlePaidOrderSideEffects(order, paymentId, amountCents, now);
+  return true;
+}
+
+async function handlePaidOrderSideEffects(
+  order: OrderRecord,
+  paymentId: string,
+  amountCents: number,
+  now: Date,
+) {
   const serverItems = order.items.filter((item) => item.type === "server");
   if (serverItems.length > 0) {
     try {
@@ -231,7 +255,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
       );
       for (const item of serverItems) {
         await activateOrExtendServerSubscription({
-          orderId,
+          orderId: order.id,
           userId: order.userId,
           userEmail: order.email,
           productId: item.productId,
@@ -251,7 +275,7 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     const user = await findUserById(order.userId);
     const { sendOrderPaidAdminNotificationEmail } = await import("@/server/auth/mail");
     await sendOrderPaidAdminNotificationEmail({
-      orderId,
+      orderId: order.id,
       customerEmail: order.email,
       customerName: user?.firstName,
       customerCountry: user?.country,
@@ -264,189 +288,256 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
   } catch (emailErr) {
     console.error("Failed to send admin order notification email", emailErr);
   }
-
-  return true;
 }
 
 export async function getOrderForUser(orderId: string, userId: string) {
-  const { orders, messages, events } = await collections();
   const rawId = orderId.trim();
   const cleanId = rawId.replace(/^(loadout|ord)[-_]/i, "");
-  const order = await orders.findOne({
-    $or: [
-      { id: rawId },
-      { id: `loadout-${cleanId}` },
-      { id: `loadout-${cleanId.toLowerCase()}` },
-      { id: `ORD-${cleanId.toUpperCase()}` },
-      { id: cleanId },
-    ],
-    userId,
-  });
-  if (!order) return null;
-  if (order.paymentStatus === "paid" && !order.paymentId) {
-    const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
-    if (ev?.details) order.paymentId = ev.details;
+  const searchIds = [
+    rawId,
+    `loadout-${cleanId}`,
+    `loadout-${cleanId.toLowerCase()}`,
+    `ORD-${cleanId.toUpperCase()}`,
+    cleanId,
+  ];
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: orderData, error } = await supabase
+      .from("orders")
+      .select("*")
+      .in("id", searchIds)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (orderData && !error) {
+      const order = mapSupabaseOrder(orderData);
+      const { data: msgData } = await supabase
+        .from("order_messages")
+        .select("*")
+        .in("order_id", [order.id, rawId])
+        .order("created_at", { ascending: true });
+
+      const messages = (msgData || []).map(mapSupabaseMessage);
+      return { ...order, messages };
+    }
+  } catch (err) {
+    console.warn("Supabase getOrderForUser error:", err);
   }
-  const orderMessages = await messages
-    .find({ orderId: { $in: [order.id, rawId] } })
-    .sort({ createdAt: 1 })
-    .toArray();
-  return { ...order, messages: orderMessages };
+  return null;
 }
 
 export async function listOrdersForUser(userId: string) {
-  const { orders, messages } = await collections();
-  const userOrders = await orders
-    .find({ userId }, { projection: { _id: 0 } })
-    .sort({ updatedAt: -1 })
-    .toArray();
-  return Promise.all(
-    userOrders.map(async (order) => {
-      const [latestMessage] = await messages
-        .find({ orderId: order.id })
-        .sort({ createdAt: -1 })
-        .limit(1)
-        .toArray();
-      return {
-        ...order,
-        latestMessage: latestMessage
-          ? { body: latestMessage.body, createdAt: latestMessage.createdAt }
-          : null,
-      };
-    }),
-  );
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: orderRows, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", userId)
+      .order("updated_at", { ascending: false });
+
+    if (orderRows && !error) {
+      return Promise.all(
+        orderRows.map(async (row) => {
+          const order = mapSupabaseOrder(row);
+          const { data: latestMsg } = await supabase
+            .from("order_messages")
+            .select("body, created_at")
+            .eq("order_id", order.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          return {
+            ...order,
+            latestMessage: latestMsg
+              ? { body: latestMsg.body, createdAt: new Date(latestMsg.created_at) }
+              : null,
+          };
+        }),
+      );
+    }
+  } catch (err) {
+    console.warn("Supabase listOrdersForUser error:", err);
+  }
+  return [];
 }
 
 export async function getOrderForAdmin(orderId: string) {
-  const { orders, messages, events } = await collections();
   const rawId = orderId.trim();
   const cleanId = rawId.replace(/^(loadout|ord)[-_]/i, "");
-  const order = await orders.findOne({
-    $or: [
-      { id: rawId },
-      { id: `loadout-${cleanId}` },
-      { id: `loadout-${cleanId.toLowerCase()}` },
-      { id: `ORD-${cleanId.toUpperCase()}` },
-      { id: cleanId },
-    ],
-  });
-  if (!order) return null;
-  if (order.paymentStatus === "paid" && !order.paymentId) {
-    const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
-    if (ev?.details) order.paymentId = ev.details;
+  const searchIds = [
+    rawId,
+    `loadout-${cleanId}`,
+    `loadout-${cleanId.toLowerCase()}`,
+    `ORD-${cleanId.toUpperCase()}`,
+    cleanId,
+  ];
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: orderData, error } = await supabase
+      .from("orders")
+      .select("*")
+      .in("id", searchIds)
+      .maybeSingle();
+
+    if (orderData && !error) {
+      const order = mapSupabaseOrder(orderData);
+      if (!order.whatsapp) {
+        const { findUserById } = await import("@/server/auth/users");
+        const user = await findUserById(order.userId);
+        if (user?.whatsapp) order.whatsapp = user.whatsapp;
+      }
+
+      const { data: msgData } = await supabase
+        .from("order_messages")
+        .select("*")
+        .in("order_id", [order.id, rawId])
+        .order("created_at", { ascending: true });
+
+      const messages = (msgData || []).map(mapSupabaseMessage);
+      return { ...order, messages };
+    }
+  } catch (err) {
+    console.warn("Supabase getOrderForAdmin error:", err);
   }
-  if (!order.whatsapp) {
-    try {
-      const { findUserById } = await import("@/server/auth/users");
-      const user = await findUserById(order.userId);
-      if (user?.whatsapp) order.whatsapp = user.whatsapp;
-    } catch {}
-  }
-  const orderMessages = await messages
-    .find({ orderId: { $in: [order.id, rawId] } })
-    .sort({ createdAt: 1 })
-    .toArray();
-  return { ...order, messages: orderMessages };
+  return null;
 }
 
 export async function canDownloadProduct(orderId: string, userId: string, productId: string) {
-  const { orders } = await collections();
-  const order = await orders.findOne({
-    id: orderId,
-    userId,
-    paymentStatus: "paid",
-    items: { $elemMatch: { productId } },
-  });
-  return Boolean(order);
+  const order = await getOrderForUser(orderId, userId);
+  if (!order || order.paymentStatus !== "paid") return false;
+  return order.items.some((item) => item.productId === productId);
 }
 
 export async function getPaidOrderForProduct(userId: string, productId: string) {
-  const { orders } = await collections();
-  return orders.findOne({
-    userId,
-    paymentStatus: "paid",
-    items: { $elemMatch: { productId } },
-  });
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: rows } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("payment_status", "paid");
+
+    if (rows) {
+      for (const row of rows) {
+        const order = mapSupabaseOrder(row);
+        if (order.items.some((it) => it.productId === productId)) {
+          return order;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Supabase getPaidOrderForProduct error:", err);
+  }
+  return null;
 }
 
-export async function listOrders() {
-  const { orders, events } = await collections();
-  const list = await orders.find({}).sort({ updatedAt: -1 }).toArray();
-  const missingUserIds = [...new Set(list.filter((o) => !o.whatsapp).map((o) => o.userId))];
-  const userMap = new Map<string, string>();
-  if (missingUserIds.length > 0) {
-    try {
-      const { findUsersByIds } = await import("@/server/auth/users");
-      const users = await findUsersByIds(missingUserIds);
-      for (const u of users) {
-        if (u.whatsapp) userMap.set(u.id, u.whatsapp);
+export async function listOrders(): Promise<OrderRecord[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: rows, error } = await supabase
+      .from("orders")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (rows && !error) {
+      const list = rows.map(mapSupabaseOrder);
+      const missingUserIds = [...new Set(list.filter((o) => !o.whatsapp).map((o) => o.userId))];
+      const userMap = new Map<string, string>();
+      if (missingUserIds.length > 0) {
+        const { findUsersByIds } = await import("@/server/auth/users");
+        const users = await findUsersByIds(missingUserIds);
+        for (const u of users) {
+          if (u.whatsapp) userMap.set(u.id, u.whatsapp);
+        }
       }
-    } catch {}
+      return list.map((order) => {
+        if (!order.whatsapp && userMap.has(order.userId)) {
+          order.whatsapp = userMap.get(order.userId);
+        }
+        return order;
+      });
+    }
+  } catch (err) {
+    console.warn("Supabase listOrders error:", err);
   }
-  return Promise.all(
-    list.map(async (order) => {
-      if (order.paymentStatus === "paid" && !order.paymentId) {
-        const ev = await events.findOne({ orderId: order.id, type: "payment.succeeded" });
-        if (ev?.details) order.paymentId = ev.details;
-      }
-      if (!order.whatsapp && userMap.has(order.userId)) {
-        order.whatsapp = userMap.get(order.userId);
-      }
-      return order;
-    }),
-  );
+  return [];
 }
 
 export async function updateOrderStatus(orderId: string, status: OrderStatus, actorId: string) {
-  const { orders, events } = await collections();
   const now = new Date();
-  const result = await orders.updateOne({ id: orderId }, { $set: { status, updatedAt: now } });
-  if (result.matchedCount === 0) return false;
-  await events.insertOne({ orderId, type: `order.${status}`, actorId, createdAt: now });
-  return true;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from("orders")
+      .update({ status, updated_at: now.toISOString() })
+      .eq("id", orderId);
+
+    if (!error) {
+      await recordOrderEvent(orderId, `order.${status}`, actorId);
+      return true;
+    }
+  } catch (err) {
+    console.warn("Supabase updateOrderStatus error:", err);
+  }
+  return false;
 }
 
 export async function listMessageNotifications(input: { userId: string; isAdmin: boolean }) {
-  const { orders, messages, reads } = await collections();
-  const orderIds = input.isAdmin
-    ? (await orders.find({}, { projection: { id: 1 } }).toArray()).map((order) => order.id)
-    : (await orders.find({ userId: input.userId }, { projection: { id: 1 } }).toArray()).map(
-        (order) => order.id,
-      );
-  if (orderIds.length === 0) return [];
+  try {
+    const supabase = getSupabaseAdmin();
+    let orderIds: string[] = [];
 
-  const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
-  const [relevantMessages, readKeys] = await Promise.all([
-    messages
-      .find({
-        orderId: { $in: orderIds },
-        senderRole: input.isAdmin ? "customer" : "admin",
-        createdAt: { $gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-      })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .toArray(),
-    reads
-      .find({
-        key: new RegExp(
-          `^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`,
-        ),
-      })
-      .toArray()
-      .catch(() => [] as NotificationRecord[]),
-  ]);
+    if (input.isAdmin) {
+      const { data: ords } = await supabase.from("orders").select("id");
+      orderIds = (ords || []).map((o) => o.id);
+    } else {
+      const { data: ords } = await supabase.from("orders").select("id").eq("user_id", input.userId);
+      orderIds = (ords || []).map((o) => o.id);
+    }
 
-  const latestByOrder = new Map<string, OrderMessage>();
-  for (const message of relevantMessages) {
-    if (!latestByOrder.has(message.orderId)) latestByOrder.set(message.orderId, message);
+    if (orderIds.length === 0) return [];
+
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const targetRole = input.isAdmin ? "customer" : "admin";
+    const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
+
+    const [{ data: relevantMessages }, { data: readData }] = await Promise.all([
+      supabase
+        .from("order_messages")
+        .select("*")
+        .in("order_id", orderIds)
+        .eq("sender_role", targetRole)
+        .gt("created_at", sevenDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("notification_reads")
+        .select("key")
+        .like("key", `${keyPrefix}%`),
+    ]);
+
+    const readKeys = new Set((readData || []).map((r) => r.key));
+    const latestByOrder = new Map<string, OrderMessage>();
+
+    for (const raw of relevantMessages || []) {
+      const msg = mapSupabaseMessage(raw);
+      if (!latestByOrder.has(msg.orderId)) latestByOrder.set(msg.orderId, msg);
+    }
+
+    return [...latestByOrder.values()].slice(0, 30).map((message) => ({
+      id: message.id,
+      orderId: message.orderId,
+      body: message.body,
+      createdAt: message.createdAt.toISOString(),
+      read: readKeys.has(`${keyPrefix}${message.orderId}:${message.id}`),
+    }));
+  } catch (err) {
+    console.warn("Supabase listMessageNotifications error:", err);
+    return [];
   }
-  return [...latestByOrder.values()].slice(0, 30).map((message) => ({
-    id: message.id,
-    orderId: message.orderId,
-    body: message.body,
-    createdAt: message.createdAt.toISOString(),
-    read: readKeys.some((record) => record.key === `${keyPrefix}${message.orderId}:${message.id}`),
-  }));
 }
 
 export async function markMessageNotificationsRead(input: {
@@ -455,76 +546,84 @@ export async function markMessageNotificationsRead(input: {
   keys: string[];
 }) {
   if (input.keys.length === 0) return;
-  const { reads } = await collections();
   const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
-  const readAt = new Date();
-  await Promise.all(
-    input.keys
-      .filter((key) => /^[\w-]+:[a-f0-9]{32}$/.test(key))
-      .map((key) =>
-        reads.updateOne(
-          { key: `${keyPrefix}${key}` },
-          { $setOnInsert: { key: `${keyPrefix}${key}`, userId: input.userId, readAt } },
-          { upsert: true },
-        ),
-      ),
-  );
+  const validKeys = input.keys.filter((key) => /^[\w-]+:[a-f0-9]{32}$/.test(key));
+  if (validKeys.length === 0) return;
+
+  const now = new Date();
+  try {
+    const supabase = getSupabaseAdmin();
+    const rows = validKeys.map((key) => ({
+      key: `${keyPrefix}${key}`,
+      user_id: input.userId,
+      read_at: now.toISOString(),
+    }));
+    await supabase.from("notification_reads").upsert(rows);
+  } catch (err) {
+    console.warn("Supabase markMessageNotificationsRead error:", err);
+  }
 }
 
 export async function listAdminMessageThreads() {
-  const { orders, messages, reads } = await collections();
-  const adminOrders = await orders
-    .find({}, { projection: { id: 1, email: 1, status: 1, paymentStatus: 1, updatedAt: 1 } })
-    .sort({ updatedAt: -1 })
-    .limit(200)
-    .toArray();
-  if (adminOrders.length === 0) return [];
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: adminOrders } = await supabase
+      .from("orders")
+      .select("id, email, status, payment_status, updated_at")
+      .order("updated_at", { ascending: false })
+      .limit(200);
 
-  const orderIds = adminOrders.map((order) => order.id);
-  const keyPrefix = "a:";
-  const [relevantMessages, readKeys] = await Promise.all([
-    messages
-      .find({ orderId: { $in: orderIds }, senderRole: "customer" })
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .toArray(),
-    reads
-      .find({
-        key: new RegExp(
-          `^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`,
-        ),
-      })
-      .toArray()
-      .catch(() => [] as NotificationRecord[]),
-  ]);
+    if (!adminOrders || adminOrders.length === 0) return [];
+    const orderIds = adminOrders.map((o) => o.id);
+    const keyPrefix = "a:";
 
-  const readKeySet = new Set(readKeys.map((record) => record.key));
-  const threads = adminOrders.map((order) => {
-    const orderMessages = relevantMessages
-      .filter((message) => message.orderId === order.id)
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    const latest = orderMessages[0];
-    const unreadCount = orderMessages.filter(
-      (message) => !readKeySet.has(`${keyPrefix}${order.id}:${message.id}`),
-    ).length;
-    return {
-      orderId: order.id,
-      email: order.email,
-      status: order.status,
-      paymentStatus: order.paymentStatus,
-      updatedAt: order.updatedAt.toISOString(),
-      latestMessage: latest
-        ? {
-            id: latest.id,
-            body: latest.body,
-            senderRole: latest.senderRole,
-            createdAt: latest.createdAt.toISOString(),
-          }
-        : null,
-      unreadCount,
-    };
-  });
-  return threads;
+    const [{ data: relevantMessages }, { data: readData }] = await Promise.all([
+      supabase
+        .from("order_messages")
+        .select("*")
+        .in("order_id", orderIds)
+        .eq("sender_role", "customer")
+        .order("created_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("notification_reads")
+        .select("key")
+        .like("key", `${keyPrefix}%`),
+    ]);
+
+    const readKeySet = new Set((readData || []).map((r) => r.key));
+    const messages = (relevantMessages || []).map(mapSupabaseMessage);
+
+    return adminOrders.map((order) => {
+      const orderMessages = messages
+        .filter((msg) => msg.orderId === order.id)
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+      const latest = orderMessages[0];
+      const unreadCount = orderMessages.filter(
+        (msg) => !readKeySet.has(`${keyPrefix}${order.id}:${msg.id}`),
+      ).length;
+
+      return {
+        orderId: order.id,
+        email: order.email,
+        status: order.status as OrderStatus,
+        paymentStatus: order.payment_status as "pending" | "paid" | "failed",
+        updatedAt: new Date(order.updated_at).toISOString(),
+        latestMessage: latest
+          ? {
+              id: latest.id,
+              body: latest.body,
+              senderRole: latest.senderRole,
+              createdAt: latest.createdAt.toISOString(),
+            }
+          : null,
+        unreadCount,
+      };
+    });
+  } catch (err) {
+    console.warn("Supabase listAdminMessageThreads error:", err);
+    return [];
+  }
 }
 
 export async function addOrderMessage(
@@ -533,9 +632,6 @@ export async function addOrderMessage(
   senderRole: "customer" | "admin",
   body: string,
 ) {
-  const { orders, messages, events } = await collections();
-  const order = await orders.findOne({ id: orderId });
-  if (!order) return null;
   const message: OrderMessage = {
     id: randomBytes(16).toString("hex"),
     orderId,
@@ -544,14 +640,25 @@ export async function addOrderMessage(
     body: body.trim(),
     createdAt: new Date(),
   };
-  await messages.insertOne(message);
-  await events.insertOne({
-    orderId,
-    type: "message.created",
-    actorId: senderId,
-    details: senderRole,
-    createdAt: message.createdAt,
-  });
-  await orders.updateOne({ id: orderId }, { $set: { updatedAt: message.createdAt } });
-  return message;
+
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from("order_messages").insert({
+      id: message.id,
+      order_id: orderId,
+      sender_id: senderId,
+      sender_role: senderRole,
+      body: message.body,
+      created_at: message.createdAt.toISOString(),
+    });
+    await recordOrderEvent(orderId, "message.created", senderId, senderRole);
+    await supabase
+      .from("orders")
+      .update({ updated_at: message.createdAt.toISOString() })
+      .eq("id", orderId);
+    return message;
+  } catch (err) {
+    console.warn("Supabase addOrderMessage error:", err);
+    return message;
+  }
 }

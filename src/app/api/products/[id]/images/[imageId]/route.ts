@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById } from "@/server/catalog/products";
 import { readProductFile } from "@/server/storage/private-files";
-import type { ProductGalleryItem } from "@/types/product";
 
 type RouteContext = { params: Promise<{ id: string; imageId: string }> };
 
@@ -9,15 +8,7 @@ export const runtime = "nodejs";
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id, imageId } = await context.params;
-  const product = await (
-    await getDatabase()
-  )
-    .collection<{
-      imageKey?: string;
-      imageContentType?: string;
-      galleryImages?: ProductGalleryItem[];
-    }>("products")
-    .findOne({ id }, { projection: { imageKey: 1, imageContentType: 1, galleryImages: 1 } });
+  const product = await getProductById(id);
 
   if (!product) return new NextResponse("Image not found.", { status: 404 });
 
@@ -42,7 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
         ? targetContentType
         : "application/octet-stream";
 
-    return new NextResponse(image, {
+    return new NextResponse(new Uint8Array(image), {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",

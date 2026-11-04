@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
-import { getDatabase } from "@/server/db/mongodb";
+import { insertProduct } from "@/server/catalog/products";
 import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type Product, type ProductType } from "@/types/product";
-
-type ProductRecord = Omit<Product, "createdAt" | "updatedAt"> & {
-  createdAt: Date;
-  updatedAt: Date;
-};
 
 function productInput(body: Record<string, unknown>) {
   const type = body.type;
@@ -71,8 +66,13 @@ export async function POST(request: Request) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
-  const product: ProductRecord = { id, ...input, createdAt: now, updatedAt: now };
-  await (await getDatabase()).collection("products").insertOne(product);
+  const product: Product = {
+    id,
+    ...input,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+  await insertProduct(product);
 
   await recordAuditLog({
     action: "PRODUCT_CREATED",
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json(
-    { product: { ...product, createdAt: now.toISOString(), updatedAt: now.toISOString() } },
+    { product },
     { status: 201 },
   );
 }

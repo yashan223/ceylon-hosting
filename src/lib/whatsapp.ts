@@ -1,7 +1,3 @@
-/**
- * WhatsApp chat integration utilities.
- */
-
 export const DEFAULT_WHATSAPP_NUMBER = "94788901407";
 
 export function formatWhatsAppUrl(

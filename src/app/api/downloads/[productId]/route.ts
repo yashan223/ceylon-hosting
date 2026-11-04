@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { getPaidOrderForProduct, recordOrderEvent } from "@/server/orders/orders";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById } from "@/server/catalog/products";
 import { readProductFile } from "@/server/storage/private-files";
-import type { Product } from "@/types/product";
 
 type RouteContext = { params: Promise<{ productId: string }> };
 
@@ -22,8 +21,7 @@ export async function GET(_request: Request, context: RouteContext) {
     );
   }
 
-  const database = await getDatabase();
-  const product = await database.collection<Product>("products").findOne({ id: productId });
+  const product = await getProductById(productId);
   if (!product?.downloadKey || !product.downloadName) {
     return NextResponse.json(
       { error: "This product does not have a downloadable file attached yet." },
@@ -35,7 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const file = await readProductFile(product.downloadKey);
     await recordOrderEvent(order.id, "download.authorized", user.id, productId);
 
-    return new NextResponse(file, {
+    return new NextResponse(new Uint8Array(file), {
       headers: {
         "Content-Type": "application/octet-stream",
         "Content-Disposition": `attachment; filename="${product.downloadName.replace(/[^a-zA-Z0-9._-]/g, "_")}"`,

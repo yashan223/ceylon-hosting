@@ -14,19 +14,16 @@ async function isAuthorized(request: Request): Promise<boolean> {
   const url = new URL(request.url);
   const secretParam = url.searchParams.get("secret");
 
-  // 1. If CRON_SECRET is configured and matches Bearer token or secret param
   if (cronSecret && cronSecret !== "replace_me") {
     if (authHeader === `Bearer ${cronSecret}` || secretParam === cronSecret) {
       return true;
     }
   }
 
-  // 2. Or if invoked by an active authenticated admin
   if (await isAdminUser()) {
     return true;
   }
 
-  // 3. In development mode without secret, allow for easy local testing
   if (process.env.NODE_ENV === "development" && !cronSecret) {
     return true;
   }
@@ -40,7 +37,6 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Ensure any previously paid server orders are synced
     await syncExistingPaidServers().catch((err) =>
       console.error("Failed to sync existing servers", err),
     );
@@ -62,8 +58,4 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-}
-
-export async function POST(request: Request) {
-  return GET(request);
 }

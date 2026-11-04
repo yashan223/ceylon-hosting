@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
-import { getDatabase } from "@/server/db/mongodb";
+import { getSupabaseAdmin } from "@/server/db/supabase";
 import { clearAllPrivateProductFiles } from "@/server/storage/private-files";
 import { recordAuditLog } from "@/server/admin/audit";
 
 export async function POST() {
   try {
     const admin = await requireAdmin();
-    const database = await getDatabase();
 
     const configuredEmails = (process.env.ADMIN_DEFAULT_EMAIL ?? "")
       .split(",")
@@ -21,28 +20,42 @@ export async function POST() {
       }
     }
 
-    const adminUsers = await database
-      .collection("users")
-      .find({ email: { $in: configuredEmails } }, { projection: { id: 1 } })
-      .toArray();
+    const supabase = getSupabaseAdmin();
+    const { data: adminUsers } = await supabase
+      .from("users")
+      .select("id, email")
+      .in("email", configuredEmails);
 
-    const adminUserIds = adminUsers.map((u) => u.id as string).filter(Boolean);
+    const adminUserIds = (adminUsers || []).map((u) => u.id);
     if (admin.id && !adminUserIds.includes(admin.id)) {
       adminUserIds.push(admin.id);
     }
 
     await Promise.all([
-      database.collection("products").deleteMany({}),
-      database.collection("orders").deleteMany({}),
-      database.collection("order_events").deleteMany({}),
-      database.collection("order_messages").deleteMany({}),
-      database.collection("notification_reads").deleteMany({}),
-      database.collection("server_subscriptions").deleteMany({}),
-      database.collection("users").deleteMany({ email: { $nin: configuredEmails } }),
-      database.collection("sessions").deleteMany({ userId: { $nin: adminUserIds } }),
-      database.collection("audit_logs").deleteMany({}),
-      clearAllPrivateProductFiles(),
+      supabase.from("order_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      supabase.from("order_events").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      supabase.from("notification_reads").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      supabase.from("server_subscriptions").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      supabase.from("orders").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
+      supabase.from("products").delete().neq("id", "__keep_none__"),
+      supabase.from("audit_logs").delete().neq("id", "00000000-0000-0000-0000-000000000000"),
     ]);
+
+    if (adminUserIds.length > 0) {
+      await supabase
+        .from("sessions")
+        .delete()
+        .not("user_id", "in", `(${adminUserIds.map((id) => `"${id}"`).join(",")})`);
+      await supabase
+        .from("users")
+        .delete()
+        .not("id", "in", `(${adminUserIds.map((id) => `"${id}"`).join(",")})`);
+    } else {
+      await supabase.from("sessions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("users").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    }
+
+    await clearAllPrivateProductFiles();
 
     await recordAuditLog({
       action: "SYSTEM_EVENT",

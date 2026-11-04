@@ -34,9 +34,7 @@ function loadCachedReadKeys() {
 function saveCachedReadKeys(keys: Set<string>) {
   try {
     window.localStorage.setItem(readStorageKey, JSON.stringify([...keys].slice(-200)));
-  } catch {
-    /* storage unavailable — optimistic read state just won't persist */
-  }
+  } catch {}
 }
 
 export function MessageNotifications({ enabled }: { enabled: boolean }) {
@@ -107,9 +105,7 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
       }
       setNotifications(incoming);
       isFirstLoad.current = false;
-    } catch {
-      /* network hiccup — retry on the next poll */
-    }
+    } catch {}
   }, []);
 
   useEffect(() => {

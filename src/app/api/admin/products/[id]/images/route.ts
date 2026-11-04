@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { randomBytes } from "node:crypto";
-import type { Document, UpdateFilter } from "mongodb";
 import { requireAdmin } from "@/server/auth/admin";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById, updateProduct } from "@/server/catalog/products";
 import { uploadProductFile } from "@/server/storage/private-files";
 import { recordAuditLog } from "@/server/admin/audit";
-import type { ProductGalleryItem } from "@/types/product";
+import type { Product, ProductGalleryItem } from "@/types/product";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -42,8 +41,7 @@ export async function POST(request: Request, context: RouteContext) {
     }
   }
 
-  const database = await getDatabase();
-  const product = await database.collection("products").findOne({ id });
+  const product = await getProductById(id);
   if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   const newGalleryItems: ProductGalleryItem[] = [];
@@ -69,22 +67,25 @@ export async function POST(request: Request, context: RouteContext) {
       ? [product.imageUrl]
       : [];
 
+  const existingGallery: ProductGalleryItem[] = Array.isArray(product.galleryImages)
+    ? [...product.galleryImages]
+    : [];
+
   const updatedImages = [...existingImages, ...newUrls];
-  const setPayload: Record<string, unknown> = {
+  const updatedGallery = [...existingGallery, ...newGalleryItems];
+
+  const updatePayload: Partial<Product> = {
     images: updatedImages,
-    updatedAt: new Date(),
+    galleryImages: updatedGallery,
   };
 
   if (!product.imageUrl && newGalleryItems.length > 0) {
-    setPayload.imageUrl = newGalleryItems[0].url;
-    setPayload.imageKey = newGalleryItems[0].key;
-    setPayload.imageContentType = newGalleryItems[0].contentType;
+    updatePayload.imageUrl = newGalleryItems[0].url;
+    updatePayload.imageKey = newGalleryItems[0].key;
+    updatePayload.imageContentType = newGalleryItems[0].contentType;
   }
 
-  await database.collection("products").updateOne({ id }, {
-    $set: setPayload,
-    $push: { galleryImages: { $each: newGalleryItems } },
-  } as unknown as UpdateFilter<Document>);
+  await updateProduct(id, updatePayload);
 
   await recordAuditLog({
     action: "PRODUCT_UPDATED",
@@ -111,30 +112,28 @@ export async function PUT(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Invalid images array." }, { status: 400 });
   }
 
-  const database = await getDatabase();
-  const product = await database.collection("products").findOne({ id });
+  const product = await getProductById(id);
   if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   const images = body.images.map((s) => s.trim()).filter(Boolean);
-  const setPayload: Record<string, unknown> = {
+  const updatePayload: Partial<Product> = {
     images,
-    updatedAt: new Date(),
   };
 
   if (images.length > 0) {
-    setPayload.imageUrl = images[0];
+    updatePayload.imageUrl = images[0];
     const matchingItem = product.galleryImages?.find(
       (g: ProductGalleryItem) => g.url === images[0],
     );
     if (matchingItem) {
-      setPayload.imageKey = matchingItem.key;
-      setPayload.imageContentType = matchingItem.contentType;
+      updatePayload.imageKey = matchingItem.key;
+      updatePayload.imageContentType = matchingItem.contentType;
     }
   } else {
-    setPayload.imageUrl = "";
+    updatePayload.imageUrl = "";
   }
 
-  await database.collection("products").updateOne({ id }, { $set: setPayload });
+  await updateProduct(id, updatePayload);
 
   await recordAuditLog({
     action: "PRODUCT_UPDATED",

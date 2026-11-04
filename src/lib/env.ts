@@ -7,9 +7,19 @@ export function getAppUrl(): string {
       return envUrl.replace(/\/+$/, "");
     }
   }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
   if (process.env.NODE_ENV === "production") {
     return "https://ceylonhosting.tech";
   }
+
   return "http://localhost:4000";
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById } from "@/server/catalog/products";
 import { readProductFile } from "@/server/storage/private-files";
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -8,15 +8,7 @@ export const runtime = "nodejs";
 
 export async function GET(_request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const product = await (
-    await getDatabase()
-  )
-    .collection<{
-      imageKey?: string;
-      imageContentType?: string;
-      galleryImages?: Array<{ key?: string; contentType?: string }>;
-    }>("products")
-    .findOne({ id }, { projection: { imageKey: 1, imageContentType: 1, galleryImages: 1 } });
+  const product = await getProductById(id);
 
   const targetKey = product?.imageKey || product?.galleryImages?.[0]?.key;
   const targetContentType = product?.imageContentType || product?.galleryImages?.[0]?.contentType;
@@ -30,7 +22,7 @@ export async function GET(_request: Request, context: RouteContext) {
         ? targetContentType
         : "application/octet-stream";
 
-    return new NextResponse(image, {
+    return new NextResponse(new Uint8Array(image), {
       headers: {
         "Content-Type": contentType,
         "Cache-Control": "public, max-age=3600",

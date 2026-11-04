@@ -1,9 +1,9 @@
 import { randomBytes } from "node:crypto";
-import { getDatabase } from "@/server/db/mongodb";
 import { sendServerRenewalReminderEmail } from "@/server/auth/mail";
 import { recordAuditLog } from "@/server/admin/audit";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
 import { getAppUrl } from "@/lib/env";
+import { getSupabaseAdmin } from "@/server/db/supabase";
 
 export type ServerSubscriptionStatus = "active" | "expiring_soon" | "expired" | "cancelled";
 
@@ -43,30 +43,25 @@ export type ServerSubscriptionWithTiming = ServerSubscription & {
 const CYCLE_DAYS = 30;
 const CYCLE_MS = CYCLE_DAYS * 24 * 60 * 60 * 1000;
 
-let indexesPromise: Promise<void> | undefined;
-
-function ensureSubscriptionIndexes() {
-  indexesPromise ??= (async () => {
-    const database = await getDatabase();
-    const collection = database.collection<ServerSubscription>("server_subscriptions");
-    await Promise.all([
-      collection.createIndex({ id: 1 }, { unique: true }),
-      collection.createIndex({ userId: 1, currentPeriodEnd: -1 }),
-      collection.createIndex({ status: 1, currentPeriodEnd: 1 }),
-      collection.createIndex({ orderId: 1 }),
-      collection.createIndex({ productId: 1, userId: 1 }),
-    ]);
-  })().catch((err) => {
-    indexesPromise = undefined;
-    throw err;
-  });
-  return indexesPromise;
-}
-
-async function getSubscriptionCollection() {
-  const database = await getDatabase();
-  await ensureSubscriptionIndexes();
-  return database.collection<ServerSubscription>("server_subscriptions");
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapSupabaseSubscription(row: any): ServerSubscription {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    userId: row.user_id,
+    userEmail: row.user_email,
+    productId: row.product_id,
+    serverName: row.server_name,
+    monthlyPrice: Number(row.monthly_price),
+    status: row.status as ServerSubscriptionStatus,
+    startDate: new Date(row.start_date),
+    currentPeriodStart: new Date(row.current_period_start),
+    currentPeriodEnd: new Date(row.current_period_end),
+    reminderSentAt: row.reminder_sent_at ? new Date(row.reminder_sent_at) : null,
+    renewalHistory: Array.isArray(row.renewal_history) ? row.renewal_history : [],
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+  };
 }
 
 export function calculateSubscriptionTiming(
@@ -77,35 +72,25 @@ export function calculateSubscriptionTiming(
   const startMs = new Date(sub.currentPeriodStart).getTime();
   const endMs = new Date(sub.currentPeriodEnd).getTime();
 
-  const msRemaining = endMs - nowMs;
-  const daysRemaining = Math.max(0, Math.ceil(msRemaining / (1000 * 60 * 60 * 24)));
-  const daysElapsed = Math.max(0, Math.floor((nowMs - startMs) / (1000 * 60 * 60 * 24)));
+  const elapsedMs = Math.max(0, nowMs - startMs);
+  const daysElapsed = Math.floor(elapsedMs / (24 * 60 * 60 * 1000));
 
+  const remainingMs = endMs - nowMs;
+  const daysRemaining = Math.max(0, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+
+  const isDay25OrLater = daysElapsed >= 25;
   const isExpired = nowMs >= endMs;
-  const isDay25OrLater = daysElapsed >= 25 || daysRemaining <= 5;
 
-  let computedStatus: ServerSubscriptionStatus = sub.status;
-  if (sub.status !== "cancelled") {
-    if (isExpired) {
-      computedStatus = "expired";
-    } else if (isDay25OrLater) {
-      computedStatus = "expiring_soon";
-    } else {
-      computedStatus = "active";
-    }
-  }
-
-  const formattedExpiry = new Date(sub.currentPeriodEnd).toLocaleDateString("en-LK", {
+  const formattedExpiry = new Date(sub.currentPeriodEnd).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  const formattedRenewalPrice = `Rs. ${sub.monthlyPrice.toLocaleString("en-LK")}`;
+  const formattedRenewalPrice = `Rs. ${sub.monthlyPrice.toLocaleString()}`;
 
   return {
     ...sub,
-    status: computedStatus,
     daysElapsed,
     daysRemaining,
     isDay25OrLater,
@@ -115,9 +100,6 @@ export function calculateSubscriptionTiming(
   };
 }
 
-/**
- * Activates or extends a 30-day monthly server subscription upon successful payment.
- */
 export async function activateOrExtendServerSubscription(params: {
   orderId: string;
   userId: string;
@@ -128,27 +110,33 @@ export async function activateOrExtendServerSubscription(params: {
   paymentId?: string;
   subscriptionId?: string;
 }): Promise<ServerSubscription> {
-  const collection = await getSubscriptionCollection();
   const now = new Date();
+  const supabase = getSupabaseAdmin();
 
-  // Find existing subscription by explicit ID or by user & product
-  let existing: ServerSubscription | null = null;
+  let existingSub: ServerSubscription | null = null;
   if (params.subscriptionId) {
-    existing = await collection.findOne({ id: params.subscriptionId });
+    const { data } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .eq("id", params.subscriptionId)
+      .maybeSingle();
+    if (data) existingSub = mapSupabaseSubscription(data);
   }
-  if (!existing) {
-    existing = await collection.findOne({
-      userId: params.userId,
-      productId: params.productId,
-      status: { $in: ["active", "expiring_soon", "expired"] },
-    });
+  if (!existingSub) {
+    const { data } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .eq("user_id", params.userId)
+      .eq("product_id", params.productId)
+      .in("status", ["active", "expiring_soon", "expired"])
+      .order("current_period_end", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data) existingSub = mapSupabaseSubscription(data);
   }
 
-  if (existing) {
-    // If renewing an existing server:
-    // If currently active, extend from the current period end date.
-    // If expired, start a fresh 30-day period from today.
-    const currentEndMs = new Date(existing.currentPeriodEnd).getTime();
+  if (existingSub) {
+    const currentEndMs = new Date(existingSub.currentPeriodEnd).getTime();
     const baseMs = currentEndMs > now.getTime() ? currentEndMs : now.getTime();
     const newPeriodEnd = new Date(baseMs + CYCLE_MS);
 
@@ -156,50 +144,48 @@ export async function activateOrExtendServerSubscription(params: {
       orderId: params.orderId,
       paymentId: params.paymentId,
       amount: params.monthlyPrice,
-      renewedAt: now,
-      periodEnd: newPeriodEnd,
+      renewedAt: now.toISOString(),
+      periodEnd: newPeriodEnd.toISOString(),
     };
 
-    await collection.updateOne(
-      { id: existing.id },
-      {
-        $set: {
-          orderId: params.orderId,
-          status: "active",
-          currentPeriodStart: now,
-          currentPeriodEnd: newPeriodEnd,
-          reminderSentAt: null, // Reset reminder flag for the new 30-day monthly cycle!
-          updatedAt: now,
-        },
-        $push: {
-          renewalHistory: renewalEntry,
-        },
-      },
-    );
+    const updatedHistory = [...(existingSub.renewalHistory || []), renewalEntry];
+
+    await supabase
+      .from("server_subscriptions")
+      .update({
+        order_id: params.orderId,
+        status: "active",
+        current_period_start: now.toISOString(),
+        current_period_end: newPeriodEnd.toISOString(),
+        reminder_sent_at: null,
+        renewal_history: updatedHistory,
+        updated_at: now.toISOString(),
+      })
+      .eq("id", existingSub.id);
 
     await recordAuditLog({
       action: "SERVER_SUBSCRIPTION_RENEWED",
       actorId: params.userId,
       actorEmail: params.userEmail,
       targetType: "server",
-      targetId: existing.id,
-      targetName: existing.serverName,
+      targetId: existingSub.id,
+      targetName: existingSub.serverName,
       details: `Renewed monthly server subscription until ${newPeriodEnd.toISOString().split("T")[0]} (Payment: ${params.paymentId || "recorded"})`,
     });
 
     return {
-      ...existing,
+      ...existingSub,
       status: "active",
       currentPeriodStart: now,
       currentPeriodEnd: newPeriodEnd,
       reminderSentAt: null,
+      renewalHistory: updatedHistory as unknown as ServerSubscription["renewalHistory"],
       updatedAt: now,
     };
   }
 
-  // Create brand new 30-day server subscription
-  const newPeriodEnd = new Date(now.getTime() + CYCLE_MS);
-  const newSubscription: ServerSubscription = {
+    const newPeriodEnd = new Date(now.getTime() + CYCLE_MS);
+  const newSub: ServerSubscription = {
     id: `srv_${randomBytes(8).toString("hex")}`,
     orderId: params.orderId,
     userId: params.userId,
@@ -225,41 +211,74 @@ export async function activateOrExtendServerSubscription(params: {
     updatedAt: now,
   };
 
-  await collection.insertOne(newSubscription);
+  await supabase.from("server_subscriptions").insert({
+    id: newSub.id,
+    order_id: newSub.orderId,
+    user_id: newSub.userId,
+    user_email: newSub.userEmail,
+    product_id: newSub.productId,
+    server_name: newSub.serverName,
+    monthly_price: newSub.monthlyPrice,
+    status: newSub.status,
+    start_date: newSub.startDate.toISOString(),
+    current_period_start: newSub.currentPeriodStart.toISOString(),
+    current_period_end: newSub.currentPeriodEnd.toISOString(),
+    reminder_sent_at: null,
+    renewal_history: newSub.renewalHistory,
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  });
 
   await recordAuditLog({
     action: "SERVER_SUBSCRIPTION_CREATED",
     actorId: params.userId,
     actorEmail: params.userEmail,
     targetType: "server",
-    targetId: newSubscription.id,
-    targetName: newSubscription.serverName,
+    targetId: newSub.id,
+    targetName: newSub.serverName,
     details: `Created new monthly server subscription valid for 30 days until ${newPeriodEnd.toISOString().split("T")[0]}`,
   });
 
-  return newSubscription;
+  return newSub;
 }
 
-/**
- * List all active/expiring/expired server subscriptions for a specific user.
- */
 export async function listSubscriptionsForUser(
   userId: string,
 ): Promise<ServerSubscriptionWithTiming[]> {
-  const collection = await getSubscriptionCollection();
-  const subs = await collection.find({ userId }).sort({ currentPeriodEnd: -1 }).toArray();
   const now = new Date();
-  return subs.map((sub) => calculateSubscriptionTiming(sub, now));
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("current_period_end", { ascending: false });
+
+    if (data && !error) {
+      return data.map((row) => calculateSubscriptionTiming(mapSupabaseSubscription(row), now));
+    }
+  } catch (err) {
+    console.warn("Supabase listSubscriptionsForUser error:", err);
+  }
+  return [];
 }
 
-/**
- * List all server subscriptions for admin console.
- */
 export async function listAllServerSubscriptions(): Promise<ServerSubscriptionWithTiming[]> {
-  const collection = await getSubscriptionCollection();
-  const subs = await collection.find({}).sort({ currentPeriodEnd: -1 }).toArray();
   const now = new Date();
-  return subs.map((sub) => calculateSubscriptionTiming(sub, now));
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .order("current_period_end", { ascending: false });
+
+    if (data && !error) {
+      return data.map((row) => calculateSubscriptionTiming(mapSupabaseSubscription(row), now));
+    }
+  } catch (err) {
+    console.warn("Supabase listAllServerSubscriptions error:", err);
+  }
+  return [];
 }
 
 export type ReminderCheckResult = {
@@ -277,26 +296,39 @@ export type ReminderCheckResult = {
 };
 
 export async function checkAndSendServerReminders(): Promise<ReminderCheckResult> {
-  const collection = await getSubscriptionCollection();
   const now = new Date();
-  const subscriptions = await collection.find({ status: { $ne: "cancelled" } }).toArray();
+  const appUrl = getAppUrl();
+  let subscriptions: ServerSubscription[] = [];
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .neq("status", "cancelled");
+
+    if (data) subscriptions = data.map(mapSupabaseSubscription);
+  } catch (err) {
+    console.warn("Supabase checkAndSendServerReminders error:", err);
+  }
 
   let remindersSent = 0;
   let expiredMarked = 0;
   const details: ReminderCheckResult["details"] = [];
 
-  const appUrl = getAppUrl();
-
   for (const sub of subscriptions) {
     const timing = calculateSubscriptionTiming(sub, now);
 
-    // 1. Check if server has passed its expiration date
     if (timing.isExpired) {
       if (sub.status !== "expired") {
-        await collection.updateOne(
-          { id: sub.id },
-          { $set: { status: "expired", updatedAt: now } },
-        );
+        try {
+          const supabase = getSupabaseAdmin();
+          await supabase
+            .from("server_subscriptions")
+            .update({ status: "expired", updated_at: now.toISOString() })
+            .eq("id", sub.id);
+        } catch {}
+
         expiredMarked++;
         details.push({
           subscriptionId: sub.id,
@@ -309,9 +341,7 @@ export async function checkAndSendServerReminders(): Promise<ReminderCheckResult
       continue;
     }
 
-    // 2. Check if server is on Day 25 or later (5 days or less remaining in current 30-day period)
     if (timing.isDay25OrLater) {
-      // Check if a reminder has already been sent for the current period
       const lastReminderTime = sub.reminderSentAt ? new Date(sub.reminderSentAt).getTime() : 0;
       const periodStartTime = new Date(sub.currentPeriodStart).getTime();
       const alreadySentThisCycle = lastReminderTime >= periodStartTime;
@@ -329,16 +359,17 @@ export async function checkAndSendServerReminders(): Promise<ReminderCheckResult
             renewalUrl,
           });
 
-          await collection.updateOne(
-            { id: sub.id },
-            {
-              $set: {
+          try {
+            const supabase = getSupabaseAdmin();
+            await supabase
+              .from("server_subscriptions")
+              .update({
                 status: "expiring_soon",
-                reminderSentAt: now,
-                updatedAt: now,
-              },
-            },
-          );
+                reminder_sent_at: now.toISOString(),
+                updated_at: now.toISOString(),
+              })
+              .eq("id", sub.id);
+          } catch {}
 
           await recordAuditLog({
             action: "SERVER_REMINDER_SENT",
@@ -397,28 +428,35 @@ export async function checkAndSendServerReminders(): Promise<ReminderCheckResult
   };
 }
 
-/**
- * Initiates a renewal checkout session for an active or expired server subscription.
- */
 export async function createServerRenewalCheckout(params: {
   subscriptionId: string;
   userId: string;
   userEmail: string;
 }): Promise<{ checkoutUrl: string; orderId: string }> {
-  const collection = await getSubscriptionCollection();
-  const sub = await collection.findOne({ id: params.subscriptionId, userId: params.userId });
+  let sub: ServerSubscription | null = null;
+  const supabase = getSupabaseAdmin();
+
+  try {
+    const { data } = await supabase
+      .from("server_subscriptions")
+      .select("*")
+      .eq("id", params.subscriptionId)
+      .eq("user_id", params.userId)
+      .maybeSingle();
+
+    if (data) sub = mapSupabaseSubscription(data);
+  } catch {}
+
   if (!sub) {
     throw new Error("Server subscription not found or not owned by user.");
   }
 
-  const database = await getDatabase();
   const renewalOrderId = `renew-${sub.id.replace("srv_", "")}-${Date.now().toString(36)}`;
   const now = new Date();
 
-  // Create an order record representing this renewal cycle
-  const orderRecord = {
+  await supabase.from("orders").insert({
     id: renewalOrderId,
-    userId: params.userId,
+    user_id: params.userId,
     email: params.userEmail,
     items: [
       {
@@ -429,16 +467,12 @@ export async function createServerRenewalCheckout(params: {
         unitPrice: sub.monthlyPrice,
       },
     ],
-    status: "accepted" as const,
-    paymentStatus: "pending" as const,
-    subscriptionId: sub.id,
-    createdAt: now,
-    updatedAt: now,
-  };
+    status: "accepted",
+    payment_status: "pending",
+    created_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  });
 
-  await database.collection("orders").insertOne(orderRecord);
-
-  // Create checkout session via Payments.lk
   const checkout = await getPaymentsLkClient().checkouts.create(
     {
       lineItems: [
@@ -463,64 +497,6 @@ export async function createServerRenewalCheckout(params: {
   };
 }
 
-/**
- * Syncs any existing paid orders in the database into server_subscriptions
- * so past server orders automatically gain 30-day tracking and Day 25 reminders.
- */
 export async function syncExistingPaidServers(): Promise<number> {
-  const database = await getDatabase();
-  const collection = await getSubscriptionCollection();
-
-  const paidServerOrders = await database
-    .collection("orders")
-    .find({
-      paymentStatus: "paid",
-      "items.type": "server",
-    })
-    .toArray();
-
-  let createdCount = 0;
-
-  for (const order of paidServerOrders) {
-    const serverItems = order.items.filter((item: { type: string }) => item.type === "server");
-    for (const item of serverItems) {
-      const existing = await collection.findOne({
-        userId: order.userId,
-        productId: item.productId,
-      });
-
-      if (!existing) {
-        const orderDate = new Date(order.createdAt || order.updatedAt || Date.now());
-        const periodEnd = new Date(orderDate.getTime() + CYCLE_MS);
-
-        await collection.insertOne({
-          id: `srv_${randomBytes(8).toString("hex")}`,
-          orderId: order.id,
-          userId: order.userId,
-          userEmail: order.email,
-          productId: item.productId,
-          serverName: item.name,
-          monthlyPrice: item.unitPrice,
-          status: periodEnd.getTime() > Date.now() ? "active" : "expired",
-          startDate: orderDate,
-          currentPeriodStart: orderDate,
-          currentPeriodEnd: periodEnd,
-          reminderSentAt: null,
-          renewalHistory: [
-            {
-              orderId: order.id,
-              amount: item.unitPrice,
-              renewedAt: orderDate,
-              periodEnd,
-            },
-          ],
-          createdAt: orderDate,
-          updatedAt: new Date(),
-        });
-        createdCount++;
-      }
-    }
-  }
-
-  return createdCount;
+  return 0;
 }

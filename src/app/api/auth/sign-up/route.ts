@@ -47,7 +47,6 @@ export async function POST(request: Request) {
       country: body.country,
       whatsapp,
     });
-    // The account already exists at this point, so a mail outage must not fail the request.
     let emailSent = true;
     try {
       await sendVerificationEmail({

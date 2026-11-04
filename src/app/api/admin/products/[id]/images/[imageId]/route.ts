@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
-import { getDatabase } from "@/server/db/mongodb";
+import { getProductById, updateProduct } from "@/server/catalog/products";
 import { deleteProductFile } from "@/server/storage/private-files";
 import { recordAuditLog } from "@/server/admin/audit";
 import type { ProductGalleryItem } from "@/types/product";
@@ -13,8 +13,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const admin = await requireAdmin();
   const { id, imageId } = await context.params;
 
-  const database = await getDatabase();
-  const product = await database.collection("products").findOne({ id });
+  const product = await getProductById(id);
   if (!product) return NextResponse.json({ error: "Product not found." }, { status: 404 });
 
   const galleryImages: ProductGalleryItem[] = Array.isArray(product.galleryImages)
@@ -58,19 +57,13 @@ export async function DELETE(_request: Request, context: RouteContext) {
     }
   }
 
-  await database.collection("products").updateOne(
-    { id },
-    {
-      $set: {
-        imageUrl: newImageUrl,
-        imageKey: newImageKey,
-        imageContentType: newImageContentType,
-        images: updatedImages,
-        galleryImages: updatedGallery,
-        updatedAt: new Date(),
-      },
-    },
-  );
+  await updateProduct(id, {
+    imageUrl: newImageUrl,
+    imageKey: newImageKey,
+    imageContentType: newImageContentType,
+    images: updatedImages,
+    galleryImages: updatedGallery,
+  });
 
   await recordAuditLog({
     action: "PRODUCT_UPDATED",

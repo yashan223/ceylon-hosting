@@ -108,7 +108,7 @@ export default async function Home() {
   try {
     products = await getActiveProducts();
   } catch (error) {
-    console.error("Unable to load products from MongoDB", error);
+    console.error("Unable to load products", error);
   }
 
   return (
