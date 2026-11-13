@@ -226,35 +226,26 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
   return (
     <div className="admin-invoices-page">
-      {/* Top Controls Header */}
-      <div className="admin-page-header no-print">
-        <div>
-          <span className="admin-kicker">Administration</span>
-          <h1 className="admin-page-title">Custom Bill Generator</h1>
-          <p className="admin-page-subtitle">
-            Create simple, clean black-and-white invoices with CeylonHosting branding and export as PDF.
-          </p>
-        </div>
-        <div className="admin-invoice-top-actions">
-          <button type="button" className="admin-btn admin-btn-outline" onClick={handleNewInvoice}>
-            <RotateCcw size={14} /> New Bill
-          </button>
-          <button type="button" className="admin-btn admin-btn-outline" onClick={handleSaveInvoice}>
-            {saveSuccess ? <Check size={14} /> : <Save size={14} />}
-            {saveSuccess ? "Saved" : "Save"}
-          </button>
-          <button type="button" className="admin-btn admin-btn-outline" onClick={handlePrint}>
-            <Printer size={14} /> Print
-          </button>
-          <button
-            type="button"
-            className="admin-btn admin-btn-primary"
-            onClick={handleDownloadPdf}
-            disabled={isDownloading}
-          >
-            <Download size={14} /> {isDownloading ? "Generating..." : "Download PDF"}
-          </button>
-        </div>
+      {/* Top Action Buttons */}
+      <div className="admin-invoice-top-actions no-print">
+        <button type="button" className="admin-btn admin-btn-outline" onClick={handleNewInvoice}>
+          <RotateCcw size={14} /> New Bill
+        </button>
+        <button type="button" className="admin-btn admin-btn-outline" onClick={handleSaveInvoice}>
+          {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+          {saveSuccess ? "Saved" : "Save"}
+        </button>
+        <button type="button" className="admin-btn admin-btn-outline" onClick={handlePrint}>
+          <Printer size={14} /> Print
+        </button>
+        <button
+          type="button"
+          className="admin-btn admin-btn-primary"
+          onClick={handleDownloadPdf}
+          disabled={isDownloading}
+        >
+          <Download size={14} /> {isDownloading ? "Generating..." : "Download PDF"}
+        </button>
       </div>
 
       {/* Main 2-Column Workspace */}
