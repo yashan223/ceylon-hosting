@@ -179,16 +179,18 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   doc.setTextColor(70, 70, 70);
   doc.text("BILLED TO:", margin, infoY);
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10.5);
-  doc.setTextColor(0, 0, 0);
-  const clientName = invoice.clientName || "Valued Customer";
-  doc.text(clientName, margin, infoY + 5.5);
+  let clientDetailY = infoY + 5.5;
+  if (invoice.clientName) {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10.5);
+    doc.setTextColor(0, 0, 0);
+    doc.text(invoice.clientName, margin, clientDetailY);
+    clientDetailY += 4.5;
+  }
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(60, 60, 60);
-  let clientDetailY = infoY + 10;
   if (invoice.clientEmail || invoice.clientPhone) {
     const contactLine = [invoice.clientEmail, invoice.clientPhone].filter(Boolean).join("  •  ");
     doc.text(contactLine, margin, clientDetailY);
@@ -262,7 +264,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
     // Item Name
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    const itemName = item.name || "Item";
+    const itemName = item.name || "";
     doc.text(itemName.length > 62 ? itemName.slice(0, 60) + "..." : itemName, margin + 12, tableY);
 
     // Item Description (Subtitle)

@@ -281,7 +281,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="text"
                   value={invoice.invoiceNumber}
                   onChange={(e) => updateInvoice("invoiceNumber", e.target.value)}
-                  placeholder="CH-2026-0042"
                 />
               </div>
 
@@ -334,13 +333,11 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
             <div className="admin-form-grid-2">
               <div className="admin-field admin-field-span-2">
-                <label>Customer Name / Clan *</label>
+                <label>Customer Name / Clan</label>
                 <input
                   type="text"
                   value={invoice.clientName}
                   onChange={(e) => updateInvoice("clientName", e.target.value)}
-                  placeholder="John Doe / Ghost Clan"
-                  required
                 />
               </div>
 
@@ -350,7 +347,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="email"
                   value={invoice.clientEmail || ""}
                   onChange={(e) => updateInvoice("clientEmail", e.target.value)}
-                  placeholder="client@example.com"
                 />
               </div>
 
@@ -360,7 +356,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="text"
                   value={invoice.clientPhone || ""}
                   onChange={(e) => updateInvoice("clientPhone", e.target.value)}
-                  placeholder="+94 77 123 4567"
                 />
               </div>
 
@@ -370,7 +365,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="text"
                   value={invoice.clientAddress || ""}
                   onChange={(e) => updateInvoice("clientAddress", e.target.value)}
-                  placeholder="Colombo, Sri Lanka"
                 />
               </div>
             </div>
@@ -396,7 +390,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                           className="admin-item-title-input"
                           value={item.name}
                           onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
-                          placeholder="Item name / service title"
                         />
                       </div>
 
@@ -406,7 +399,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                           className="admin-item-desc-input"
                           value={item.description || ""}
                           onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
-                          placeholder="Description / specifications (optional)"
                         />
                       </div>
 
@@ -418,7 +410,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                             min="1"
                             step="1"
                             value={item.quantity === 0 ? "" : item.quantity}
-                            placeholder="1"
                             onChange={(e) =>
                               handleItemChange(
                                 item.id,
@@ -436,7 +427,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                             min="0"
                             step="any"
                             value={item.unitPrice === 0 ? "" : item.unitPrice}
-                            placeholder="0.00"
                             onChange={(e) =>
                               handleItemChange(
                                 item.id,
@@ -504,7 +494,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     step="0.01"
                     value={invoice.taxRate}
                     onChange={(e) => updateInvoice("taxRate", parseFloat(e.target.value) || 0)}
-                    placeholder="0"
                   />
                   <span className="admin-input-suffix">%</span>
                 </div>
@@ -584,7 +573,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                 <div className="invoice-bw-info-grid">
                   <div className="invoice-bw-info-col">
                     <span className="bw-kicker">BILLED TO:</span>
-                    <strong className="bw-client-name">{invoice.clientName || "Valued Customer"}</strong>
+                    {invoice.clientName && <strong className="bw-client-name">{invoice.clientName}</strong>}
                     {invoice.clientEmail && <p className="bw-detail">{invoice.clientEmail}</p>}
                     {invoice.clientPhone && <p className="bw-detail">WhatsApp: {invoice.clientPhone}</p>}
                     {invoice.clientAddress && <p className="bw-detail">{invoice.clientAddress}</p>}
@@ -609,7 +598,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                         <tr key={item.id + idx}>
                           <td className="bw-index">{idx + 1}</td>
                           <td className="bw-desc-cell">
-                            <strong className="bw-item-name">{item.name || "(Item Name)"}</strong>
+                            <strong className="bw-item-name">{item.name}</strong>
                             {item.description && <p className="bw-item-desc">{item.description}</p>}
                           </td>
                           <td className="bw-qty">{item.quantity}</td>
