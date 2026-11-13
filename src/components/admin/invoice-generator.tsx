@@ -12,10 +12,6 @@ import {
   Check,
   FileText,
   Clock,
-  Building2,
-  CreditCard,
-  Sparkles,
-  ExternalLink,
 } from "lucide-react";
 import type { Product } from "@/types/product";
 import type { StoreSettings } from "@/server/settings/settings";
@@ -102,7 +98,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Load saved invoices from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -235,13 +230,13 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
       const updatedList = [
         { ...invoice, updatedAt: now },
         ...savedInvoices.filter((inv) => inv.invoiceNumber !== invoice.invoiceNumber),
-      ].slice(0, 50); // keep up to 50
+      ].slice(0, 50);
 
       setSavedInvoices(updatedList);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
 
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2500);
+      setTimeout(() => setSaveSuccess(false), 2000);
     } catch (err) {
       console.warn("Failed to save invoice:", err);
     }
@@ -283,22 +278,22 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
   return (
     <div className="admin-invoices-page">
-      {/* Page Header */}
-      <div className="admin-page-header">
+      {/* Top Controls Header */}
+      <div className="admin-page-header no-print">
         <div>
           <span className="admin-kicker">Administration</span>
-          <h1 className="admin-page-title">Custom Bill & Invoice Generator</h1>
+          <h1 className="admin-page-title">Custom Bill Generator</h1>
           <p className="admin-page-subtitle">
-            Manually create and customize official CeylonHosting invoices, add custom items and prices, and generate professional PDF bills.
+            Create simple, clean black-and-white invoices with CeylonHosting branding and export as PDF.
           </p>
         </div>
-        <div className="admin-invoice-top-actions no-print">
-          <button type="button" className="admin-btn admin-btn-ghost" onClick={handleNewInvoice}>
+        <div className="admin-invoice-top-actions">
+          <button type="button" className="admin-btn admin-btn-outline" onClick={handleNewInvoice}>
             <RotateCcw size={14} /> New Bill
           </button>
           <button type="button" className="admin-btn admin-btn-outline" onClick={handleSaveInvoice}>
-            {saveSuccess ? <Check size={14} color="#16a34a" /> : <Save size={14} />}
-            {saveSuccess ? "Saved!" : "Save Bill"}
+            {saveSuccess ? <Check size={14} /> : <Save size={14} />}
+            {saveSuccess ? "Saved" : "Save"}
           </button>
           <button type="button" className="admin-btn admin-btn-outline" onClick={handlePrint}>
             <Printer size={14} /> Print
@@ -309,29 +304,25 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             onClick={handleDownloadPdf}
             disabled={isDownloading}
           >
-            <Download size={14} /> {isDownloading ? "Generating PDF..." : "Download PDF"}
+            <Download size={14} /> {isDownloading ? "Generating..." : "Download PDF"}
           </button>
         </div>
       </div>
 
-      {/* Main Workspace: Left Editor, Right Live Preview */}
+      {/* Main 2-Column Workspace */}
       <div className="admin-invoice-workspace">
-        {/* LEFT COLUMN: Form Inputs */}
+        {/* LEFT COLUMN: Input Fields */}
         <div className="admin-invoice-editor-col no-print">
-          {/* Section 1: Invoice Details */}
+          {/* Section 1: Bill Meta */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
-              <div className="admin-section-title-wrap">
-                <FileText size={16} className="admin-section-icon" />
-                <h3>Invoice Details</h3>
-              </div>
+              <h3 className="admin-simple-title">Invoice Settings</h3>
               <button
                 type="button"
                 className="admin-link-btn"
                 onClick={() => updateInvoice("invoiceNumber", generateInvoiceNumber())}
-                title="Generate new invoice number"
               >
-                🔄 Refresh #
+                Generate #
               </button>
             </div>
 
@@ -342,20 +333,20 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="text"
                   value={invoice.invoiceNumber}
                   onChange={(e) => updateInvoice("invoiceNumber", e.target.value)}
-                  placeholder="e.g. CH-2026-0042"
+                  placeholder="CH-2026-0042"
                 />
               </div>
 
               <div className="admin-field">
-                <label>Status Badge</label>
+                <label>Status</label>
                 <select
                   value={invoice.status}
                   onChange={(e) => updateInvoice("status", e.target.value as InvoiceStatus)}
                 >
-                  <option value="PAID">PAID (Green)</option>
-                  <option value="PENDING">PENDING (Amber)</option>
-                  <option value="DUE">DUE (Blue)</option>
-                  <option value="CANCELLED">CANCELLED (Slate)</option>
+                  <option value="PAID">PAID</option>
+                  <option value="PENDING">PENDING</option>
+                  <option value="DUE">DUE</option>
+                  <option value="CANCELLED">CANCELLED</option>
                 </select>
               </div>
 
@@ -383,7 +374,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   type="text"
                   value={invoice.paymentMethod}
                   onChange={(e) => updateInvoice("paymentMethod", e.target.value)}
-                  placeholder="Bank Transfer, Online, Cash, etc."
+                  placeholder="Bank Transfer, Cash, Online"
                 />
               </div>
 
@@ -406,34 +397,31 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             </div>
           </section>
 
-          {/* Section 2: Client / Billed To */}
+          {/* Section 2: Customer Info */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
-              <div className="admin-section-title-wrap">
-                <Building2 size={16} className="admin-section-icon" />
-                <h3>Billed To (Customer Information)</h3>
-              </div>
+              <h3 className="admin-simple-title">Billed To (Customer Details)</h3>
             </div>
 
             <div className="admin-form-grid-2">
               <div className="admin-field admin-field-span-2">
-                <label>Customer / Clan Name *</label>
+                <label>Customer Name / Clan *</label>
                 <input
                   type="text"
                   value={invoice.clientName}
                   onChange={(e) => updateInvoice("clientName", e.target.value)}
-                  placeholder="e.g. Ghost Clan / John Doe"
+                  placeholder="John Doe / Ghost Clan"
                   required
                 />
               </div>
 
               <div className="admin-field">
-                <label>Email Address</label>
+                <label>Email</label>
                 <input
                   type="email"
                   value={invoice.clientEmail || ""}
                   onChange={(e) => updateInvoice("clientEmail", e.target.value)}
-                  placeholder="customer@example.com"
+                  placeholder="client@example.com"
                 />
               </div>
 
@@ -448,24 +436,21 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
               </div>
 
               <div className="admin-field admin-field-span-2">
-                <label>Customer Address / Country (Optional)</label>
+                <label>Address / Country</label>
                 <input
                   type="text"
                   value={invoice.clientAddress || ""}
                   onChange={(e) => updateInvoice("clientAddress", e.target.value)}
-                  placeholder="e.g. Colombo, Sri Lanka"
+                  placeholder="Colombo, Sri Lanka"
                 />
               </div>
             </div>
           </section>
 
-          {/* Section 3: Line Items & Prices */}
+          {/* Section 3: Line Items */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
-              <div className="admin-section-title-wrap">
-                <CreditCard size={16} className="admin-section-icon" />
-                <h3>Items & Pricing</h3>
-              </div>
+              <h3 className="admin-simple-title">Items & Prices</h3>
               {products.length > 0 && (
                 <div className="admin-catalog-quick-add">
                   <select
@@ -474,10 +459,9 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       handleAddFromCatalog(e.target.value);
                       e.target.value = "";
                     }}
-                    title="Add a product from your catalog"
                   >
                     <option value="" disabled>
-                      ⚡ Add from Store Catalog...
+                      + Add from catalog...
                     </option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -494,7 +478,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                 const lineTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
                 return (
                   <div key={item.id} className="admin-invoice-item-row">
-                    <span className="admin-invoice-item-num">#{index + 1}</span>
+                    <span className="admin-invoice-item-num">{index + 1}.</span>
 
                     <div className="admin-invoice-item-fields">
                       <div className="admin-field-row">
@@ -503,7 +487,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                           className="admin-item-title-input"
                           value={item.name}
                           onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
-                          placeholder="Item name / service title (e.g. COD4 Server 1 Month)"
+                          placeholder="Item name / service"
                         />
                       </div>
 
@@ -513,7 +497,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                           className="admin-item-desc-input"
                           value={item.description || ""}
                           onChange={(e) => handleItemChange(item.id, "description", e.target.value)}
-                          placeholder="Specifications / details (e.g. 16 slots, PML220, Singapore)"
+                          placeholder="Description / specifications (optional)"
                         />
                       </div>
 
@@ -557,7 +541,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       type="button"
                       className="admin-item-del-btn"
                       onClick={() => handleRemoveItem(item.id)}
-                      title="Remove item"
+                      title="Delete item"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -566,7 +550,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
               })}
 
               <button type="button" className="admin-add-item-btn" onClick={handleAddItem}>
-                <Plus size={15} /> Add Another Line Item
+                <Plus size={14} /> Add Line Item
               </button>
             </div>
 
@@ -586,14 +570,14 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     value={invoice.discountType}
                     onChange={(e) => updateInvoice("discountType", e.target.value as "fixed" | "percent")}
                   >
-                    <option value="fixed">{symbol} (Fixed)</option>
-                    <option value="percent">% (Percent)</option>
+                    <option value="fixed">{symbol}</option>
+                    <option value="percent">%</option>
                   </select>
                 </div>
               </div>
 
               <div className="admin-adj-col">
-                <label>Tax / VAT Rate (%)</label>
+                <label>Tax (%)</label>
                 <div className="admin-input-group">
                   <input
                     type="number"
@@ -609,13 +593,10 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             </div>
           </section>
 
-          {/* Section 4: Bank Details & Instructions */}
+          {/* Section 4: Bank Details */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
-              <div className="admin-section-title-wrap">
-                <CreditCard size={16} className="admin-section-icon" />
-                <h3>Bank Details & Payment Instructions</h3>
-              </div>
+              <h3 className="admin-simple-title">Payment & Bank Details</h3>
             </div>
 
             <div className="admin-form-grid-2">
@@ -660,7 +641,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
               </div>
 
               <div className="admin-field admin-field-span-2">
-                <label>Payment Notice / Receipt Instructions</label>
+                <label>Payment Reference / Receipt Instructions</label>
                 <input
                   type="text"
                   value={invoice.paymentNote || ""}
@@ -671,13 +652,10 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             </div>
           </section>
 
-          {/* Section 5: Notes & Terms */}
+          {/* Section 5: Notes */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
-              <div className="admin-section-title-wrap">
-                <Sparkles size={16} className="admin-section-icon" />
-                <h3>Notes & Terms</h3>
-              </div>
+              <h3 className="admin-simple-title">Notes & Terms</h3>
             </div>
 
             <div className="admin-field">
@@ -686,12 +664,12 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                 rows={2}
                 value={invoice.notes || ""}
                 onChange={(e) => updateInvoice("notes", e.target.value)}
-                placeholder="Notes visible on the invoice..."
+                placeholder="Thank you for choosing CeylonHosting..."
               />
             </div>
 
             <div className="admin-field" style={{ marginTop: 12 }}>
-              <label>Terms & Conditions</label>
+              <label>Terms</label>
               <textarea
                 rows={2}
                 value={invoice.terms || ""}
@@ -702,21 +680,16 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
           </section>
         </div>
 
-        {/* RIGHT COLUMN: Live Interactive A4 Document Preview */}
+        {/* RIGHT COLUMN: Minimalist Black & White Document Preview */}
         <div className="admin-invoice-preview-col">
           <div className="admin-preview-sticky">
             <div className="admin-preview-header no-print">
               <div className="admin-preview-title">
                 <FileText size={15} />
-                <span>Live Document Preview</span>
+                <span>Document Preview</span>
               </div>
               <div className="admin-preview-actions">
-                <button
-                  type="button"
-                  className="admin-preview-btn print"
-                  onClick={handlePrint}
-                  title="Print or Save via browser"
-                >
+                <button type="button" className="admin-preview-btn print" onClick={handlePrint}>
                   <Printer size={14} /> Print
                 </button>
                 <button
@@ -724,27 +697,23 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   className="admin-preview-btn download"
                   onClick={handleDownloadPdf}
                   disabled={isDownloading}
-                  title="Generate vector PDF"
                 >
                   <Download size={14} /> {isDownloading ? "Generating..." : "Download PDF"}
                 </button>
               </div>
             </div>
 
-            {/* A4 PAPER PREVIEW (also used for browser print) */}
+            {/* PURE BLACK AND WHITE A4 PAPER PREVIEW */}
             <div className="invoice-printable-wrapper">
-              <div className="invoice-paper" id="invoice-paper">
-                {/* Top Slate Brand Strip */}
-                <div className="invoice-paper-top-bar" />
-
-                {/* Header Row: Logo & Invoice Title */}
+              <div className="invoice-paper bw-mode" id="invoice-paper">
+                {/* Header: Logo & Invoice Title */}
                 <div className="invoice-paper-header">
                   <div className="invoice-paper-brand">
                     <Image
                       src="/logo.png"
                       alt="CeylonHosting"
-                      width={180}
-                      height={24}
+                      width={170}
+                      height={22}
                       className="invoice-paper-logo"
                       priority
                     />
@@ -761,9 +730,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
                   <div className="invoice-paper-meta-right">
                     <h2 className="invoice-paper-title">INVOICE</h2>
-                    <span className={`invoice-paper-badge status-${invoice.status.toLowerCase()}`}>
-                      {invoice.status}
-                    </span>
+                    <span className="invoice-bw-status-tag">STATUS: {invoice.status}</span>
 
                     <div className="invoice-paper-meta-list">
                       <div className="meta-row">
@@ -784,46 +751,38 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   </div>
                 </div>
 
-                <div className="invoice-paper-divider" />
+                <div className="invoice-bw-divider" />
 
-                {/* Billed To & Payment Cards */}
-                <div className="invoice-paper-cards-row">
-                  <div className="invoice-paper-card">
-                    <span className="card-kicker">BILLED TO</span>
-                    <strong className="client-name">{invoice.clientName || "Valued Customer"}</strong>
-                    {invoice.clientEmail && <p className="client-detail">{invoice.clientEmail}</p>}
-                    {invoice.clientPhone && <p className="client-detail">WhatsApp: {invoice.clientPhone}</p>}
-                    {invoice.clientAddress && <p className="client-detail">{invoice.clientAddress}</p>}
+                {/* Billed To & Payment Overview (Simple Clean Black & White) */}
+                <div className="invoice-bw-info-grid">
+                  <div className="invoice-bw-info-col">
+                    <span className="bw-kicker">BILLED TO:</span>
+                    <strong className="bw-client-name">{invoice.clientName || "Valued Customer"}</strong>
+                    {invoice.clientEmail && <p className="bw-detail">{invoice.clientEmail}</p>}
+                    {invoice.clientPhone && <p className="bw-detail">WhatsApp: {invoice.clientPhone}</p>}
+                    {invoice.clientAddress && <p className="bw-detail">{invoice.clientAddress}</p>}
                   </div>
 
-                  <div className="invoice-paper-card">
-                    <span className="card-kicker">PAYMENT OVERVIEW</span>
-                    <div className="card-kv">
-                      <span>Method:</span>
-                      <strong>{invoice.paymentMethod || "Bank Transfer"}</strong>
-                    </div>
-                    <div className="card-kv">
-                      <span>Currency:</span>
-                      <strong>{invoice.currency || "LKR"}</strong>
-                    </div>
-                    <div className="card-kv total">
-                      <span>Total Due:</span>
-                      <strong className="grand-total-text">
-                        {symbol} {grandTotal.toLocaleString("en-LK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </strong>
-                    </div>
+                  <div className="invoice-bw-info-col right">
+                    <span className="bw-kicker">PAYMENT DETAILS:</span>
+                    <p className="bw-detail">
+                      <strong>Method:</strong> {invoice.paymentMethod || "Bank Transfer"}
+                    </p>
+                    <p className="bw-detail">
+                      <strong>Currency:</strong> {invoice.currency || "LKR"}
+                    </p>
                   </div>
                 </div>
 
-                {/* Items Table */}
-                <table className="invoice-paper-table">
+                {/* Items Table (Pure Black & White, No Shading) */}
+                <table className="invoice-bw-table">
                   <thead>
                     <tr>
-                      <th style={{ width: "32px", textAlign: "left" }}>#</th>
+                      <th style={{ width: "30px", textAlign: "left" }}>#</th>
                       <th style={{ textAlign: "left" }}>ITEM & DESCRIPTION</th>
                       <th style={{ width: "45px", textAlign: "center" }}>QTY</th>
-                      <th style={{ width: "90px", textAlign: "right" }}>UNIT PRICE</th>
-                      <th style={{ width: "105px", textAlign: "right" }}>AMOUNT</th>
+                      <th style={{ width: "95px", textAlign: "right" }}>UNIT PRICE</th>
+                      <th style={{ width: "105px", textAlign: "right" }}>TOTAL</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -831,16 +790,16 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       const rowTotal = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
                       return (
                         <tr key={item.id + idx}>
-                          <td className="item-index">{idx + 1}</td>
-                          <td className="item-details">
-                            <strong className="item-name">{item.name || "Custom item / service"}</strong>
-                            {item.description && <p className="item-desc">{item.description}</p>}
+                          <td className="bw-index">{idx + 1}</td>
+                          <td className="bw-desc-cell">
+                            <strong className="bw-item-name">{item.name || "Custom item"}</strong>
+                            {item.description && <p className="bw-item-desc">{item.description}</p>}
                           </td>
-                          <td className="item-qty">{item.quantity}</td>
-                          <td className="item-price">
+                          <td className="bw-qty">{item.quantity}</td>
+                          <td className="bw-price">
                             {symbol} {(Number(item.unitPrice) || 0).toLocaleString("en-LK", { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="item-amount">
+                          <td className="bw-total">
                             {symbol} {rowTotal.toLocaleString("en-LK", { minimumFractionDigits: 2 })}
                           </td>
                         </tr>
@@ -849,28 +808,28 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   </tbody>
                 </table>
 
-                {/* Bottom Row: Bank Instructions & Totals */}
-                <div className="invoice-paper-bottom-grid">
-                  <div className="invoice-paper-bank-card">
-                    <span className="card-kicker">BANK TRANSFER INSTRUCTIONS</span>
-                    <p className="bank-line">
+                {/* Bank Box (Left) & Totals (Right) */}
+                <div className="invoice-bw-bottom-grid">
+                  <div className="invoice-bw-bank-box">
+                    <span className="bw-kicker">PAYMENT DETAILS (BANK TRANSFER)</span>
+                    <p className="bw-bank-line">
                       <strong>Bank:</strong> {invoice.bankName || "Commercial Bank of Ceylon"}
                     </p>
-                    <p className="bank-line">
+                    <p className="bw-bank-line">
                       <strong>Account Name:</strong> {invoice.accountName || "CeylonHosting"}
                     </p>
-                    <p className="bank-line">
+                    <p className="bw-bank-line">
                       <strong>Account Number:</strong> {invoice.accountNumber || "800123456789"}
                     </p>
-                    <p className="bank-line">
-                      <strong>Branch:</strong> {invoice.branch || "Colombo Branch"} • <strong>Ref:</strong>{" "}
+                    <p className="bw-bank-line">
+                      <strong>Branch:</strong> {invoice.branch || "Colombo"} • <strong>Ref:</strong>{" "}
                       {invoice.invoiceNumber}
                     </p>
-                    {invoice.paymentNote && <p className="bank-note">{invoice.paymentNote}</p>}
+                    {invoice.paymentNote && <p className="bw-bank-note">{invoice.paymentNote}</p>}
                   </div>
 
-                  <div className="invoice-paper-totals-box">
-                    <div className="totals-row">
+                  <div className="invoice-bw-totals-box">
+                    <div className="bw-totals-row">
                       <span>Subtotal:</span>
                       <strong>
                         {symbol} {subtotal.toLocaleString("en-LK", { minimumFractionDigits: 2 })}
@@ -878,7 +837,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     </div>
 
                     {discountAmount > 0 && (
-                      <div className="totals-row discount">
+                      <div className="bw-totals-row">
                         <span>
                           Discount {invoice.discountType === "percent" ? `(${invoice.discountValue}%)` : ""}:
                         </span>
@@ -889,7 +848,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     )}
 
                     {taxAmount > 0 && (
-                      <div className="totals-row">
+                      <div className="bw-totals-row">
                         <span>Tax ({invoice.taxRate}%):</span>
                         <strong>
                           + {symbol} {taxAmount.toLocaleString("en-LK", { minimumFractionDigits: 2 })}
@@ -897,9 +856,9 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       </div>
                     )}
 
-                    <div className="totals-grand-box">
+                    <div className="bw-grand-total-box">
                       <span>TOTAL DUE:</span>
-                      <strong className="grand-total-val">
+                      <strong className="bw-grand-val">
                         {symbol}{" "}
                         {grandTotal.toLocaleString("en-LK", {
                           minimumFractionDigits: 2,
@@ -912,27 +871,19 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
                 {/* Notes & Terms */}
                 {(invoice.notes || invoice.terms) && (
-                  <div className="invoice-paper-notes-box">
-                    {invoice.notes && (
-                      <p className="notes-line">
-                        <strong>Note:</strong> {invoice.notes}
-                      </p>
-                    )}
-                    {invoice.terms && (
-                      <p className="terms-line">
-                        <strong>Terms:</strong> {invoice.terms}
-                      </p>
-                    )}
+                  <div className="invoice-bw-notes-block">
+                    {invoice.notes && <p><strong>Note:</strong> {invoice.notes}</p>}
+                    {invoice.terms && <p><strong>Terms:</strong> {invoice.terms}</p>}
                   </div>
                 )}
 
-                {/* Paper Footer */}
-                <div className="invoice-paper-footer">
+                {/* Footer */}
+                <div className="invoice-bw-footer">
                   <p>
-                    Thank you for your business! • {invoice.companyWebsite || "ceylonhosting.tech"} • WhatsApp:{" "}
+                    Thank you for your business. • {invoice.companyWebsite || "https://ceylonhosting.tech"} • WhatsApp:{" "}
                     {invoice.companyPhone || "+94 78 890 1407"}
                   </p>
-                  <span>Generated electronically by CeylonHosting</span>
+                  <span>CeylonHosting Billing System</span>
                 </div>
               </div>
             </div>
@@ -940,14 +891,11 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
         </div>
       </div>
 
-      {/* SAVED INVOICES HISTORY SECTION */}
+      {/* SAVED INVOICES HISTORY */}
       {savedInvoices.length > 0 && (
-        <section className="admin-panel admin-saved-invoices-panel no-print" style={{ marginTop: 32 }}>
+        <section className="admin-panel admin-saved-invoices-panel no-print" style={{ marginTop: 28 }}>
           <div className="admin-panel-header">
-            <div className="admin-section-title-wrap">
-              <Clock size={16} className="admin-section-icon" />
-              <h3>Saved Invoices History ({savedInvoices.length})</h3>
-            </div>
+            <h3 className="admin-simple-title">Saved Bills ({savedInvoices.length})</h3>
           </div>
 
           <div className="admin-saved-invoices-table-wrap">
@@ -973,12 +921,9 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       </td>
                       <td>
                         <strong>{saved.clientName || "Valued Customer"}</strong>
-                        {saved.clientPhone && (
-                          <small style={{ display: "block", color: "#64748b" }}>{saved.clientPhone}</small>
-                        )}
                       </td>
                       <td>{saved.issueDate}</td>
-                      <td>{saved.items?.length || 0} item(s)</td>
+                      <td>{saved.items?.length || 0}</td>
                       <td>
                         <strong>
                           {saved.currencySymbol || "Rs."}{" "}
@@ -986,28 +931,24 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                         </strong>
                       </td>
                       <td>
-                        <span className={`admin-invoice-status-tag tag-${saved.status.toLowerCase()}`}>
-                          {saved.status}
-                        </span>
+                        <span className="admin-bw-tag">{saved.status}</span>
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div className="admin-saved-actions">
                           <button
                             type="button"
-                            className="admin-sm-action-btn load"
+                            className="admin-sm-action-btn"
                             onClick={() => handleLoadInvoice(saved)}
-                            title="Load into editor"
                           >
                             Edit
                           </button>
                           <button
                             type="button"
-                            className="admin-sm-action-btn pdf"
+                            className="admin-sm-action-btn"
                             onClick={() => {
                               const doc = generateInvoicePdf(saved);
                               doc.save(`Invoice_${saved.invoiceNumber}.pdf`);
                             }}
-                            title="Download PDF"
                           >
                             <Download size={12} /> PDF
                           </button>
@@ -1015,7 +956,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                             type="button"
                             className="admin-sm-action-btn delete"
                             onClick={() => handleDeleteSavedInvoice(saved.invoiceNumber)}
-                            title="Delete invoice"
                           >
                             <Trash2 size={12} />
                           </button>
