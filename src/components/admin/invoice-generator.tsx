@@ -293,7 +293,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                 >
                   <option value="PAID">PAID</option>
                   <option value="PENDING">PENDING</option>
-                  <option value="DUE">DUE</option>
+                  <option value="UNPAID">UNPAID</option>
                   <option value="CANCELLED">CANCELLED</option>
                 </select>
               </div>
@@ -656,7 +656,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     )}
 
                     <div className="bw-grand-total-box">
-                      <span>TOTAL DUE:</span>
+                      <span>TOTAL:</span>
                       <strong className="bw-grand-val">
                         {symbol}{" "}
                         {grandTotal.toLocaleString("en-LK", {

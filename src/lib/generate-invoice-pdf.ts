@@ -9,7 +9,7 @@ export type InvoiceItem = {
   unitPrice: number;
 };
 
-export type InvoiceStatus = "PAID" | "PENDING" | "DUE" | "CANCELLED";
+export type InvoiceStatus = "PAID" | "PENDING" | "UNPAID" | "DUE" | "CANCELLED";
 
 export type InvoiceData = {
   id: string;
@@ -132,7 +132,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   doc.text("INVOICE", pageWidth - margin, 20, { align: "right" });
 
   // Minimalist Status Box (Simple 1px black outline, no colors)
-  const statusText = `STATUS: ${invoice.status || "DUE"}`;
+  const statusText = `STATUS: ${invoice.status || "PENDING"}`;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(0, 0, 0);
@@ -353,7 +353,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(0, 0, 0);
-  doc.text("TOTAL DUE:", totalsX + 2, totY + 6.2);
+  doc.text("TOTAL:", totalsX + 2, totY + 6.2);
 
   doc.setFontSize(10.5);
   doc.text(formatAmount(grandTotal, symbol), pageWidth - margin - 3, totY + 6.2, { align: "right" });
