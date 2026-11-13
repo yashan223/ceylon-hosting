@@ -15,9 +15,9 @@ export type InvoiceData = {
   id: string;
   invoiceNumber: string;
   issueDate: string;
-  dueDate: string;
+  dueDate?: string;
   status: InvoiceStatus;
-  paymentMethod: string;
+  paymentMethod?: string;
   currency: string;
   currencySymbol: string;
 
@@ -38,10 +38,10 @@ export type InvoiceData = {
   discountType: "fixed" | "percent";
   taxRate: number;
 
-  bankName: string;
-  accountName: string;
-  accountNumber: string;
-  branch: string;
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  branch?: string;
   paymentNote?: string;
 
   notes?: string;
@@ -164,16 +164,6 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   doc.setTextColor(0, 0, 0);
   doc.text(invoice.issueDate || "Today", metaValX, metaY, { align: "right" });
 
-  if (invoice.dueDate) {
-    metaY += 4.5;
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(70, 70, 70);
-    doc.text("Due Date:", metaLabelX, metaY);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text(invoice.dueDate, metaValX, metaY, { align: "right" });
-  }
-
   // 3. Simple Black Horizontal Divider Line
   const lineY = Math.max(46, metaY + 4);
   doc.setDrawColor(0, 0, 0);
@@ -209,25 +199,8 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
     clientDetailY += 4.5;
   }
 
-  // Right: Payment Info
-  const rightInfoX = pageWidth - margin - 70;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(8);
-  doc.setTextColor(70, 70, 70);
-  doc.text("PAYMENT METHOD:", rightInfoX, infoY);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(0, 0, 0);
-  doc.text(invoice.paymentMethod || "Bank Transfer", rightInfoX, infoY + 5.5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.setTextColor(60, 60, 60);
-  doc.text(`Currency: ${invoice.currency || "LKR"}`, rightInfoX, infoY + 10);
-
   // 5. Minimalist Table (Pure Black & White)
-  let tableY = Math.max(clientDetailY + 4, infoY + 18);
+  let tableY = Math.max(clientDetailY + 4, infoY + 12);
 
   // Top border line
   doc.setDrawColor(0, 0, 0);
@@ -330,40 +303,14 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
 
   tableY += 5;
 
-  // 6. Bottom Section: Bank Instructions (Left) + Totals Breakdown (Right)
-  if (tableY > pageHeight - 75) {
+  // 6. Bottom Section: Totals Breakdown (Right-Aligned)
+  if (tableY > pageHeight - 65) {
     doc.addPage();
     tableY = 16;
   }
 
-  const totalsWidth = 72;
+  const totalsWidth = 76;
   const totalsX = pageWidth - margin - totalsWidth;
-  const bankWidth = contentWidth - totalsWidth - 8;
-
-  // Bank Info Box (Clean 1px black outline box, no fill)
-  const bankBoxHeight = 32;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.35);
-  doc.rect(margin, tableY, bankWidth, bankBoxHeight, "S");
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7.5);
-  doc.setTextColor(0, 0, 0);
-  doc.text("PAYMENT DETAILS (BANK TRANSFER)", margin + 4, tableY + 5);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(60, 60, 60);
-  doc.text(`Bank: ${invoice.bankName || "Commercial Bank of Ceylon"}`, margin + 4, tableY + 10.5);
-  doc.text(`Account Name: ${invoice.accountName || "CeylonHosting"}`, margin + 4, tableY + 15);
-  doc.text(`Account Number: ${invoice.accountNumber || "800123456789"}`, margin + 4, tableY + 19.5);
-  doc.text(`Branch: ${invoice.branch || "Colombo"}  |  Ref: ${invoice.invoiceNumber}`, margin + 4, tableY + 24);
-
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(7);
-  doc.setTextColor(80, 80, 80);
-  const payNote = invoice.paymentNote || `Send receipt via WhatsApp: ${invoice.companyPhone || "+94 78 890 1407"}`;
-  doc.text(payNote.length > 56 ? payNote.slice(0, 54) + "..." : payNote, margin + 4, tableY + 28.5);
 
   // Totals breakdown (Right, clean black & white)
   let totY = tableY + 3;
@@ -412,7 +359,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   doc.text(formatAmount(grandTotal, symbol), pageWidth - margin - 3, totY + 6.2, { align: "right" });
 
   // 7. Notes & Terms
-  const notesY = tableY + bankBoxHeight + 5;
+  const notesY = Math.max(totY + 16, tableY + 22);
   if (invoice.notes || invoice.terms) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);

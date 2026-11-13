@@ -42,20 +42,12 @@ function getTodayString() {
   return new Date().toISOString().split("T")[0];
 }
 
-function getDueDateString(days = 7) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split("T")[0];
-}
-
 export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorProps) {
   const [invoice, setInvoice] = useState<InvoiceData>(() => ({
     id: `inv-${Date.now()}`,
     invoiceNumber: generateInvoiceNumber(),
     issueDate: getTodayString(),
-    dueDate: getDueDateString(7),
     status: "PAID",
-    paymentMethod: "Bank Transfer",
     currency: "LKR",
     currencySymbol: "Rs.",
 
@@ -73,10 +65,10 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
     items: [
       {
         id: "item-1",
-        name: "COD4 Singapore Dedicated Server",
-        description: "16 Slots, PML220 mod, SS-Site, 24/7 low-ping host (1 Month)",
+        name: "",
+        description: "",
         quantity: 1,
-        unitPrice: 1800,
+        unitPrice: 0,
       },
     ],
 
@@ -84,14 +76,8 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
     discountType: "fixed",
     taxRate: 0,
 
-    bankName: "Commercial Bank of Ceylon",
-    accountName: "CeylonHosting",
-    accountNumber: "800123456789",
-    branch: "Colombo Branch",
-    paymentNote: `Send payment slip via WhatsApp: ${storeSettings?.whatsappNumber || "+94 78 890 1407"}`,
-
     notes: "Thank you for choosing CeylonHosting! All servers are provisioned according to service terms.",
-    terms: "Payment is due within 7 days of invoice issue date.",
+    terms: "Thank you for your business. CeylonHosting Technologies.",
   }));
 
   const [savedInvoices, setSavedInvoices] = useState<InvoiceData[]>([]);
@@ -118,7 +104,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
   function handleAddItem() {
     const newItem: InvoiceItem = {
-      id: `item-${Date.now()}`,
+      id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name: "",
       description: "",
       quantity: 1,
@@ -153,38 +139,12 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
     );
   }
 
-  function handleAddFromCatalog(productId: string) {
-    if (!productId) return;
-    const product = products.find((p) => p.id === productId);
-    if (!product) return;
-
-    const specs = [
-      product.type === "server" ? "Dedicated Server" : product.type === "mod" ? "Mod pack" : "Service",
-      product.location ? `Location: ${product.location}` : null,
-      product.meta || null,
-    ]
-      .filter(Boolean)
-      .join(" • ");
-
-    const newItem: InvoiceItem = {
-      id: `item-${Date.now()}`,
-      name: product.name,
-      description: specs,
-      quantity: 1,
-      unitPrice: product.price,
-    };
-
-    updateInvoice("items", [...invoice.items, newItem]);
-  }
-
   function handleNewInvoice() {
     setInvoice({
       id: `inv-${Date.now()}`,
       invoiceNumber: generateInvoiceNumber(),
       issueDate: getTodayString(),
-      dueDate: getDueDateString(7),
       status: "PAID",
-      paymentMethod: "Bank Transfer",
       currency: "LKR",
       currencySymbol: "Rs.",
 
@@ -213,14 +173,8 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
       discountType: "fixed",
       taxRate: 0,
 
-      bankName: "Commercial Bank of Ceylon",
-      accountName: "CeylonHosting",
-      accountNumber: "800123456789",
-      branch: "Colombo Branch",
-      paymentNote: `Send payment slip via WhatsApp: ${storeSettings?.whatsappNumber || "+94 78 890 1407"}`,
-
       notes: "Thank you for choosing CeylonHosting! All servers are provisioned according to service terms.",
-      terms: "Payment is due within 7 days of invoice issue date.",
+      terms: "Thank you for your business. CeylonHosting Technologies.",
     });
   }
 
@@ -360,25 +314,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
               </div>
 
               <div className="admin-field">
-                <label>Due Date</label>
-                <input
-                  type="date"
-                  value={invoice.dueDate}
-                  onChange={(e) => updateInvoice("dueDate", e.target.value)}
-                />
-              </div>
-
-              <div className="admin-field">
-                <label>Payment Method</label>
-                <input
-                  type="text"
-                  value={invoice.paymentMethod}
-                  onChange={(e) => updateInvoice("paymentMethod", e.target.value)}
-                  placeholder="Bank Transfer, Cash, Online"
-                />
-              </div>
-
-              <div className="admin-field">
                 <label>Currency</label>
                 <select
                   value={`${invoice.currency}|${invoice.currencySymbol}`}
@@ -447,30 +382,10 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             </div>
           </section>
 
-          {/* Section 3: Line Items */}
+          {/* Section 3: Line Items (Manual Entry) */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
               <h3 className="admin-simple-title">Items & Prices</h3>
-              {products.length > 0 && (
-                <div className="admin-catalog-quick-add">
-                  <select
-                    defaultValue=""
-                    onChange={(e) => {
-                      handleAddFromCatalog(e.target.value);
-                      e.target.value = "";
-                    }}
-                  >
-                    <option value="" disabled>
-                      + Add from catalog...
-                    </option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} — Rs. {p.price.toLocaleString()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
             </div>
 
             <div className="admin-invoice-items-table">
@@ -487,7 +402,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                           className="admin-item-title-input"
                           value={item.name}
                           onChange={(e) => handleItemChange(item.id, "name", e.target.value)}
-                          placeholder="Item name / service"
+                          placeholder="Item name / service title"
                         />
                       </div>
 
@@ -508,9 +423,14 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                             type="number"
                             min="1"
                             step="1"
-                            value={item.quantity}
+                            value={item.quantity === 0 ? "" : item.quantity}
+                            placeholder="1"
                             onChange={(e) =>
-                              handleItemChange(item.id, "quantity", Math.max(1, parseInt(e.target.value) || 1))
+                              handleItemChange(
+                                item.id,
+                                "quantity",
+                                e.target.value === "" ? 1 : Math.max(1, parseInt(e.target.value) || 1),
+                              )
                             }
                           />
                         </div>
@@ -521,9 +441,14 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                             type="number"
                             min="0"
                             step="any"
-                            value={item.unitPrice}
+                            value={item.unitPrice === 0 ? "" : item.unitPrice}
+                            placeholder="0.00"
                             onChange={(e) =>
-                              handleItemChange(item.id, "unitPrice", Math.max(0, parseFloat(e.target.value) || 0))
+                              handleItemChange(
+                                item.id,
+                                "unitPrice",
+                                e.target.value === "" ? 0 : Math.max(0, parseFloat(e.target.value) || 0),
+                              )
                             }
                           />
                         </div>
@@ -593,66 +518,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
             </div>
           </section>
 
-          {/* Section 4: Bank Details */}
-          <section className="admin-panel admin-invoice-section">
-            <div className="admin-panel-header">
-              <h3 className="admin-simple-title">Payment & Bank Details</h3>
-            </div>
-
-            <div className="admin-form-grid-2">
-              <div className="admin-field">
-                <label>Bank Name</label>
-                <input
-                  type="text"
-                  value={invoice.bankName}
-                  onChange={(e) => updateInvoice("bankName", e.target.value)}
-                  placeholder="Commercial Bank of Ceylon"
-                />
-              </div>
-
-              <div className="admin-field">
-                <label>Account Name</label>
-                <input
-                  type="text"
-                  value={invoice.accountName}
-                  onChange={(e) => updateInvoice("accountName", e.target.value)}
-                  placeholder="CeylonHosting"
-                />
-              </div>
-
-              <div className="admin-field">
-                <label>Account Number</label>
-                <input
-                  type="text"
-                  value={invoice.accountNumber}
-                  onChange={(e) => updateInvoice("accountNumber", e.target.value)}
-                  placeholder="800123456789"
-                />
-              </div>
-
-              <div className="admin-field">
-                <label>Branch</label>
-                <input
-                  type="text"
-                  value={invoice.branch}
-                  onChange={(e) => updateInvoice("branch", e.target.value)}
-                  placeholder="Colombo Branch"
-                />
-              </div>
-
-              <div className="admin-field admin-field-span-2">
-                <label>Payment Reference / Receipt Instructions</label>
-                <input
-                  type="text"
-                  value={invoice.paymentNote || ""}
-                  onChange={(e) => updateInvoice("paymentNote", e.target.value)}
-                  placeholder="Send receipt screenshot to WhatsApp..."
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Section 5: Notes */}
+          {/* Section 4: Notes */}
           <section className="admin-panel admin-invoice-section">
             <div className="admin-panel-header">
               <h3 className="admin-simple-title">Notes & Terms</h3>
@@ -741,19 +607,13 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                         <span>Issue Date:</span>
                         <strong>{invoice.issueDate || "Today"}</strong>
                       </div>
-                      {invoice.dueDate && (
-                        <div className="meta-row">
-                          <span>Due Date:</span>
-                          <strong>{invoice.dueDate}</strong>
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="invoice-bw-divider" />
 
-                {/* Billed To & Payment Overview (Simple Clean Black & White) */}
+                {/* Billed To (Clean Black & White) */}
                 <div className="invoice-bw-info-grid">
                   <div className="invoice-bw-info-col">
                     <span className="bw-kicker">BILLED TO:</span>
@@ -761,16 +621,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                     {invoice.clientEmail && <p className="bw-detail">{invoice.clientEmail}</p>}
                     {invoice.clientPhone && <p className="bw-detail">WhatsApp: {invoice.clientPhone}</p>}
                     {invoice.clientAddress && <p className="bw-detail">{invoice.clientAddress}</p>}
-                  </div>
-
-                  <div className="invoice-bw-info-col right">
-                    <span className="bw-kicker">PAYMENT DETAILS:</span>
-                    <p className="bw-detail">
-                      <strong>Method:</strong> {invoice.paymentMethod || "Bank Transfer"}
-                    </p>
-                    <p className="bw-detail">
-                      <strong>Currency:</strong> {invoice.currency || "LKR"}
-                    </p>
                   </div>
                 </div>
 
@@ -792,7 +642,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                         <tr key={item.id + idx}>
                           <td className="bw-index">{idx + 1}</td>
                           <td className="bw-desc-cell">
-                            <strong className="bw-item-name">{item.name || "Custom item"}</strong>
+                            <strong className="bw-item-name">{item.name || "(Item Name)"}</strong>
                             {item.description && <p className="bw-item-desc">{item.description}</p>}
                           </td>
                           <td className="bw-qty">{item.quantity}</td>
@@ -808,26 +658,8 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                   </tbody>
                 </table>
 
-                {/* Bank Box (Left) & Totals (Right) */}
+                {/* Totals (Right-Aligned) */}
                 <div className="invoice-bw-bottom-grid">
-                  <div className="invoice-bw-bank-box">
-                    <span className="bw-kicker">PAYMENT DETAILS (BANK TRANSFER)</span>
-                    <p className="bw-bank-line">
-                      <strong>Bank:</strong> {invoice.bankName || "Commercial Bank of Ceylon"}
-                    </p>
-                    <p className="bw-bank-line">
-                      <strong>Account Name:</strong> {invoice.accountName || "CeylonHosting"}
-                    </p>
-                    <p className="bw-bank-line">
-                      <strong>Account Number:</strong> {invoice.accountNumber || "800123456789"}
-                    </p>
-                    <p className="bw-bank-line">
-                      <strong>Branch:</strong> {invoice.branch || "Colombo"} • <strong>Ref:</strong>{" "}
-                      {invoice.invoiceNumber}
-                    </p>
-                    {invoice.paymentNote && <p className="bw-bank-note">{invoice.paymentNote}</p>}
-                  </div>
-
                   <div className="invoice-bw-totals-box">
                     <div className="bw-totals-row">
                       <span>Subtotal:</span>
