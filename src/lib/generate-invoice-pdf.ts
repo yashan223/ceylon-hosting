@@ -81,20 +81,65 @@ function formatAmount(amount: number, symbol = "Rs.") {
   })}`;
 }
 
-export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
-  const doc = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
+export function calculateInvoicePdfHeight(invoice: InvoiceData): number {
+  const metaY = 38;
+  const lineY = Math.max(46, metaY + 4);
+  const infoY = lineY + 6;
 
-  const pageWidth = doc.internal.pageSize.getWidth(); // 210mm
-  const pageHeight = doc.internal.pageSize.getHeight(); // 297mm
+  let clientDetailY = infoY + 5.5;
+  if (invoice.clientName) {
+    clientDetailY += 4.5;
+  }
+  if (invoice.clientEmail || invoice.clientPhone) {
+    clientDetailY += 4.5;
+  }
+  if (invoice.clientAddress) {
+    clientDetailY += 4.5;
+  }
+
+  let tableY = Math.max(clientDetailY + 4, infoY + 12);
+  tableY += 7.5; // table header line & text
+
+  const items = invoice.items && invoice.items.length > 0 ? invoice.items : [];
+  for (const item of items) {
+    const rowHasDesc = Boolean(item.description && item.description.trim());
+    tableY += 4.5;
+    tableY += rowHasDesc ? 7 : 3.5;
+  }
+  tableY += 5; // table bottom border
+
+  let totY = tableY + 3;
+  const { discountAmount, taxAmount } = calculateInvoiceTotals(invoice);
+  if (discountAmount > 0) totY += 5;
+  if (taxAmount > 0) totY += 5;
+  totY += 4.5 + 9.5; // grand total box
+
+  const bottomPadding = 18;
+  return Math.ceil(totY + bottomPadding);
+}
+
+export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   const margin = 15;
-  const contentWidth = pageWidth - margin * 2; // 180mm
+  const pageWidth = 210; // Standard 210mm width (same width as A4)
 
   const { subtotal, discountAmount, taxAmount, grandTotal } = calculateInvoiceTotals(invoice);
   const symbol = invoice.currencySymbol || "Rs.";
+
+  // Calculate content height so the PDF neatly fits the bill without massive empty space underneath
+  const calculatedHeight = calculateInvoicePdfHeight(invoice);
+
+  // If content fits within single page (<= 297mm), dynamically size page height
+  // so there is no huge blank void at the bottom.
+  // If it exceeds 297mm, use standard A4 portrait format with pagination.
+  const isSinglePage = calculatedHeight <= 297;
+  const pageHeight = isSinglePage ? Math.max(110, calculatedHeight) : 297;
+  const isLandscape = isSinglePage && 210 > pageHeight;
+
+  const doc = new jsPDF({
+    orientation: isLandscape ? "landscape" : "portrait",
+    unit: "mm",
+    format: isSinglePage ? (isLandscape ? [pageHeight, 210] : [210, pageHeight]) : "a4",
+  });
 
   // 1. CeylonHosting Logo (Top Left)
   // Aspect ratio is 1864:244 = ~7.64:1
@@ -230,8 +275,8 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   const items = invoice.items && invoice.items.length > 0 ? invoice.items : [];
 
   items.forEach((item, index) => {
-    // Check page break
-    if (tableY > pageHeight - 65) {
+    // Check page break (only for multi-page documents)
+    if (!isSinglePage && tableY > pageHeight - 45) {
       doc.addPage();
       tableY = 16;
       doc.setDrawColor(0, 0, 0);
@@ -306,7 +351,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
   tableY += 5;
 
   // 6. Bottom Section: Totals Breakdown (Right-Aligned)
-  if (tableY > pageHeight - 65) {
+  if (!isSinglePage && tableY > pageHeight - 45) {
     doc.addPage();
     tableY = 16;
   }
