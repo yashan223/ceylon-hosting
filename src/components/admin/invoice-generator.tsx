@@ -58,7 +58,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
     companyName: "CeylonHosting Technologies",
     companyAddress: "Colombo, Sri Lanka",
-    companyEmail: "admin@ceylonhosting.tech",
+    companyEmail: "ceylonhosting@proton.me",
     companyPhone: storeSettings?.whatsappNumber || "+94 78 890 1407",
     companyWebsite: "https://ceylonhosting.tech",
 
@@ -75,9 +75,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
     discountValue: 0,
     discountType: "fixed",
     taxRate: 0,
-
-    notes: "Thank you for choosing CeylonHosting! All servers are provisioned according to service terms.",
-    terms: "Thank you for your business. CeylonHosting Technologies.",
   }));
 
   const [savedInvoices, setSavedInvoices] = useState<InvoiceData[]>([]);
@@ -155,7 +152,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
 
       companyName: "CeylonHosting Technologies",
       companyAddress: "Colombo, Sri Lanka",
-      companyEmail: "admin@ceylonhosting.tech",
+      companyEmail: "ceylonhosting@proton.me",
       companyPhone: storeSettings?.whatsappNumber || "+94 78 890 1407",
       companyWebsite: "https://ceylonhosting.tech",
 
@@ -172,9 +169,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
       discountValue: 0,
       discountType: "fixed",
       taxRate: 0,
-
-      notes: "Thank you for choosing CeylonHosting! All servers are provisioned according to service terms.",
-      terms: "Thank you for your business. CeylonHosting Technologies.",
     });
   }
 
@@ -517,33 +511,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
               </div>
             </div>
           </section>
-
-          {/* Section 4: Notes */}
-          <section className="admin-panel admin-invoice-section">
-            <div className="admin-panel-header">
-              <h3 className="admin-simple-title">Notes & Terms</h3>
-            </div>
-
-            <div className="admin-field">
-              <label>Customer Note</label>
-              <textarea
-                rows={2}
-                value={invoice.notes || ""}
-                onChange={(e) => updateInvoice("notes", e.target.value)}
-                placeholder="Thank you for choosing CeylonHosting..."
-              />
-            </div>
-
-            <div className="admin-field" style={{ marginTop: 12 }}>
-              <label>Terms</label>
-              <textarea
-                rows={2}
-                value={invoice.terms || ""}
-                onChange={(e) => updateInvoice("terms", e.target.value)}
-                placeholder="Payment terms..."
-              />
-            </div>
-          </section>
         </div>
 
         {/* RIGHT COLUMN: Minimalist Black & White Document Preview */}
@@ -589,7 +556,7 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                         {invoice.companyAddress || "Sri Lanka"} • {invoice.companyWebsite || "ceylonhosting.tech"}
                       </p>
                       <p className="company-contact">
-                        WhatsApp: {invoice.companyPhone || "+94 78 890 1407"} | {invoice.companyEmail || "admin@ceylonhosting.tech"}
+                        WhatsApp: {invoice.companyPhone || "+94 78 890 1407"} | {invoice.companyEmail || "ceylonhosting@proton.me"}
                       </p>
                     </div>
                   </div>
@@ -699,23 +666,6 @@ export function InvoiceGenerator({ products, storeSettings }: InvoiceGeneratorPr
                       </strong>
                     </div>
                   </div>
-                </div>
-
-                {/* Notes & Terms */}
-                {(invoice.notes || invoice.terms) && (
-                  <div className="invoice-bw-notes-block">
-                    {invoice.notes && <p><strong>Note:</strong> {invoice.notes}</p>}
-                    {invoice.terms && <p><strong>Terms:</strong> {invoice.terms}</p>}
-                  </div>
-                )}
-
-                {/* Footer */}
-                <div className="invoice-bw-footer">
-                  <p>
-                    Thank you for your business. • {invoice.companyWebsite || "https://ceylonhosting.tech"} • WhatsApp:{" "}
-                    {invoice.companyPhone || "+94 78 890 1407"}
-                  </p>
-                  <span>CeylonHosting Billing System</span>
                 </div>
               </div>
             </div>

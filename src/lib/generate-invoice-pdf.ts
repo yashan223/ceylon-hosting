@@ -120,7 +120,7 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
     29,
   );
   doc.text(
-    `Email: ${invoice.companyEmail || "admin@ceylonhosting.tech"}  |  WhatsApp: ${invoice.companyPhone || "+94 78 890 1407"}`,
+    `Email: ${invoice.companyEmail || "ceylonhosting@proton.me"}  |  WhatsApp: ${invoice.companyPhone || "+94 78 890 1407"}`,
     margin,
     33,
   );
@@ -357,41 +357,6 @@ export function generateInvoicePdf(invoice: InvoiceData): jsPDF {
 
   doc.setFontSize(10.5);
   doc.text(formatAmount(grandTotal, symbol), pageWidth - margin - 3, totY + 6.2, { align: "right" });
-
-  // 7. Notes & Terms
-  const notesY = Math.max(totY + 16, tableY + 22);
-  if (invoice.notes || invoice.terms) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(80, 80, 80);
-    if (invoice.notes) {
-      doc.text(`Note: ${invoice.notes}`, margin, notesY);
-    }
-    if (invoice.terms) {
-      doc.text(`Terms: ${invoice.terms}`, margin, notesY + 4);
-    }
-  }
-
-  // 8. Minimalist Footer
-  const footerY = pageHeight - 12;
-  doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.3);
-  doc.line(margin, footerY, pageWidth - margin, footerY);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 100, 100);
-  doc.text(
-    `Thank you for your business.  •  ${invoice.companyWebsite || "https://ceylonhosting.tech"}  •  WhatsApp: ${invoice.companyPhone || "+94 78 890 1407"}`,
-    margin,
-    footerY + 4.5,
-  );
-  doc.text(
-    `CeylonHosting Billing System`,
-    pageWidth - margin,
-    footerY + 4.5,
-    { align: "right" },
-  );
 
   return doc;
 }
