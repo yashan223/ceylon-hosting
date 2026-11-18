@@ -8,6 +8,7 @@ import { InactivityLogout } from "@/components/auth/inactivity-logout";
 import { MessageNotifications } from "@/components/notifications/message-notifications";
 import { SmoothScroll } from "@/components/ui/smooth-scroll";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -166,6 +167,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <MessageNotifications enabled={Boolean(currentSession)} />
         {children}
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

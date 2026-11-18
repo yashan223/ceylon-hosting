@@ -16,6 +16,7 @@
     "@payments-lk/node": "https://payments.lk/sdks/payments-lk-node-0.2.0.tgz",
     "@supabase/supabase-js": "^2.118.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.1.0",
     "cn": "^0.3.0",
     "dotenv": "^18.0.1",
     "jspdf": "^4.2.1",
