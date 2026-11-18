@@ -8,6 +8,7 @@ export interface Datacenter {
   name: string;
   city: string;
   country: string;
+  countryCode: string;
   flag: string;
   lat: number;
   lng: number;
@@ -28,6 +29,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Colombo",
     city: "Colombo",
     country: "Sri Lanka",
+    countryCode: "lk",
     flag: "🇱🇰",
     lat: 6.9271,
     lng: 79.8612,
@@ -38,6 +40,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Mumbai",
     city: "Mumbai",
     country: "India",
+    countryCode: "in",
     flag: "🇮🇳",
     lat: 19.076,
     lng: 72.8777,
@@ -48,6 +51,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Chennai",
     city: "Chennai",
     country: "India",
+    countryCode: "in",
     flag: "🇮🇳",
     lat: 13.0827,
     lng: 80.2707,
@@ -58,6 +62,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Singapore",
     city: "Singapore",
     country: "Singapore",
+    countryCode: "sg",
     flag: "🇸🇬",
     lat: 1.3521,
     lng: 103.8198,
@@ -68,6 +73,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Hong Kong",
     city: "Hong Kong",
     country: "Hong Kong",
+    countryCode: "hk",
     flag: "🇭🇰",
     lat: 22.3193,
     lng: 114.1694,
@@ -78,6 +84,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Dubai",
     city: "Dubai",
     country: "UAE",
+    countryCode: "ae",
     flag: "🇦🇪",
     lat: 25.2048,
     lng: 55.2708,
@@ -88,6 +95,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Tokyo",
     city: "Tokyo",
     country: "Japan",
+    countryCode: "jp",
     flag: "🇯🇵",
     lat: 35.6762,
     lng: 139.6503,
@@ -98,6 +106,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Seoul",
     city: "Seoul",
     country: "South Korea",
+    countryCode: "kr",
     flag: "🇰🇷",
     lat: 37.5665,
     lng: 126.978,
@@ -108,6 +117,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Frankfurt",
     city: "Frankfurt",
     country: "Germany",
+    countryCode: "de",
     flag: "🇩🇪",
     lat: 50.1109,
     lng: 8.6821,
@@ -118,6 +128,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "London",
     city: "London",
     country: "United Kingdom",
+    countryCode: "gb",
     flag: "🇬🇧",
     lat: 51.5074,
     lng: -0.1278,
@@ -128,6 +139,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Virginia",
     city: "Virginia",
     country: "USA",
+    countryCode: "us",
     flag: "🇺🇸",
     lat: 39.0438,
     lng: -77.4874,
@@ -138,6 +150,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "California",
     city: "California",
     country: "USA",
+    countryCode: "us",
     flag: "🇺🇸",
     lat: 37.3382,
     lng: -121.8863,
@@ -148,6 +161,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Sydney",
     city: "Sydney",
     country: "Australia",
+    countryCode: "au",
     flag: "🇦🇺",
     lat: -33.8688,
     lng: 151.2093,
@@ -158,6 +172,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "Johannesburg",
     city: "Johannesburg",
     country: "South Africa",
+    countryCode: "za",
     flag: "🇿🇦",
     lat: -26.2041,
     lng: 28.0473,
@@ -168,6 +183,7 @@ export const DATACENTERS: Datacenter[] = [
     name: "São Paulo",
     city: "São Paulo",
     country: "Brazil",
+    countryCode: "br",
     flag: "🇧🇷",
     lat: -23.5505,
     lng: -46.6333,
@@ -803,7 +819,16 @@ export function LatencyGlobe() {
               selectDatacenter(dc);
             }}
           >
-            <span className="node-label-flag">{dc.flag}</span>
+            <span className="node-label-flag">
+              <img
+                src={`/flags/${dc.countryCode}.svg`}
+                alt={dc.country}
+                className="globe-flag-icon"
+                width={14}
+                height={10}
+                loading="lazy"
+              />
+            </span>
             <span>{dc.city}</span>
           </div>
         ))}
@@ -815,7 +840,16 @@ export function LatencyGlobe() {
         >
           {selectedDc && (
             <>
-              <span className="node-callout-flag">{selectedDc.flag}</span>
+              <span className="node-callout-flag">
+                <img
+                  src={`/flags/${selectedDc.countryCode}.svg`}
+                  alt={selectedDc.country}
+                  className="globe-callout-flag-icon"
+                  width={17}
+                  height={12}
+                  loading="lazy"
+                />
+              </span>
               <span className="node-callout-city">{selectedDc.city}</span>
               <span className="node-callout-dot">•</span>
               <span className="node-callout-ping">

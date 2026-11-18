@@ -333,8 +333,20 @@
 }
 
 .node-callout-flag {
-  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+
+.globe-callout-flag-icon {
+  width: 17px;
+  height: 12px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.45);
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .node-callout-city {
@@ -403,8 +415,20 @@
 }
 
 .node-label-flag {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
+}
+
+.globe-flag-icon {
+  width: 14px;
+  height: 10px;
+  object-fit: cover;
+  border-radius: 2px;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.45);
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .globe-node-label:hover {
