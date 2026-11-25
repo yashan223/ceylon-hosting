@@ -737,7 +737,7 @@ export function Storefront({
           </label>
         </div>
         <div className="product-grid">
-          {visibleProducts.map((product) => {
+          {visibleProducts.map((product, index) => {
             const inCart = cart.some((item) => item.productId === product.id);
             const isService = product.type === "service";
             const isAvailable = product.type !== "server" || product.available !== false;
@@ -778,8 +778,9 @@ export function Storefront({
                       alt={`${product.name} - COD4 ${product.type === "server" ? "server hosting" : product.type === "service" ? "setup service" : "mod"}`}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+                      quality={80}
                       className="product-art-image"
-                      priority={false}
+                      priority={index < 3}
                     />
                   ) : (
                     <div className="product-art-symbol">

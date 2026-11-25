@@ -36,7 +36,8 @@ export async function GET(_request: Request, context: RouteContext) {
     return new NextResponse(new Uint8Array(image), {
       headers: {
         "Content-Type": contentType,
-        "Cache-Control": "public, max-age=3600",
+        "Cache-Control": "public, max-age=86400, s-maxage=31536000, stale-while-revalidate=86400",
+        ETag: `"${targetKey}"`,
         "X-Content-Type-Options": "nosniff",
         "Content-Security-Policy": "default-src 'none'; sandbox",
       },

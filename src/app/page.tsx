@@ -100,16 +100,15 @@ const homeStructuredData = {
 };
 
 export default async function Home() {
-  let products: Product[] = [];
-  const currentUser = await getCurrentUser();
-  const isAdmin = await isAdminUser();
-  const storeSettings = await getStoreSettings();
-
-  try {
-    products = await getActiveProducts();
-  } catch (error) {
-    console.error("Unable to load products", error);
-  }
+  const [currentUser, isAdmin, storeSettings, products] = await Promise.all([
+    getCurrentUser(),
+    isAdminUser(),
+    getStoreSettings(),
+    getActiveProducts().catch((error) => {
+      console.error("Unable to load products", error);
+      return [] as Product[];
+    }),
+  ]);
 
   return (
     <>
