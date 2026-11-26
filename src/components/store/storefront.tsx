@@ -631,7 +631,7 @@ export function Storefront({
             <h1 className="intro-heading">
               <Image
                 src="/logo.png"
-                alt="CeylonHosting - COD4 Servers, Mods and Hosting Support"
+                alt="CeylonHosting - Game Servers, Mods and Hosting Support"
                 className="intro-logo"
                 width={560}
                 height={150}
@@ -639,7 +639,7 @@ export function Storefront({
                 style={{ height: "auto" }}
               />
               <span className="sr-only">
-                CeylonHosting — Call of Duty 4 Game Servers, Custom Mods & Setup Support Sri Lanka
+                CeylonHosting — Game Servers, Custom Mods & Setup Support Sri Lanka
               </span>
             </h1>
             <p>
