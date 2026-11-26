@@ -643,7 +643,7 @@ export function Storefront({
               </span>
             </h1>
             <p>
-              Build your ideal COD4 experience with reliable servers, mods, and support that keeps
+              Build your ideal gaming experience with reliable servers, mods, and support that keeps
               your community in the game.
             </p>
             <div className="intro-actions">
